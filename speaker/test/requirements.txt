@@ -1,6 +1,6 @@
 grpcio==1.76.0
 grpcio-tools==1.76.0
-protobuf==6.31.1
-pytest==8.3.5
+protobuf==6.33.5
+pytest==9.0.3
 prompt_toolkit
 pyyaml
