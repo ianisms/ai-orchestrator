@@ -1,0 +1,66 @@
+mcp_servers:
+  - name: "homeassistant"
+    # url: "https://homeassistant.local:8123/api/mcp"
+    url: "https://homeassistant.local:8123/api/mcp"
+    verify_ssl: false
+    sse_method: "POST"
+    headers:
+      Authorization: "Bearer ${HOMEASSISTANT_TOKEN}"
+
+    denied_tools:
+      - "GetDateTime"   # duplicates tools_server current_time
+
+    overrides:
+      tools:
+        homeassistant__HassTurnOn:
+          description: "Turn on/open/press a device in Home Assistant. For locks, this performs a lock action. Prefer using name. Use device_classes to disambiguate (light for lights, door for locks) when it helps."
+          params:
+            name:
+              description: "Exact device name (examples: 'Hallway Lights', 'Front Door Lock')."
+              type: "string"
+            area:
+              description: "Area/room only when user explicitly says 'in the <area>' or '<area> room/area' and no exact device name is given."
+              type: "string"
+            floor:
+              description: "Floor only if user explicitly names a floor."
+              type: "string"
+            device_classes:
+              description: "Optional disambiguation filter. Use ['light'] for lights. Use ['lock'] for door locks."
+              type: "array"
+              items:
+                type: "string"
+                enum:
+                  - light
+                  - switch
+                  - outlet
+                  - door
+                  - garage
+                  - lock
+
+        homeassistant__HassTurnOff:
+          description: "Turn off/close a device in Home Assistant. For locks, this performs an unlock action. Prefer using name. Use device_classes to disambiguate (light for lights, door for locks) when it helps."
+          params:
+            name:
+              description: "Exact device name (examples: 'Kitchen Lights', 'Kitchen Side Door Lock')."
+              type: "string"
+            area:
+              description: "Area/room only when user explicitly says 'in the <area>' or '<area> room/area' and no exact device name is given."
+              type: "string"
+            floor:
+              description: "Floor only if user explicitly names a floor."
+              type: "string"
+            device_classes:
+              description: "Optional disambiguation filter. Use ['light'] for lights. Use ['door'] for door locks."
+              type: "array"
+              items:
+                type: "string"
+                enum:
+                  - light
+                  - switch
+                  - outlet
+                  - door
+                  - garage
+                  - lock
+
+        homeassistant__GetLiveContext:
+          description: "Get the current state of all Home Assistant entities for live context. Always use before answering state questions."

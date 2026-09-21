@@ -1,0 +1,33 @@
+# Build artifacts / caches
+.cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Runtime state (mounted as volume at runtime)
+logs/
+state/
+
+# Large hardware / design files not needed at build time
+hardware/
+docs/
+README-imgs/
+pi-release/
+*.kicad_pro
+*.kicad_sch
+*.kicad_pcb
+*.gbr
+
+# Test environment
+test/.venv/
+test/.gen/
+
+# Git
+.git/
+.gitignore
+
+# Legacy backups
+modules/speaker_backup_legacy/

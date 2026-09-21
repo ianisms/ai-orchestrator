@@ -1,0 +1,53 @@
+provider: "openweathermap"
+geocode_url: "https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}"
+one_call_url: "https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={api_key}&units={units}"
+api_key: ""
+units: "imperial"
+days: 3
+user_agent: "home-ai-tools/1.0 (github.com/ianisms/ai-orchestrator)"
+tool:
+  description: |
+    Get current weather, alerts, and forecast for a location.
+
+    This is the authoritative tool for weather and forecast questions. When the user asks about weather, temperature, rain/snow, wind, humidity, or forecast, call this tool before answering.
+
+    Use this tool when the user asks for current weather, temperature, rain/snow, wind, humidity, or a forecast for a specific place.
+    Use this tool for prompts like "weather", "forecast", "is it raining", "temperature in <city>", "chance of snow", or "wind in <city>".
+    Do not use this tool for general knowledge or climate trivia.
+    Do not use this tool for stocks, business/place recommendations, or current time requests.
+
+    Output structure:
+    - Current conditions (temperature, humidity, wind)
+    - Weather alerts (if any) — marked with ⚠ WEATHER ALERTS. These are official NWS or government warnings such as winter storms, heat advisories, tornado watches, flood warnings, etc.
+    - Daily forecast with highs, lows, and precipitation chances
+
+    Days parameter:
+    - Defaults to 3 days. Only increase when the user asks about a specific day beyond the 3-day window (up to 8 days).
+    - Examples: "weather on Sunday" when Sunday is 5 days away → days=6. "What's the weather this weekend" when it is Wednesday → days=5. "Next week forecast" → days=8.
+    - For simple "what's the weather" or "forecast" → leave at default (3).
+
+    How to handle alerts in your response:
+    - Always mention active alerts FIRST, before anything else. They are the most important part of the weather response.
+    - State the alert type and timeframe clearly, e.g. "Heads up, there is a winter storm warning in effect until tomorrow morning."
+    - Briefly summarize the alert description in plain spoken language. Do not read it verbatim.
+    - If there are multiple alerts, mention each one.
+    - If there are no alerts, do not mention alerts at all.
+  params:
+    location:
+      name: "location"
+      description: |
+        Required. Location to look up.
+
+        Tips:
+        - Prefer including state/country when a place name is ambiguous.
+
+        Examples:
+        - "London, UK"
+        - "Springfield, IL"
+        - "10001"
+        - "1600 Pennsylvania Ave NW, Washington, DC"
+    days:
+      name: "days"
+      description: |
+        Optional. Number of forecast days (1-8). Default is 3.
+        Only increase beyond 3 when the user asks about a day further out, e.g. "weather on Sunday" when Sunday is 5+ days away.

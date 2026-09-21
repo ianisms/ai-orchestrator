@@ -1,0 +1,6 @@
+# Orchestrator component overrides (optional).
+# Values here override /ai/server/config/config.yaml when set.
+#
+# LOG_LEVEL: "DEBUG"
+# ORCH_LOG_KV: true
+# ORCH_METRICS_PORT: 9110

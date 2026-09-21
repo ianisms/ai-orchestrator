@@ -1,0 +1,98 @@
+groups:
+  general:
+    # Titles
+    mr: mister
+    mrs: misses
+    ms: miss
+    dr: doctor
+    drs: doctors
+    prof: professor
+    rev: reverend
+    hon: honorable
+    sr: senior
+    jr: junior
+
+    # Military
+    gen: general
+    maj: major
+    lt: lieutenant
+    sgt: sergeant
+    capt: captain
+    cmdr: commander
+    col: colonel
+    cpl: corporal
+    ens: ensign
+    adm: admiral
+    esq: esquire
+
+    # Business
+    ltd: limited
+
+    # Places
+    st: saint
+    ft: fort
+    mt: mount
+
+    # Latin / common
+    etc: et cetera
+    eg: for example
+    ie: that is
+    vs: versus
+    cf: compare
+    al: and others
+    approx: approximately
+    govt: government
+    natl: national
+    intl: international
+    assn: association
+    mgmt: management
+
+    # Units
+    °f: degrees fahrenheit
+    °c: degrees celsius
+
+  address:
+    ave: avenue
+    blvd: boulevard
+    cir: circle
+    ct: court
+    dr: drive
+    expy: expressway
+    fwy: freeway
+    hwy: highway
+    ln: lane
+    pkwy: parkway
+    pl: place
+    rd: road
+    sq: square
+    ter: terrace
+    trl: trail
+    tpke: turnpike
+    ste: suite
+    apt: apartment
+    bldg: building
+    fl: floor
+    dept: department
+    ne: northeast
+    nw: northwest
+    se: southeast
+    sw: southwest
+
+  timezone:
+    est: eastern standard time
+    edt: eastern daylight time
+    cst: central standard time
+    cdt: central daylight time
+    mst: mountain standard time
+    mdt: mountain daylight time
+    pst: pacific standard time
+    pdt: pacific daylight time
+    gmt: greenwich mean time
+    utc: coordinated universal time
+
+protect:
+  - u.s.
+  - u.k.
+  - u.n.
+  - e.u.
+  - d.c.

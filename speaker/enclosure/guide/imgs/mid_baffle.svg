@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520">
+<rect width="760" height="520" fill="#0d1e2e"/>
+<rect x="0" y="0" width="760" height="38" fill="#1a3040"/>
+<text x="380" y="25" text-anchor="middle" font-size="13" font-family="sans-serif" font-weight="bold" fill="#cce8ec">Mid Baffle Cross-Section — RS100-4 Captured-Nut System</text>
+<rect x="100" y="100" width="560" height="140" fill="#2d5a6a" stroke="#1a5a64" stroke-width="1.5"/>
+<rect x="100" y="100" width="185" height="140" fill="#0d1520"/>
+<rect x="475" y="100" width="185" height="140" fill="#0d1520"/>
+<rect x="334" y="100" width="12" height="140" fill="#0d1520" stroke="#e07020" stroke-width="1.5"/>
+<rect x="414" y="100" width="12" height="140" fill="#0d1520" stroke="#e07020" stroke-width="1.5"/>
+<rect x="324" y="100" width="32" height="30" fill="#3a2a10" stroke="#c0980a" stroke-width="1.5"/>
+<rect x="404" y="100" width="32" height="30" fill="#3a2a10" stroke="#c0980a" stroke-width="1.5"/>
+<polygon points="349,120 340,125 331,120 331,110 340,105 349,110" fill="#c0980a"/>
+<text x="340" y="119" text-anchor="middle" font-size="7" font-family="sans-serif" font-weight="bold" fill="#1a1000">NUT</text>
+<polygon points="429,120 420,125 411,120 411,110 420,105 429,110" fill="#c0980a"/>
+<text x="420" y="119" text-anchor="middle" font-size="7" font-family="sans-serif" font-weight="bold" fill="#1a1000">NUT</text>
+<rect x="285" y="258" width="190" height="18" fill="#2a5060" stroke="#4aacb8" stroke-width="1"/>
+<line x1="285" y1="258" x2="330" y2="184" stroke="#4aacb8" stroke-width="1" stroke-dasharray="4 2"/>
+<line x1="475" y1="258" x2="330" y2="184" stroke="#4aacb8" stroke-width="1" stroke-dasharray="4 2"/>
+<line x1="340" y1="308" x2="340" y2="258" stroke="#aaaaaa" stroke-width="3"/>
+<circle cx="340" cy="308" r="8" fill="#888888" stroke="#cccccc" stroke-width="1"/>
+<line x1="420" y1="308" x2="420" y2="258" stroke="#aaaaaa" stroke-width="3"/>
+<circle cx="420" cy="308" r="8" fill="#888888" stroke="#cccccc" stroke-width="1"/>
+<rect x="88" y="72" width="584" height="22" fill="#2a5a3a" stroke="#50c060" stroke-width="1.5"/>
+<text x="380" y="86" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#6ada6a">Grille cap seats on top — permanently locks M5 nut pockets</text>
+<line x1="78" y1="100" x2="78" y2="240" stroke="#4aacb8" stroke-width="1"/>
+<line x1="72" y1="100" x2="84" y2="100" stroke="#4aacb8" stroke-width="1"/>
+<line x1="72" y1="240" x2="84" y2="240" stroke="#4aacb8" stroke-width="1"/>
+<text x="55" y="172" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#4aacb8">20 mm</text>
+<text x="380" y="170" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="bold" fill="#cce8ec">O88 mm cutout  |  baffle 20 mm thick</text>
+<text x="380" y="192" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#8ad4dc">RS100-4 fires upward through cutout — cone visible as dashed lines</text>
+<line x1="340" y1="114" x2="220" y2="60" stroke="#c0980a" stroke-width="0.8"/>
+<text x="218" y="55" text-anchor="end" font-size="8" font-family="sans-serif" fill="#c0980a">9.5 mm hex  4.5 mm deep (blind)</text>
+<line x1="420" y1="114" x2="540" y2="60" stroke="#c0980a" stroke-width="0.8"/>
+<text x="542" y="55" text-anchor="start" font-size="8" font-family="sans-serif" fill="#c0980a">9.5 mm hex  4.5 mm deep (blind)</text>
+<text x="285" y="330" text-anchor="start" font-size="9" font-family="sans-serif" fill="#aaaaaa">M5x25 SHCS from below (x4 total, 2 shown)</text>
+<text x="326" y="160" text-anchor="end" font-size="8" font-family="sans-serif" fill="#e07020">O5.5 thru</text>
+<rect x="0" y="468" width="760" height="52" fill="#162840"/>
+<text x="20" y="488" text-anchor="start" font-size="9" font-family="sans-serif" fill="#e07020">Orange slot: O5.5 mm bolt clearance passes through full 20 mm baffle depth</text>
+<text x="20" y="506" text-anchor="start" font-size="9" font-family="sans-serif" fill="#c0980a">Gold pocket: M5 hex nut recess  9.5 mm circumdiam x 4.5 mm deep  blind from top  — grille cap locks permanently</text>
+</svg>

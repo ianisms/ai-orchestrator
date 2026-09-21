@@ -1,0 +1,27 @@
+tool:
+  description: |
+    Manage lightweight timers and alarms for household voice workflows.
+
+    Use this for:
+    - "set a timer for 5 minutes"
+    - "how much time is left"
+    - "cancel the pasta timer"
+  params:
+    action:
+      name: "action"
+      description: |
+        Action to run.
+        Allowed values: set, status, list, cancel, clear.
+    name:
+      name: "name"
+      description: |
+        Optional timer label (e.g., "pasta", "laundry").
+    minutes:
+      name: "minutes"
+      description: |
+        Optional timer duration in minutes for action=set.
+    seconds:
+      name: "seconds"
+      description: |
+        Optional timer duration in seconds for action=set.
+

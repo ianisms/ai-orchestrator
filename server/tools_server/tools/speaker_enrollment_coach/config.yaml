@@ -1,0 +1,19 @@
+tool:
+  description: |
+    Analyze enrollment clips and provide quality coaching for speaker identity enrollment.
+  params:
+    action:
+      name: "action"
+      description: |
+        Action: analyze_clip, enrollment_readiness.
+    audio_b64:
+      name: "audio_b64"
+      description: |
+        Base64-encoded WAV PCM16 clip.
+duration_target_min_s: 2.0
+duration_target_max_s: 8.0
+max_clipping_ratio: 0.01
+min_rms_dbfs: -38.0
+min_estimated_snr_db: 10.0
+max_silence_ratio: 0.65
+

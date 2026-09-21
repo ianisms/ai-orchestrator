@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="660" viewBox="0 0 620 660">
+<rect width="620" height="660" fill="#0d1e2e"/>
+<rect x="0" y="0" width="620" height="38" fill="#1a3040"/>
+<text x="310" y="25" text-anchor="middle" font-size="13" font-family="sans-serif" font-weight="bold" fill="#cce8ec">Bottom Cap — Plan View  (looking from below)</text>
+<circle cx="310" cy="330" r="262" fill="#2d8a94" stroke="#1a5a64" stroke-width="1.5"/>
+<circle cx="310" cy="330" r="245" fill="#162840" stroke="#1a5a64" stroke-width="1"/>
+<circle cx="310" cy="330" r="245" fill="#2d5a6a" stroke="#1a5a64" stroke-width="1"/>
+<circle cx="310" cy="330" r="205" fill="#162840" stroke="#4aacb8" stroke-width="1" stroke-dasharray="4 3"/>
+<circle cx="310" cy="330" r="140" fill="#0d1520"/>
+<text x="310" y="90" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#7ac8d4">OD 150 mm</text>
+<text x="310" y="110" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#4aacb8">ID 140 mm</text>
+<text x="310" y="142" text-anchor="middle" font-size="8" font-family="sans-serif" fill="#4aacb8">RS125 flange step r=58.5 mm (dashed)</text>
+<circle cx="480" cy="500" r="10" fill="#e07020" stroke="#ffa040" stroke-width="1.5"/>
+<circle cx="140" cy="500" r="10" fill="#e07020" stroke="#ffa040" stroke-width="1.5"/>
+<circle cx="140" cy="160" r="10" fill="#e07020" stroke="#ffa040" stroke-width="1.5"/>
+<circle cx="480" cy="160" r="10" fill="#e07020" stroke="#ffa040" stroke-width="1.5"/>
+<line x1="484" y1="496" x2="550" y2="444" stroke="#e07020" stroke-width="0.8"/>
+<text x="552" y="441" text-anchor="start" font-size="9" font-family="sans-serif" fill="#e07020">x4  M5 clearance  r=68.5 mm  45 deg phase</text>
+<circle cx="534" cy="330" r="14" fill="#1e7a3a" stroke="#50c060" stroke-width="1.5"/>
+<circle cx="310" cy="554" r="14" fill="#1e7a3a" stroke="#50c060" stroke-width="1.5"/>
+<circle cx="86"  cy="330" r="14" fill="#1e7a3a" stroke="#50c060" stroke-width="1.5"/>
+<circle cx="310" cy="106" r="14" fill="#1e7a3a" stroke="#50c060" stroke-width="1.5"/>
+<line x1="538" y1="330" x2="600" y2="290" stroke="#50c060" stroke-width="0.8"/>
+<text x="602" y="287" text-anchor="start" font-size="9" font-family="sans-serif" fill="#50c060">x4  foot recess O8x3 mm  r=64 mm  0 deg phase</text>
+<line x1="310" y1="330" x2="480" y2="500" stroke="#e07020" stroke-width="0.6" stroke-dasharray="3 2"/>
+<line x1="310" y1="330" x2="534" y2="330" stroke="#50c060" stroke-width="0.6" stroke-dasharray="3 2"/>
+<line x1="298" y1="330" x2="322" y2="330" stroke="#4aacb8" stroke-width="0.8"/>
+<line x1="310" y1="318" x2="310" y2="342" stroke="#4aacb8" stroke-width="0.8"/>
+<rect x="0" y="608" width="620" height="52" fill="#162840"/>
+<text x="20" y="628" text-anchor="start" font-size="9" font-family="sans-serif" fill="#e07020">Orange: M5 bolt clearance O5.5 mm  BCD=137 mm  phase=45 deg  (4 bolts)</text>
+<text x="20" y="646" text-anchor="start" font-size="9" font-family="sans-serif" fill="#50c060">Green: Foot recess O8x3 mm deep  r=64 mm  phase=0 deg  (midway between bolts — do NOT use 45 deg phase)</text>
+</svg>

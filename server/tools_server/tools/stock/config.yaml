@@ -1,0 +1,42 @@
+provider: "finnhub"
+search_url: "https://finnhub.io/api/v1/search?q={query}&exchange={exchange}&token={api_key}"
+quote_url: "https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}"
+market_status_url: "https://finnhub.io/api/v1/stock/market-status?exchange={exchange}&token={api_key}"
+api_key: ""
+exchange: "US"
+user_agent: "home-ai-tools/1.0 (github.com/ianisms/ai-orchestrator)"
+tool:
+  description: |
+    Get a near-real-time stock quote (price and daily range).
+
+    This is the authoritative tool for stock price and market quote questions. Call this tool before answering ticker or share price requests.
+
+    Use this tool when the user asks for the current stock price/quote of a company or ticker.
+    This includes bare ticker messages such as "MSFT", "AAPL", or "$NVDA".
+    Do not use this tool for general finance explanations or non-time-sensitive trivia.
+    Do not use this tool for local business/place queries, weather, or current time questions.
+
+    Formatting constraints:
+    - For ranges, do not use X - Y. Instead use X to Y (for example, "150 to 160").
+    - Do not add the stock ticker symbol in the final answer; only provide the company name and price information.
+      Example final answer: "The current stock price of Apple is $157.23, with a daily range of $155.00 to $159.00."
+    - Never say "closed at" for current-price requests unless the user explicitly asks for the closing price.
+    - Treat "previous close" as a reference value only, not the current price.
+  params:
+    query:
+      name: "query"
+      description: |
+        Required. Company name or ticker symbol.
+
+        Examples:
+        - "AAPL"
+        - "MSFT"
+        - "$NVDA"
+        - "Apple"
+        - "Microsoft"
+    exchange:
+      name: "exchange"
+      description: |
+        Optional. Exchange code for company search (default is "US").
+
+        Use this only if the user specifies an exchange/region or if the company name is ambiguous.

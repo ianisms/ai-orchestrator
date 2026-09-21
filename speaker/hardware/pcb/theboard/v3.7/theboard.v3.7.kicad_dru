@@ -1,0 +1,73 @@
+(version 1)
+
+# JLCPCB 4-Layer Manufacturing Rules (1oz outer / 0.5oz inner)
+# Standard process: 0.1mm (4mil) min trace/space
+# Via: 0.45mm pad / 0.2mm drill minimum
+
+# Global JLCPCB minimums
+(rule "JLCPCB min clearance"
+  (condition "A.Type == 'track' || A.Type == 'via' || A.Type == 'pad'")
+  (constraint clearance (min 0.1mm))
+)
+
+(rule "JLCPCB min track width"
+  (condition "A.Type == 'track'")
+  (constraint track_width (min 0.1mm))
+)
+
+(rule "JLCPCB min via drill"
+  (condition "A.Type == 'via'")
+  (constraint hole_size (min 0.2mm))
+)
+
+(rule "JLCPCB min via annular ring"
+  (condition "A.Type == 'via'")
+  (constraint annular_width (min 0.125mm))
+)
+
+(rule "JLCPCB min hole to hole"
+  (condition "A.Type == 'via' && B.Type == 'via'")
+  (constraint hole_to_hole (min 0.25mm))
+)
+
+(rule "JLCPCB copper to edge"
+  (condition "A.Type == 'track' || A.Type == 'via' || A.Type == 'pad'")
+  (constraint edge_clearance (min 0.3mm))
+)
+
+(rule "JLCPCB solder mask dam"
+  (constraint silk_clearance (min 0.1mm))
+)
+
+# PCIe differential pair spacing
+(rule "PCIe diff pair clearance"
+  (condition "A.NetClass == 'PCIe (diff pair)' && B.NetClass != 'PCIe (diff pair)'")
+  (constraint clearance (min 0.15mm))
+)
+
+# HDMI differential pair spacing
+(rule "HDMI diff pair clearance"
+  (condition "A.NetClass == 'HDMI (diff pair)' && B.NetClass != 'HDMI (diff pair)'")
+  (constraint clearance (min 0.15mm))
+)
+
+# Power trace clearance from signals
+(rule "Power to signal clearance"
+  (condition "(A.NetClass == 'Power (high)' || A.NetClass == 'Power (in high)' || A.NetClass == 'Power (out high)') && B.NetClass != A.NetClass")
+  (constraint clearance (min 0.2mm))
+)
+
+# Footprint-specific overrides (existing)
+(rule "U2 hole size"
+  (condition "A.memberOfFootprint('U2')")
+  (constraint hole_size (min 0.1mm))
+)
+(rule "U2 clearance"
+  (condition "A.memberOfFootprint('U2') && B.memberOfFootprint('U2')")
+  (constraint clearance (min 0.1mm))
+)
+(rule "U3 clearance"
+  (condition "A.memberOfFootprint('U3') && B.memberOfFootprint('U3')")
+  (constraint clearance (min 0.1mm))
+  (constraint hole_size (min 0.1mm))
+)

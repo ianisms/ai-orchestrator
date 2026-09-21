@@ -1,0 +1,5 @@
+# Override service endpoints if they differ from env vars.
+# Falls back to LLM_BASE_URL / TTS_BASE_URL / STT_GRPC_TARGET env vars.
+#llm_url: "http://127.0.0.1:8000"
+#tts_url: "http://127.0.0.1:9001"
+#stt_target: "127.0.0.1:50051"

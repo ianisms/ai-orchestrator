@@ -1,0 +1,25 @@
+services:
+  speaker-client:
+    build:
+      context: /ai/speaker
+      dockerfile: docker/Dockerfile
+    container_name: speaker-client
+    volumes:
+      - /ai/speaker:/ai/speaker:rw
+      - /run/user/1000/pulse:/run/user/1000/pulse:rw
+      - /ai/speaker/config:/ai/speaker/config:rw
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      PULSE_SERVER: "unix:/run/user/1000/pulse/native"
+      XDG_RUNTIME_DIR: "/run/user/1000"
+      SDL_AUDIODRIVER: "alsa"
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: "/ai/speaker"
+      OPENWAKEWORD_HOME: "/ai/speaker/.cache/openwakeword"
+      PERSIST_OPENWAKEWORD_HOME: "/ai/speaker/.cache/openwakeword"
+      IMAGE_OPENWAKEWORD_HOME: "/opt/openwakeword_cache"
+    working_dir: /ai/speaker
+    command: ["python", "-u", "-m", "modules.speaker.orchestrator"]
+
+    restart: unless-stopped

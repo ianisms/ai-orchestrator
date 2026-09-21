@@ -1,0 +1,11 @@
+grpcio==1.68.1
+grpcio-tools==1.68.1
+httpx[http2]==0.27.2
+mcp==1.25.0
+pydantic>=2.11.0,<3.0.0
+pydantic-settings==2.6.1
+PyYAML==6.0.2
+prometheus_client==0.20.0
+nvidia-riva-client
+protobuf>=4.25,<6
+watchfiles==0.24.0

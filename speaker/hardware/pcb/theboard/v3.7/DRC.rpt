@@ -1,0 +1,1101 @@
+** Drc report for theboard.v3.7.kicad_pcb **
+** Created on 2026-03-19T13:18:22-0400 **
+
+** Found 285 DRC violations **
+[silk_edge_clearance]: Silkscreen clipped by board edge (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(100.9400 mm, 133.9200 mm): Segment on Edge.Cuts
+    @(56.5000 mm, 132.1475 mm): Segment of J10 on F.Silkscreen
+[silk_edge_clearance]: Silkscreen clipped by board edge (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(100.9400 mm, 133.9200 mm): Segment on Edge.Cuts
+    @(56.5000 mm, 133.9275 mm): Segment of J10 on F.Silkscreen
+[silk_edge_clearance]: Silkscreen clipped by board edge (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(100.9400 mm, 133.9200 mm): Segment on Edge.Cuts
+    @(71.5000 mm, 133.9275 mm): Segment of J10 on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.2500 mm, 112.5750 mm): PCB text 'WiFi R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.2500 mm, 108.0000 mm): PCB text 'CM5 R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(16.0000 mm, 108.2875 mm): PCB text 'WiFi
+LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(16.0000 mm, 104.5000 mm): PCB text 'CM5
+LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(16.0000 mm, 101.0000 mm): PCB text 'PWR
+in LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(19.0000 mm, 78.5000 mm): PCB text 'PWR
+in LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.2500 mm, 103.3250 mm): PCB text 'PWR in R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(16.0000 mm, 98.0000 mm): PCB text 'SW
+on LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(34.0000 mm, 120.2500 mm): PCB text 'PWR
+SW in' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(19.0000 mm, 90.2500 mm): PCB text 'SW
+on LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(42.2500 mm, 94.5000 mm): PCB text '5V Buck U1' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.5000 mm, 80.9000 mm): PCB text 'PWR in R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(53.0000 mm, 120.2500 mm): PCB text '28V
+DC in
+' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(19.0000 mm, 82.5000 mm): PCB text 'CM5
+LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.2500 mm, 99.3250 mm): PCB text 'SW on R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(57.0000 mm, 121.4025 mm): PCB text 'J10' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.5000 mm, 85.0750 mm): PCB text 'CM5 R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(19.0000 mm, 86.2500 mm): PCB text 'WiFi
+LED' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(19.2500 mm, 119.2500 mm): PCB text 'J3' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(23.7500 mm, 118.7500 mm): PCB text 'JAB5
+PWR out' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(31.6500 mm, 114.7500 mm): PCB text 'D5' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(60.5000 mm, 121.4025 mm): PCB text 'HDMI' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(33.2500 mm, 78.7500 mm): PCB text '3.3V
+Buck' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(25.5000 mm, 89.4000 mm): PCB text 'WiFi R' on F.Silkscreen
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(49.2500 mm, 121.5000 mm): Reference field of J1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(33.2500 mm, 121.7500 mm): Reference field of J2
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(74.7500 mm, 64.0250 mm): Footprint text of J7 (2242)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(94.7500 mm, 83.0250 mm): Footprint text of J7 (2260)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(75.0000 mm, 52.0250 mm): Footprint text of J7 (2230)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(74.7500 mm, 82.0250 mm): Footprint text of J7 (2260)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(94.7500 mm, 65.0250 mm): Footprint text of J7 (2242)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(74.7500 mm, 102.0250 mm): Footprint text of J7 (2280)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(80.8500 mm, 29.7750 mm): Footprint text of J7 (M.2 M Key)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(94.7500 mm, 53.0250 mm): Footprint text of J7 (2230)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(94.7500 mm, 100.5250 mm): Footprint text of J7 (2280)
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(44.5000 mm, 100.4500 mm): Reference field of R2
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(53.7500 mm, 86.5500 mm): Reference field of C17
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(44.0000 mm, 71.4250 mm): Reference field of L1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(38.7500 mm, 94.2500 mm): Reference field of R3
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(43.7500 mm, 86.5000 mm): Reference field of C4
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(44.5000 mm, 97.2500 mm): Reference field of R1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.5000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(90.0000 mm, 28.2500 mm): Reference field of C8
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(47.0000 mm, 71.2500 mm): Reference field of C20
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.6403 mm)
+    Rule: board setup constraints silk text height; warning
+    @(42.2500 mm, 111.0000 mm): Reference field of Q1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.5000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(91.5000 mm, 28.2500 mm): Reference field of C7
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(43.7500 mm, 83.5000 mm): Reference field of C16
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(49.7500 mm, 74.7500 mm): Reference field of C6
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(47.5000 mm, 97.7500 mm): Reference field of C12
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(47.0000 mm, 77.7500 mm): Reference field of R5
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(47.0000 mm, 74.0000 mm): Reference field of R4
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(95.0000 mm, 28.5000 mm): Reference field of C9
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(39.5000 mm, 83.5000 mm): Reference field of C18
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(55.8000 mm, 87.7000 mm): Reference field of C11
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(20.7500 mm, 70.0000 mm): Reference field of J8
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(40.5000 mm, 107.6950 mm): Reference field of R_GS1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(48.2500 mm, 86.8000 mm): Reference field of C3
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(38.7500 mm, 102.0000 mm): Reference field of C1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(32.7700 mm, 75.2500 mm): Reference field of C5
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(32.3600 mm, 85.7500 mm): Reference field of L2
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(27.0000 mm, 92.7125 mm): Reference field of SW on R1
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(20.0000 mm, 76.0000 mm): Reference field of J11
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(36.7500 mm, 100.5000 mm): Reference field of C14
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(36.7500 mm, 97.7500 mm): Reference field of C13
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(36.7500 mm, 95.0000 mm): Reference field of C2
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(36.7500 mm, 103.0000 mm): Reference field of C15
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(53.7500 mm, 81.7500 mm): Reference field of C10
+[text_height]: Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7000 mm)
+    Rule: board setup constraints silk text height; warning
+    @(35.2000 mm, 83.9000 mm): Reference field of C19
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.8922 mm, 86.1400 mm): Segment of C4 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.8922 mm, 86.8600 mm): Segment of C4 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(89.6400 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(90.3600 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.8600 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.1400 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0430 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.7950 mm, 113.0225 mm): Segment of Q1 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0430 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(39.8950 mm, 116.9225 mm): Segment of Q1 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.1400 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.8600 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(34.4122 mm, 74.8900 mm): Segment of C5 on F.Silkscreen
+[silk_over_copper]: Silkscreen clipped by solder mask (rule 'JLCPCB solder mask dam' clearance 0.1000 mm; actual 0.0986 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(34.4122 mm, 75.6100 mm): Segment of C5 on F.Silkscreen
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(40.0000 mm, 76.3250 mm): Pad 1 [Net-(U2-SW)] of L1 on F.Cu
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+    @(40.0000 mm, 72.1750 mm): Pad 2 [Net-(C20-Pad2)] of L1 on F.Cu
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+    @(40.0000 mm, 72.1750 mm): Pad 2 [Net-(C20-Pad2)] of L1 on F.Cu
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0400 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(40.0000 mm, 76.3250 mm): Pad 1 [Net-(U2-SW)] of L1 on F.Cu
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0791 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(90.0000 mm, 28.2500 mm): Reference field of C8
+    @(89.5400 mm, 30.3900 mm): Rectangle of C8 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0791 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.5000 mm, 28.2500 mm): Reference field of C7
+    @(91.0400 mm, 30.3900 mm): Rectangle of C7 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0567 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(47.0000 mm, 71.2500 mm): Reference field of C20
+    @(45.9600 mm, 70.8200 mm): Rectangle of C20 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0694 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(49.7500 mm, 74.7500 mm): Reference field of C6
+    @(48.0500 mm, 72.2700 mm): Rectangle of C6 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0160 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(35.2000 mm, 83.9000 mm): Reference field of C19
+    @(34.2700 mm, 83.4000 mm): Rectangle of C19 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0755 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(42.2500 mm, 94.5000 mm): PCB text '5V Buck U1' on F.Silkscreen
+    @(41.0500 mm, 94.3500 mm): Segment of U1 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0694 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(47.5000 mm, 97.7500 mm): Reference field of C12
+    @(46.9800 mm, 95.6750 mm): Rectangle of C12 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0840 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(48.2500 mm, 86.8000 mm): Reference field of C3
+    @(47.2700 mm, 90.7000 mm): Rectangle of C3 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0840 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(31.6500 mm, 114.7500 mm): PCB text 'D5' on F.Silkscreen
+    @(31.1000 mm, 115.2500 mm): Segment of D5 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0870 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(31.6500 mm, 114.7500 mm): PCB text 'D5' on F.Silkscreen
+    @(31.1000 mm, 119.7500 mm): Segment of D5 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0694 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.7500 mm, 83.5000 mm): Reference field of C16
+    @(43.2300 mm, 82.5450 mm): Rectangle of C16 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0867 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(55.8000 mm, 87.7000 mm): Reference field of C11
+    @(52.7700 mm, 90.6500 mm): Rectangle of C11 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0048 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(20.7500 mm, 64.2500 mm): PCB text 'JAB5 I2S out' on F.Silkscreen
+    @(20.1000 mm, 55.0500 mm): Rectangle of J8 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0708 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.2500 mm, 108.0000 mm): PCB text 'CM5 R' on F.Silkscreen
+    @(24.5200 mm, 107.4800 mm): Rectangle of R12A1 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0360 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.2500 mm, 103.3250 mm): PCB text 'PWR in R' on F.Silkscreen
+    @(25.9800 mm, 99.8450 mm): Rectangle of R11A1 on F.Courtyard
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0633 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(89.6400 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+    @(90.0000 mm, 29.4800 mm): Footprint text of C8 (C8)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0031 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(90.3600 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+    @(90.0000 mm, 29.4800 mm): Footprint text of C8 (C8)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.5000 mm, 28.2500 mm): Reference field of C7
+    @(91.1600 mm, 29.4800 mm): Value field of C8 (0.1uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.1400 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+    @(91.1600 mm, 29.4800 mm): Value field of C8 (0.1uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.1400 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+    @(91.5000 mm, 29.4800 mm): Footprint text of C7 (C7)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0538 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.9775 mm, 78.5877 mm): Segment of R5 on F.Silkscreen
+    @(45.5000 mm, 78.8250 mm): Footprint text of R5 (R5)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0963 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(47.0000 mm, 74.0000 mm): Reference field of R4
+    @(46.7500 mm, 75.2500 mm): Value field of R4 (31.6k)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0586 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.8600 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+    @(47.2500 mm, 72.2500 mm): Value field of C20 (0.1uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0240 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.8600 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+    @(45.5000 mm, 71.7300 mm): Footprint text of C20 (C20)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.1400 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+    @(45.5000 mm, 71.7300 mm): Footprint text of C20 (C20)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(49.7500 mm, 74.7500 mm): Reference field of C6
+    @(49.3000 mm, 75.3500 mm): Value field of C6 (22uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0865 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.9775 mm, 74.8377 mm): Segment of R4 on F.Silkscreen
+    @(45.5000 mm, 75.0750 mm): Footprint text of R4 (R4)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(92.5150 mm, 29.9613 mm): Segment of C9 on F.Silkscreen
+    @(92.6600 mm, 29.4800 mm): Value field of C7 (0.1uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(95.0000 mm, 28.5000 mm): Reference field of C9
+    @(94.9300 mm, 29.7000 mm): Value field of C9 (22uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0996 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.8600 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+    @(91.5000 mm, 29.4800 mm): Footprint text of C7 (C7)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.7275 mm, 97.4873 mm): Segment of R11A2 on F.Silkscreen
+    @(25.2500 mm, 97.2500 mm): Footprint text of R11A2 (R11A2)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.9775 mm, 79.0623 mm): Segment of R11B1 on F.Silkscreen
+    @(25.5000 mm, 78.8250 mm): Footprint text of R11B1 (R11B1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.9775 mm, 87.3873 mm): Segment of R13B1 on F.Silkscreen
+    @(25.5000 mm, 87.1500 mm): Footprint text of R13B1 (R13B1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(14.7000 mm, 84.9000 mm): Segment of J11 on F.Silkscreen
+    @(15.0000 mm, 85.0000 mm): Footprint text of J11 (J11)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0317 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(14.2000 mm, 84.9000 mm): Segment of J11 on F.Silkscreen
+    @(15.0000 mm, 85.0000 mm): Footprint text of J11 (J11)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(14.2000 mm, 85.0000 mm): Segment of J11 on F.Silkscreen
+    @(15.0000 mm, 85.0000 mm): Footprint text of J11 (J11)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(14.7000 mm, 85.1000 mm): Segment of J11 on F.Silkscreen
+    @(15.0000 mm, 85.0000 mm): Footprint text of J11 (J11)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0179 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(27.0000 mm, 92.7125 mm): Reference field of SW on R1
+    @(27.0800 mm, 92.7125 mm): Value field of SW on R1 (2.2k)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0432 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(33.0137 mm, 99.5900 mm): Segment of C14 on F.Silkscreen
+    @(33.7250 mm, 99.6000 mm): Value field of C13 (22uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0432 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(33.0137 mm, 96.8400 mm): Segment of C13 on F.Silkscreen
+    @(33.7250 mm, 96.8500 mm): Value field of C2 (22uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0771 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(33.0137 mm, 102.0900 mm): Segment of C15 on F.Silkscreen
+    @(33.7250 mm, 102.3500 mm): Value field of C14 (22uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0731 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(32.3600 mm, 85.7500 mm): Reference field of L2
+    @(33.6800 mm, 86.0000 mm): Value field of L2 (3.3uH)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0373 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(16.0000 mm, 101.0000 mm): PCB text 'PWR
+in LED' on F.Silkscreen
+    @(20.0026 mm, 101.5000 mm): Value field of D1 (PWR_IN_LED)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0759 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(16.0000 mm, 98.0000 mm): PCB text 'SW
+on LED' on F.Silkscreen
+    @(20.0000 mm, 98.0000 mm): Value field of D4 (SW_ON_LED)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0234 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.5000 mm, 97.2500 mm): Reference field of R1
+    @(44.2500 mm, 97.1550 mm): Value field of R1 (100k)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0923 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(42.4775 mm, 97.3923 mm): Segment of R1 on F.Silkscreen
+    @(43.0000 mm, 97.1550 mm): Footprint text of R1 (R1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(39.4300 mm, 86.7000 mm): Segment of L2 on F.Silkscreen
+    @(40.2500 mm, 87.5000 mm): Value field of C4 (0.47uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0993 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(46.7600 mm, 97.0144 mm): Segment of C12 on F.Silkscreen
+    @(46.2500 mm, 97.1550 mm): Footprint text of C12 (C12)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0407 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.7400 mm, 97.0144 mm): Segment of C12 on F.Silkscreen
+    @(46.2500 mm, 97.1550 mm): Footprint text of C12 (C12)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(49.6400 mm, 89.1113 mm): Segment of C17 on F.Silkscreen
+    @(49.9300 mm, 89.0000 mm): Value field of C3 (0.47uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0244 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(48.2500 mm, 86.8000 mm): Reference field of C3
+    @(48.9500 mm, 85.9250 mm): Value field of C17 (10uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0538 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(39.9123 mm, 94.9775 mm): Segment of R3 on F.Silkscreen
+    @(39.6750 mm, 95.5000 mm): Footprint text of R3 (R3)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0633 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.8922 mm, 86.1400 mm): Segment of C4 on F.Silkscreen
+    @(42.0000 mm, 86.5000 mm): Footprint text of C4 (C4)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0031 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.8922 mm, 86.8600 mm): Segment of C4 on F.Silkscreen
+    @(42.0000 mm, 86.5000 mm): Footprint text of C4 (C4)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0714 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(53.0000 mm, 120.2500 mm): PCB text '28V
+DC in
+' on F.Silkscreen
+    @(51.7500 mm, 120.5900 mm): Footprint text of J1 (PTH D1.02 +/- 0.05)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(56.5000 mm, 133.9275 mm): Segment of J10 on F.Silkscreen
+    @(64.0000 mm, 133.5425 mm): Footprint text of J10 (PCB EDGE)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0865 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.9775 mm, 83.1373 mm): Segment of R12B1 on F.Silkscreen
+    @(25.5000 mm, 82.9000 mm): Footprint text of R12B1 (R12B1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0888 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.5000 mm, 80.9000 mm): PCB text 'PWR in R' on F.Silkscreen
+    @(25.5000 mm, 78.8250 mm): Footprint text of R11B1 (R11B1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0576 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.5000 mm, 80.9000 mm): PCB text 'PWR in R' on F.Silkscreen
+    @(25.5000 mm, 82.9000 mm): Footprint text of R12B1 (R12B1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0993 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.0100 mm, 83.8844 mm): Segment of C16 on F.Silkscreen
+    @(42.5000 mm, 84.0250 mm): Footprint text of C16 (C16)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.9900 mm, 83.8844 mm): Segment of C16 on F.Silkscreen
+    @(42.1800 mm, 84.0250 mm): Value field of C18 (2.2uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0407 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.9900 mm, 83.8844 mm): Segment of C16 on F.Silkscreen
+    @(42.5000 mm, 84.0250 mm): Footprint text of C16 (C16)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0407 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(40.2400 mm, 84.1656 mm): Segment of C18 on F.Silkscreen
+    @(40.7500 mm, 84.0250 mm): Footprint text of C18 (C18)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0657 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.2600 mm, 84.1656 mm): Segment of C18 on F.Silkscreen
+    @(41.3100 mm, 83.9625 mm): Value field of C16 (2.2uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0993 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(41.2600 mm, 84.1656 mm): Segment of C18 on F.Silkscreen
+    @(40.7500 mm, 84.0250 mm): Footprint text of C18 (C18)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(55.8000 mm, 87.7000 mm): Reference field of C11
+    @(55.4300 mm, 88.9500 mm): Value field of C11 (10uF)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(14.5000 mm, 72.3000 mm): Segment of J8 on F.Silkscreen
+    @(14.5500 mm, 64.2500 mm): Footprint text of J8 (J8)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(34.4122 mm, 75.6100 mm): Segment of C5 on F.Silkscreen
+    @(34.5200 mm, 75.6350 mm): Footprint text of C5 (C5)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0547 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(18.0000 mm, 19.0000 mm): Value field of J9 (XVF3800 out)
+    @(14.7500 mm, 17.9000 mm): Value field of H1 (MountingHole)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(14.5000 mm, 56.2000 mm): Segment of J8 on F.Silkscreen
+    @(14.5500 mm, 64.2500 mm): Footprint text of J8 (J8)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.7275 mm, 110.6373 mm): Segment of R13A1 on F.Silkscreen
+    @(25.2500 mm, 110.4000 mm): Footprint text of R13A1 (R13A1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0277 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.2500 mm, 108.0000 mm): PCB text 'CM5 R' on F.Silkscreen
+    @(25.2500 mm, 106.0000 mm): Footprint text of R12A1 (R12A1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.7275 mm, 106.2373 mm): Segment of R12A1 on F.Silkscreen
+    @(25.2500 mm, 106.0000 mm): Footprint text of R12A1 (R12A1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0474 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(16.0000 mm, 104.5000 mm): PCB text 'CM5
+LED' on F.Silkscreen
+    @(19.2169 mm, 105.0000 mm): Value field of D2 (CM5_PWR_LED)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0983 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.2500 mm, 103.3250 mm): PCB text 'PWR in R' on F.Silkscreen
+    @(25.2500 mm, 101.3250 mm): Footprint text of R11A1 (R11A1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.7275 mm, 101.0877 mm): Segment of R11A1 on F.Silkscreen
+    @(25.2500 mm, 101.3250 mm): Footprint text of R11A1 (R11A1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(39.8950 mm, 116.9225 mm): Segment of Q1 on F.Silkscreen
+    @(42.3450 mm, 114.9725 mm): Value field of Q1 (Q_PMOS_GDS)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0823 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(31.0900 mm, 115.3500 mm): Segment of D5 on F.Silkscreen
+    @(34.1000 mm, 114.7500 mm): Value field of D5 (D_TVS)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.7950 mm, 113.0225 mm): Segment of Q1 on F.Silkscreen
+    @(42.3450 mm, 114.9725 mm): Value field of Q1 (Q_PMOS_GDS)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0532 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(39.9775 mm, 110.1073 mm): Segment of R_GS1 on F.Silkscreen
+    @(40.5000 mm, 109.8700 mm): Footprint text of R_GS1 (R_GS1)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.5000 mm, 100.4500 mm): Reference field of R2
+    @(44.5000 mm, 100.3750 mm): Value field of R2 (24.9k)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0538 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(42.4775 mm, 100.1377 mm): Segment of R2 on F.Silkscreen
+    @(43.0000 mm, 100.3750 mm): Footprint text of R2 (R2)
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(94.7500 mm, 83.0250 mm): Footprint text of J7 (2260)
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(74.7500 mm, 82.0250 mm): Footprint text of J7 (2260)
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 64.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(94.7500 mm, 65.0250 mm): Footprint text of J7 (2242)
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(88.7500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(88.7500 mm, 82.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0613 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(88.2500 mm, 14.5000 mm): Track [/PCIE_TX_N] on F.Cu, length 3.8891 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(85.5000 mm, 17.2500 mm): Track [/PCIE_TX_N] on F.Cu, length 1.7500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(86.0000 mm, 17.5000 mm): Track [/PCIE_TX_P] on F.Cu, length 1.5000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0623 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(88.5000 mm, 15.0000 mm): Track [/PCIE_TX_P] on F.Cu, length 3.5355 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0414 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(88.5000 mm, 15.5000 mm): Track [/PCIE_RX_N] on F.Cu, length 2.1213 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(87.0000 mm, 17.0000 mm): Track [/PCIE_RX_N] on F.Cu, length 2.0000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0799 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(88.5000 mm, 17.0000 mm): Track [/PCIE_CLK_N] on F.Cu, length 2.0000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(89.0000 mm, 16.5000 mm): Track [/PCIE_CLK_N] on F.Cu, length 0.7071 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0901 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(96.0000 mm, 16.5000 mm): Track [/PCIE_CLK_N] on F.Cu, length 7.0000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0016 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(95.7500 mm, 17.0000 mm): Track [/PCIE_CLK_P] on F.Cu, length 6.2500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(89.5000 mm, 17.0000 mm): Track [/PCIE_CLK_P] on F.Cu, length 0.7071 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(84.7500 mm, 17.2500 mm): PCB text 'NVME M.2 J7' on F.Silkscreen
+    @(89.0000 mm, 17.5000 mm): Track [/PCIE_CLK_P] on F.Cu, length 1.5000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(75.5000 mm, 17.4790 mm): Circle of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(80.8500 mm, 29.7750 mm): Footprint text of J7 (M.2 M Key)
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(80.8500 mm, 29.7750 mm): Footprint text of J7 (M.2 M Key)
+    @(87.7500 mm, 27.4450 mm): Track [/PCIE_RST] on F.Cu, length 9.6237 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(80.8500 mm, 29.7750 mm): Footprint text of J7 (M.2 M Key)
+    @(80.9950 mm, 34.7000 mm): Track [/PCIE_CLKREQ] on F.Cu, length 10.2601 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0751 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(80.8500 mm, 29.7750 mm): Footprint text of J7 (M.2 M Key)
+    @(81.0950 mm, 35.1000 mm): Track [/PCIE_PEWAKE] on F.Cu, length 10.8258 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(90.0000 mm, 28.2500 mm): Reference field of C8
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0622 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(89.6400 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+    @(90.0000 mm, 29.0000 mm): Track [+3.3V] on F.Cu, length 0.7500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0661 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(89.6400 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0724 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(90.3600 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0622 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(90.3600 mm, 29.5878 mm): Segment of C8 on F.Silkscreen
+    @(91.5000 mm, 29.0000 mm): Track [+3.3V] on F.Cu, length 1.5000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0152 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.5000 mm, 28.2500 mm): Reference field of C7
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0792 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.1400 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0622 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.1400 mm, 29.5878 mm): Segment of C7 on F.Silkscreen
+    @(91.5000 mm, 29.0000 mm): Track [+3.3V] on F.Cu, length 1.5000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0438 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(33.2500 mm, 78.7500 mm): PCB text '3.3V
+Buck' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(36.4980 mm, 76.9500 mm): Track [Net-(U2-FB)] on F.Cu, length 1.8385 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(36.4980 mm, 76.9500 mm): Track [Net-(U2-FB)] on F.Cu, length 1.8385 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(38.9250 mm, 75.2500 mm): Track [Net-(U2-SW)] on F.Cu, length 3.9250 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(36.9000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0319 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(63.3952 mm, 66.0000 mm): Arc of J6 on F.Silkscreen
+    @(64.0000 mm, 70.5457 mm): Track [Net-(J10-CK+)] on F.Cu, length 4.0959 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(63.3952 mm, 66.0000 mm): Arc of J6 on F.Silkscreen
+    @(63.0000 mm, 71.0507 mm): Track [Net-(J10-CK-)] on F.Cu, length 5.0151 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(63.3952 mm, 66.0000 mm): Arc of J6 on F.Silkscreen
+    @(66.9212 mm, 67.4605 mm): Track [Net-(J10-CK+)] on F.Cu, length 2.9210 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(63.3952 mm, 66.0000 mm): Arc of J6 on F.Silkscreen
+    @(66.5462 mm, 67.3405 mm): Track [Net-(J10-CK-)] on F.Cu, length 0.0354 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(63.3952 mm, 66.0000 mm): Arc of J6 on F.Silkscreen
+    @(66.5712 mm, 67.3155 mm): Track [Net-(J10-CK-)] on F.Cu, length 2.6311 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(63.3952 mm, 66.0000 mm): Arc of J6 on F.Silkscreen
+    @(66.5462 mm, 67.5045 mm): Track [Net-(J10-CK-)] on F.Cu, length 0.1639 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(30.3952 mm, 69.5000 mm): Segment of J6 on F.Silkscreen
+    @(59.5000 mm, 57.1552 mm): Track [Net-(J10-SDA)] on F.Cu, length 61.8448 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(30.3952 mm, 69.5000 mm): Segment of J6 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(30.3952 mm, 69.5000 mm): Segment of J6 on F.Silkscreen
+    @(59.0000 mm, 48.0000 mm): Track [Net-(J10-HPD/HEAC-)] on F.Cu, length 73.9675 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(30.3952 mm, 69.5000 mm): Segment of J6 on F.Silkscreen
+    @(58.5000 mm, 47.7500 mm): Track [Net-(J10-CEC)] on F.Cu, length 77.3520 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(30.3952 mm, 69.5000 mm): Segment of J6 on F.Silkscreen
+    @(60.0000 mm, 118.7500 mm): Track [Net-(J10-SCL)] on F.Cu, length 58.7500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(47.0000 mm, 71.2500 mm): Reference field of C20
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.0000 mm, 71.4250 mm): Reference field of L1
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 77.3500 mm): Segment of L1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(43.1000 mm, 71.1500 mm): Segment of L1 on F.Silkscreen
+    @(41.0750 mm, 73.2500 mm): Track [Net-(C20-Pad2)] on F.Cu, length 4.4250 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(47.0000 mm, 77.7500 mm): Reference field of R5
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0604 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(46.0225 mm, 78.5877 mm): Segment of R5 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.9775 mm, 78.5877 mm): Segment of R5 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0681 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(49.7500 mm, 74.7500 mm): Reference field of C6
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0473 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(49.4887 mm, 72.5150 mm): Segment of C6 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(49.4887 mm, 73.9850 mm): Segment of C6 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0644 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(47.0000 mm, 74.0000 mm): Reference field of R4
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0363 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.8600 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(45.1400 mm, 71.6222 mm): Segment of C20 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0972 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(46.0225 mm, 74.8377 mm): Segment of R4 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(44.9775 mm, 74.8377 mm): Segment of R4 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(89.8500 mm, 37.9000 mm): Track [/PCIE_RX_N] on F.Cu, length 11.5258 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(90.2750 mm, 39.1000 mm): Track [/PCIE_TX_N] on F.Cu, length 12.3390 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(89.8000 mm, 38.7000 mm): Track [/PCIE_TX_P] on F.Cu, length 12.3037 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(89.5500 mm, 36.7000 mm): Track [/PCIE_CLK_N] on F.Cu, length 10.5359 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(89.5000 mm, 37.5000 mm): Track [/PCIE_RX_P] on F.Cu, length 11.3137 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(96.2500 mm, 102.5250 mm): Segment of J7 on F.Silkscreen
+    @(89.4085 mm, 36.3000 mm): Track [/PCIE_CLK_P] on F.Cu, length 10.0289 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0078 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(88.7500 mm, 64.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(88.7500 mm, 52.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(65.4352 mm, 37.9000 mm): Track [/PCIE_RX_N] on F.Cu, length 24.4148 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(65.4352 mm, 39.1000 mm): Track [/PCIE_TX_N] on F.Cu, length 24.8398 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(70.4248 mm, 36.3000 mm): Track [/PCIE_CLK_P] on F.Cu, length 18.9837 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(71.9575 mm, 38.7000 mm): Track [/PCIE_TX_P] on F.Cu, length 17.8425 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(71.1138 mm, 37.5000 mm): Track [/PCIE_RX_P] on F.Cu, length 18.3862 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(65.4352 mm, 34.7000 mm): Track [/PCIE_CLKREQ] on F.Cu, length 15.5598 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(65.4352 mm, 36.7000 mm): Track [/PCIE_CLK_N] on F.Cu, length 24.1148 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(80.9450 mm, 34.2500 mm): Track [/PCIE_RST] on F.Cu, length 15.9450 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 24.2750 mm): Segment of J7 on F.Silkscreen
+    @(65.4352 mm, 35.1000 mm): Track [/PCIE_PEWAKE] on F.Cu, length 15.6598 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(92.5150 mm, 29.9613 mm): Segment of C9 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0934 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(93.9850 mm, 29.9613 mm): Segment of C9 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(95.0000 mm, 28.5000 mm): Reference field of C9
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(94.7500 mm, 53.0250 mm): Footprint text of J7 (2230)
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(73.2500 mm, 52.5250 mm): Segment of J7 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.5000 mm, 28.2500 mm): Reference field of C7
+    @(91.7500 mm, 28.7500 mm): Track [+3.3V] on F.Cu, length 0.3536 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(91.5000 mm, 28.2500 mm): Reference field of C7
+    @(93.2500 mm, 28.7500 mm): Track [+3.3V] on F.Cu, length 1.5000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(16.0000 mm, 101.0000 mm): PCB text 'PWR
+in LED' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0948 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.7275 mm, 97.4873 mm): Segment of R11A2 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0277 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.7725 mm, 97.4873 mm): Segment of R11A2 on F.Silkscreen
+    @(25.2500 mm, 98.0750 mm): Track [+28V_SW] on F.Cu, length 5.2500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.7725 mm, 97.4873 mm): Segment of R11A2 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(19.0000 mm, 90.2500 mm): PCB text 'SW
+on LED' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0832 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.3400 mm, 93.4396 mm): Segment of SW on R1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(17.0000 mm, 94.0600 mm): Segment of J11 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0338 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(15.2350 mm, 96.5525 mm): Segment of D4 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0289 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(13.7650 mm, 96.5525 mm): Segment of D4 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(15.2350 mm, 98.8375 mm): Segment of D4 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(15.2350 mm, 98.8375 mm): Segment of D4 on F.Silkscreen
+    @(15.7500 mm, 97.2500 mm): Track [GND] on F.Cu, length 1.2500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(15.2350 mm, 98.8375 mm): Segment of D4 on F.Silkscreen
+    @(14.5000 mm, 98.8250 mm): Track [Net-(D4-A)] on F.Cu, length 1.6000 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(19.0000 mm, 86.2500 mm): PCB text 'WiFi
+LED' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.5000 mm, 85.0750 mm): PCB text 'CM5 R' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0709 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.9775 mm, 79.0623 mm): Segment of R11B1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0277 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(26.0225 mm, 79.0623 mm): Segment of R11B1 on F.Silkscreen
+    @(25.5000 mm, 79.6500 mm): Track [+28V] on F.Cu, length 3.6500 mm
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(26.0225 mm, 79.0623 mm): Segment of R11B1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0527 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(25.5000 mm, 89.4000 mm): PCB text 'WiFi R' on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0812 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(24.9775 mm, 87.3873 mm): Segment of R13B1 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0000 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(18.5100 mm, 77.4000 mm): Segment of J11 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+[silk_overlap]: Silkscreen overlap (JLCPCB solder mask dam clearance 0.1000 mm; actual 0.0249 mm)
+    Rule: JLCPCB solder mask dam; warning
+    @(18.5100 mm, 77.7000 mm): Segment of J11 on F.Silkscreen
+    @(12.0000 mm, 12.0000 mm): Zone [GND] on F.Cu and B.Cu, priority 0
+
+** Found 0 unconnected pads **
+
+** Found 4 Footprint errors **
+[net_conflict]: No corresponding pin found in schematic.
+    Local override; warning
+    @(84.7500 mm, 102.5250 mm): PTH pad M4 [GND] of J7
+[net_conflict]: No corresponding pin found in schematic.
+    Local override; warning
+    @(84.7500 mm, 82.5250 mm): PTH pad M3 [GND] of J7
+[net_conflict]: No corresponding pin found in schematic.
+    Local override; warning
+    @(84.7500 mm, 64.5250 mm): PTH pad M2 [GND] of J7
+[net_conflict]: No corresponding pin found in schematic.
+    Local override; warning
+    @(84.7500 mm, 52.5250 mm): PTH pad M1 [GND] of J7
+
+** End of Report **

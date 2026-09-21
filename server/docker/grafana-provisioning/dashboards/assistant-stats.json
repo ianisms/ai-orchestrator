@@ -1,0 +1,148 @@
+{
+  "uid": "assistant-stats",
+  "title": "Assistant Stats",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Orchestrator Turns (uptime)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "orchestrator_turns_total"
+        }
+      ],
+      "gridPos": {
+        "x": 8,
+        "y": 12,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Orchestrator Turns (lifetime)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "orchestrator_turns_lifetime_total"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "TTS Requests (uptime)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "tts_requests_total"
+        }
+      ],
+      "gridPos": {
+        "x": 16,
+        "y": 12,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "stat",
+      "title": "TTS Requests (lifetime)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "tts_requests_lifetime_total"
+        }
+      ],
+      "gridPos": {
+        "x": 20,
+        "y": 12,
+        "w": 4,
+        "h": 4
+      }
+    },
+    {
+      "type": "table",
+      "title": "Tool Calls (uptime)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "tools_tool_calls_total",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{tool}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 6
+      }
+    },
+    {
+      "type": "table",
+      "title": "Tool Calls (lifetime)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "tools_tool_calls_lifetime_total",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{tool}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 12,
+        "h": 6
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Tokens/sec",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(vllm:prompt_tokens_total[1m])) + sum(rate(vllm:generation_tokens_total[1m]))",
+          "legendFormat": "tokens/sec"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 6
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Requests/sec",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(vllm:request_prompt_tokens_count[1m]))",
+          "legendFormat": "req/sec"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 6
+      }
+    }
+  ]
+}

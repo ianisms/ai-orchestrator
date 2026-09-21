@@ -1,0 +1,8 @@
+# Tools server component overrides (optional).
+# Values here override /ai/server/config/config.yaml when set.
+#
+# LOG_LEVEL: "INFO"
+# TOOLS_MCP_HOST: "0.0.0.0"
+# TOOLS_MCP_PORT: 9102
+# TOOLS_DIR: "/ai/server/tools_server/tools"
+# TOOLS_MCP_SERVERS_CONFIG: "/ai/server/tools_server/mcp-servers.yaml"

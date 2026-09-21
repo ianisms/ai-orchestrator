@@ -1,0 +1,30 @@
+tool:
+  description: |
+    Store and retrieve lightweight household memory entries.
+
+    Use this for persistent facts such as:
+    - "remember the guest wifi password is ... "
+    - "where did we store the spare batteries?"
+    - "forget the old garage code"
+  params:
+    action:
+      name: "action"
+      description: |
+        Action to run. Allowed values: upsert, get, delete, list, search, clear.
+    key:
+      name: "key"
+      description: |
+        Memory key (e.g., "guest_wifi", "spare_batteries").
+    value:
+      name: "value"
+      description: |
+        Memory value used with action=upsert.
+    tags:
+      name: "tags"
+      description: |
+        Optional comma-separated tags used with upsert/list/search.
+    query:
+      name: "query"
+      description: |
+        Optional freeform search text used with action=search.
+

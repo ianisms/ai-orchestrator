@@ -1,0 +1,22 @@
+# TTS component overrides (optional).
+# Values here override /ai/server/config/config.yaml when set.
+#
+# TTS_LOG_LEVEL: "INFO"
+# FASTPITCH_NEMO: "/models/assistant.fastpitch.nemo"
+# HIFIGAN_NEMO: "/models/assistant.hifigan.nemo"
+# TTS_TARGET_PEAK: 0.60
+# TTS_HIGHPASS_HZ: 45.0
+# TTS_MAX_GAIN: 3.2
+# TTS_FADE_MS: 10.0
+# TTS_TAIL_MS: 40.0
+# TTS_GATE_DB: -80
+# TTS_GATE_RATIO: 0.5
+# TTS_GATE_ATTACK_MS: 4.0
+# TTS_GATE_RELEASE_MS: 400.0
+# TTS_PITCH_SEMITONES: 0.0
+# TTS_SPEAKING_RATE: 1.0
+# TTS_SENTENCE_PAUSE_MS: 160
+# TTS_MIN_CHUNK_CHARS: 160
+# TTS_MIN_CHUNK_WORDS: 16
+# TTS_NORMALIZE_ENABLED: true
+# TTS_NORMALIZE_TIMEOUT_MS: 150

@@ -1,0 +1,110 @@
+/*
+ * Device Tree Overlay for XVF3800 + JAB5 I2S Audio
+ *
+ * Raspberry Pi 5 as I2S master (bitclock + frame master)
+ * - XVF3800 mic array: I2S slave, capture (DIN <- GPIO20)
+ * - Wondom JAB5 (ADAU1701): I2S slave, playback (DOUT -> GPIO21)
+ *
+ * GPIO Pinout:
+ *   GPIO18 (Pin 12) = BCLK
+ *   GPIO19 (Pin 35) = LRCLK / FS
+ *   GPIO20 (Pin 38) = DIN (Pi receives from XVF3800)
+ *   GPIO21 (Pin 40) = DOUT (Pi sends to JAB5)
+ *
+ * No MCLK is used.
+ *
+ * Compile:
+ *   dtc -@ -I dts -O dtb -o xvf3800-jab5-i2s.dtbo xvf3800-jab5-i2s.dts
+ *
+ * Install:
+ *   sudo cp xvf3800-jab5-i2s.dtbo /boot/firmware/overlays/
+ *
+ * config.txt:
+ *   dtparam=i2s=on
+ *   dtoverlay=xvf3800-jab5-i2s
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2712", "brcm,bcm2835";
+
+    /* Fragment 0: Enable rp1_i2s0 as clock producer (Pi is master) */
+    fragment@0 {
+        target = <&i2s_clk_producer>;
+        __overlay__ {
+            status = "okay";
+        };
+    };
+
+    /* Fragment 1: Create the codec nodes */
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            /* Playback codec: generic I2S transmitter (Pi -> JAB5) */
+            codec_playback: spdif-transmitter {
+                #sound-dai-cells = <0>;
+                compatible = "linux,spdif-dit";
+                status = "okay";
+            };
+
+            /* Capture codec: generic I2S receiver (XVF3800 -> Pi) */
+            codec_capture: spdif-receiver {
+                #sound-dai-cells = <0>;
+                compatible = "linux,spdif-dir";
+                status = "okay";
+            };
+        };
+    };
+
+    /* Fragment 2: Configure the sound card with duplex dai-links */
+    fragment@2 {
+        target = <&sound>;
+        __overlay__ {
+            compatible = "simple-audio-card";
+            simple-audio-card,name = "XVF3800-JAB5";
+            status = "okay";
+
+            /* Playback link: Pi -> JAB5 */
+            simple-audio-card,dai-link@0 {
+                reg = <0>;
+                format = "i2s";
+
+                /* Pi is master */
+                bitclock-master = <&cpu_playback>;
+                frame-master = <&cpu_playback>;
+
+                cpu_playback: cpu {
+                    sound-dai = <&i2s_clk_producer>;
+                    dai-tdm-slot-num = <2>;
+                    dai-tdm-slot-width = <32>;
+                };
+
+                codec_pb: codec {
+                    sound-dai = <&codec_playback>;
+                };
+            };
+
+            /* Capture link: XVF3800 -> Pi */
+            simple-audio-card,dai-link@1 {
+                reg = <1>;
+                format = "i2s";
+
+                /* Pi is master */
+                bitclock-master = <&cpu_capture>;
+                frame-master = <&cpu_capture>;
+
+                cpu_capture: cpu {
+                    sound-dai = <&i2s_clk_producer>;
+                    dai-tdm-slot-num = <2>;
+                    dai-tdm-slot-width = <32>;
+                };
+
+                codec_cap: codec {
+                    sound-dai = <&codec_capture>;
+                };
+            };
+        };
+    };
+};
