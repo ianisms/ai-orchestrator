@@ -1,0 +1,11 @@
+# push_notify tool configuration
+#
+# ntfy_url: base URL for ntfy server (default: https://ntfy.sh)
+# ntfy_topic: topic name to publish to — REQUIRED (or set NTFY_TOPIC env var)
+# ntfy_token: bearer auth token for private topics / self-hosted (or set NTFY_TOKEN env var)
+# default_priority: 3  (1=min, 2=low, 3=default, 4=high, 5=urgent)
+#
+# ntfy_url: "https://ntfy.sh"
+# ntfy_topic: ""
+# ntfy_token: ""
+# default_priority: 3

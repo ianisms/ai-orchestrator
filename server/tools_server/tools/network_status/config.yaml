@@ -1,0 +1,22 @@
+tool:
+  description: |
+    Report quick network health for the host running the tools server.
+
+    Use this when the user asks:
+    - "is the internet down?"
+    - "how is the network?"
+    - "check connectivity"
+  params:
+    action:
+      name: "action"
+      description: |
+        Action to run. Allowed values: summary, internet, dns, gateway.
+    target:
+      name: "target"
+      description: |
+        Optional host for internet checks (default: 1.1.1.1).
+    timeout_ms:
+      name: "timeout_ms"
+      description: |
+        Optional timeout in milliseconds for connectivity checks (default: 1200).
+

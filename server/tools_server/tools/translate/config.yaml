@@ -1,0 +1,22 @@
+tool:
+  description: |
+    Translate text or a phrase into another language using Google Translate.
+
+    Use this when the user asks:
+    - "How do you say X in Spanish?"
+    - "Translate 'good morning' to French"
+    - "What is 'merci' in English?"
+    - "How do I say thank you in Japanese?"
+  params:
+    text:
+      description: The word, phrase, or sentence to translate.
+    target_language:
+      description: |
+        The language to translate into. Accepts full language names (Spanish, French,
+        Japanese, Mandarin) or ISO 639-1 codes (es, fr, ja, zh). Defaults to English
+        if not specified.
+    source_language:
+      description: |
+        Optional. The language of the input text. If omitted, it is auto-detected.
+
+# google_api_key: ""  # falls back to GOOGLE_API_KEY env var

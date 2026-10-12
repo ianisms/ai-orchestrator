@@ -1,0 +1,27 @@
+tool:
+  description: |
+    Enroll and identify household speakers from short WAV clips.
+
+    Backend uses NVIDIA NeMo speaker embeddings and cosine similarity.
+    Recommended clip length: 2 to 8 seconds of clean speech.
+  params:
+    action:
+      name: "action"
+      description: |
+        Action: enroll, identify, verify, delete_enrollment, list_enrollments, clear_enrollments.
+    profile_id:
+      name: "profile_id"
+      description: |
+        Profile identifier for enroll/verify/delete.
+    audio_b64:
+      name: "audio_b64"
+      description: |
+        Base64-encoded WAV audio bytes.
+    threshold:
+      name: "threshold"
+      description: |
+        Optional cosine similarity threshold for identify/verify. Default 0.78.
+model_name: "medium"
+device: "auto"
+default_threshold: 0.78
+max_enrollment_samples: 8

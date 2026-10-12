@@ -1,0 +1,4 @@
+fastapi
+uvicorn[standard]
+numpy
+nemo_text_processing==1.1.0

@@ -1,0 +1,452 @@
+services:
+  #   #   nofile:
+  #   #     soft: 1048576
+  #   #     hard: 1048576
+
+  #   # ulimits:
+  #   environment:
+  #     # NVIDIA settings
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+  #     # NGC / NIM settings
+  #     - NGC_API_KEY=${NGC_API_KEY}
+  #     - NIM_SERVED_MODEL_NAME=nemotron
+  #     - NIM_KVCACHE_PERCENT=0.70
+
+  #     # HF cache dirs
+  #     - HF_HOME=/opt/hf-cache
+  #     # - TRANSFORMERS_CACHE=/opt/hf-cache/transformers
+  #     - HF_HUB_CACHE=/opt/hf-cache/hub
+  #     - HF_MODULES_CACHE=/opt/hf-cache/modules
+
+  #     # (Optional) if anything respects XDG
+  #     - XDG_CACHE_HOME=/opt/xdg-cache
+
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/health/ready', timeout=3).read()\""]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 30
+  #     start_period: 5m
+
+  #   ports:
+  #     - "8000:8000"
+
+  #   volumes:
+  #     # NIM cache
+  #     - /ai/server/llm/.nim-cache:/opt/nim/.cache
+
+  #     # vLLM torch compile cache
+  #     - /ai/server/llm/ubuntu/.cache:/home/ubuntu/.cache
+
+  #     # HF cache
+  #     - /ai/server/llm/.hf-cache:/opt/hf-cache
+
+  #     # XDG cache
+  #     - /ai/server/llm/.xdg-cache:/opt/xdg-cache
+
+  # llm:
+  #   # image: nvcr.io/nim/nvidia/nemotron-3-nano:1.5
+  #   # image: nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:latest
+  #   # image: nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+  #   container_name: llm
+  #   restart: unless-stopped
+
+  #   gpus: all
+  #   ipc: host
+  #   shm_size: "64g"
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    pid: host
+
+    environment:
+      - DOCKER_API_VERSION=1.44
+
+    ports:
+      - "8080:8080"
+
+    command:
+      - "--docker=unix:///var/run/docker.sock"
+      - "--docker_only=true"
+
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:rw"
+      - "/run/containerd/containerd.sock:/run/containerd/containerd.sock:rw"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker/:/var/lib/docker:ro"
+
+  dcgm-exporter:
+    image: nvidia/dcgm-exporter:4.4.2-4.7.1-ubuntu22.04
+    container_name: dcgm-exporter
+    restart: unless-stopped
+
+    ports:
+      - "9400:9400"
+
+    gpus: all
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    restart: unless-stopped
+    user: "0"
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+
+    volumes:
+      - "/ai/server/grafana:/var/lib/grafana"
+      - "/ai/server/docker/grafana-provisioning:/etc/grafana/provisioning:ro"
+
+    depends_on:
+      - loki
+
+  llm:
+    image: vllm/vllm-openai:glm5 # vllm/vllm-openai:nightly # nvcr.io/nvidia/vllm:26.01-py3
+    container_name: llm
+    restart: unless-stopped
+
+    gpus: all
+    ipc: host
+    shm_size: "64g"
+
+    network_mode: host
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - VLLM_LOGGING_LEVEL=${VLLM_LOGGING_LEVEL:-INFO}
+      - VLLM_TUNED_CONFIG_FOLDER=/opt/vllm-tuned-configs
+
+      # HF cache dirs
+      - HF_HOME=/root/.cache/huggingface
+      - HF_HUB_CACHE=/root/.cache/huggingface/hub
+      - HF_MODULES_CACHE=/root/.cache/huggingface/modules
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface/transformers
+      - XDG_CACHE_HOME=/root/.cache
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+
+    volumes:
+      - /ai/server/llm/.hf-cache:/root/.cache/huggingface
+      - /ai/server/llm/.vllm-cache:/root/.cache/vllm
+      - /ai/server/llm/.torch-cache:/root/.cache/torch
+      - /ai/server/llm/local-models:/ai/server/llm/local-models:ro
+      - /ai/server/llm/moe-configs:/opt/vllm-tuned-configs:ro
+      - /ai/server/llm/chat-templates:/ai/server/llm/chat-templates:ro
+    command:
+      [
+        "/ai/server/llm/local-models/qwen3-30b-a3b", #"zai-org/GLM-4.7-Flash", #"Qwen/Qwen3-30B-A3B-Instruct-2507", #"openai/gpt-oss-120b", #"Qwen3-30B-A3B-Instruct-2507-FP8",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--dtype", "bfloat16",
+        "--max-model-len", "32768",
+        "--gpu-memory-utilization", "0.85",
+        "--kv-cache-dtype", "auto",
+        "--enable-auto-tool-choice",
+        # "--enable-reasoning",
+        "--reasoning-parser", "qwen3", #"glm45", #"openai_gptoss",
+        "--tool-call-parser", "qwen3_xml", #"qwen3_json", #"glm47", #"glm45", #"openai",
+        "--trust-remote-code",
+        "--disable-log-requests",
+        "--disable-log-stats",
+        "--enable-chunked-prefill",
+        "--enable-prefix-caching",
+        # "--chat-template", "/ai/server/llm/chat-templates/qwen3_tools.jinja",
+        # "--chat-template-content-format", "string",
+        # "--speculative-config.method", "mtp",
+        # "--speculative-config.num_speculative_tokens", "1",
+        "--async-scheduling"
+      ]
+
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/models', timeout=3).read()\""]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 5m
+
+  loki:
+    image: grafana/loki:2.9.6
+    container_name: loki
+    restart: unless-stopped
+    user: "0"
+
+    ports:
+      - "3100:3100"
+
+    command:
+      - "-config.file=/etc/loki/config.yaml"
+
+    volumes:
+      - "/ai/server/docker/loki-config.yaml:/etc/loki/config.yaml:ro"
+      - "/ai/server/loki:/loki"
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    restart: unless-stopped
+
+    ports:
+      - "9100:9100"
+
+    volumes:
+      - "/proc:/host/proc:ro"
+      - "/sys:/host/sys:ro"
+      - "/:/rootfs:ro"
+
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
+  orchestrator:
+    build:
+      context: /ai/server/modules/orchestrator/docker
+      dockerfile: Dockerfile.orchestrator
+    container_name: orchestrator
+    restart: unless-stopped
+
+    network_mode: host
+
+    volumes:
+      - /ai/server:/ai/server
+
+    working_dir: /ai/server/modules/orchestrator
+
+    environment:
+      - ORCH_CONFIG_PATH=/ai/server/config/config.yaml
+      - ENABLE_STORED_HISTORY=${ENABLE_STORED_HISTORY:-false}
+      - LLM_PROMPT_PATH=/ai/server/config/prompt.md
+      - STT_GRPC_TARGET=127.0.0.1:50051
+      - LLM_BASE_URL=http://127.0.0.1:8000
+      - TTS_BASE_URL=http://127.0.0.1:9001
+      - TOOLS_MCP_URL=http://127.0.0.1:9102/mcp
+
+    depends_on:
+      llm:
+        condition: service_healthy
+      stt:
+        condition: service_healthy
+      tts:
+        condition: service_healthy
+      tools:
+        condition: service_healthy
+
+    ipc: host
+    shm_size: "2g"
+    user: "${UID:-1000}:${GID:-1000}"
+    # Generate gRPC stubs with container's grpcio-tools before running.
+    command: ["sh", "-lc", "/ai/server/modules/orchestrator/run_orchestrator.sh"]
+
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request, urllib.error, sys; u='http://127.0.0.1:9111/readyz';\ntry:\n r=urllib.request.urlopen(u, timeout=2)\n sys.exit(0 if r.getcode()==200 else 1)\nexcept Exception:\n sys.exit(1)\""
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    restart: unless-stopped
+    user: "0"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - "/ai/server/docker/prometheus.yaml:/etc/prometheus/prometheus.yml:ro"
+      - "/ai/server/prometheus:/prometheus"
+
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+
+  promtail:
+    image: grafana/promtail:3.6.3
+    container_name: promtail
+    restart: unless-stopped
+    user: "0"
+
+    environment:
+      - DOCKER_API_VERSION=1.44
+
+    command:
+      - "-config.file=/etc/promtail/config.yaml"
+
+    volumes:
+      - "/ai/server/docker/promtail-config.yaml:/etc/promtail/config.yaml:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+
+    depends_on:
+      - loki
+
+  stt:
+    image: nvcr.io/nim/nvidia/parakeet-0-6b-ctc-en-us:3.1.0
+    container_name: stt
+    restart: unless-stopped
+
+    runtime: nvidia
+    gpus: all
+    ipc: host
+    shm_size: "12g"
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - NGC_API_KEY=${NGC_API_KEY}
+      - NIM_TAGS_SELECTOR=name=parakeet-0-6b-ctc-en-us,bs=1,mode=str,diarizer=disabled,vad=default
+
+    ports:
+      - "9000:9000"   # HTTP
+      - "50051:50051" # gRPC (streaming)
+
+    volumes:
+      - /ai:/ai
+      - /ai/server/stt/nim:/opt/nim/.cache
+      - ${HOME}/.cache:/root/.cache
+
+    depends_on:
+      llm:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/v1/health/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  tools:
+    build:
+      context: "/ai/server/tools_server"
+      dockerfile: "Dockerfile.tools"
+    container_name: tools
+    restart: unless-stopped
+
+    network_mode: host
+
+    environment:
+      - TOOLS_MCP_HOST=0.0.0.0
+      - TOOLS_MCP_PORT=9102
+      - TOOLS_DIR=/app/tools
+      - TOOLS_CONFIG_PATH=/app/config.yaml
+      - TOOLS_MCP_SERVERS_CONFIG=/app/mcp-servers.yaml
+      - TOOLS_STATS_PATH=/app/state/tools_stats.json
+      - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - NEWSDATA_API_KEY=${NEWSDATA_API_KEY}
+      - HOMEASSISTANT_TOKEN=${HOMEASSISTANT_TOKEN}
+
+    volumes:
+      - "/ai/server/tools_server:/app"
+      - "/ai/server/state:/app/state"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9102/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  tts:
+    build:
+      context: "/ai/server/tts/docker"
+      dockerfile: "Dockerfile.server.tts"
+    container_name: tts
+    restart: unless-stopped
+
+    gpus: all
+    ipc: host
+    shm_size: "12g"
+
+    network_mode: host
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - TTS_ABBREV_FILE=/app/config/abbrev.yaml
+      - PYTHONPATH=/app
+      - TTS_TARGET_PEAK=0.50
+      - TTS_HIGHPASS_HZ=40
+      - TTS_MAX_GAIN=3.2
+      - TTS_FADE_MS=20
+      - TTS_TAIL_MS=80
+      - TTS_GATE_DB=-60
+      - TTS_GATE_RATIO=1.2
+      - TTS_GATE_ATTACK_MS=4
+      - TTS_GATE_RELEASE_MS=700
+      - TTS_LOG_LEVEL=DEBUG
+      # - TTS_TARGET_PEAK=0.48          # Lower from 0.56 → softer, less peaky (more breathy/intimate)
+      # - TTS_HIGHPASS_HZ=35            # Lower from 45 → keep more low-end warmth/rumble (Assistant has depth)
+      # - TTS_MAX_GAIN=2.8              # Lower from 3.2 → prevent over-amplification/ harshness
+      # - TTS_FADE_MS=12                # Longer fade-in → smoother, less abrupt starts (breathier)
+      # - TTS_TAIL_MS=60                # Longer tail → natural decay, more lingering warmth
+      # - TTS_SENTENCE_PAUSE_MS=220     # Longer pauses → relaxed, thoughtful pacing
+      # # Gating: Keep aggressive to reduce noise/breath artifacts if needed, but loosen for breathiness
+      # - TTS_GATE_DB=-75               # Slightly higher threshold → allow more subtle breaths
+      # - TTS_GATE_RATIO=1.2            # Mild compression → subtle warmth without squashing
+      # - TTS_GATE_ATTACK_MS=6          # Slower attack → preserve breath onsets
+      # - TTS_GATE_RELEASE_MS=500       # Longer release → smoother tails
+      - TTS_STATS_PATH=/app/state/tts_stats.json
+      # - FASTPITCH_NEMO=/models/tts_en_multispeaker_fastpitchhifigan_v1.10.0/tts_en_fastpitch_multispeaker.nemo
+      # - HIFIGAN_NEMO=/models/tts_en_multispeaker_fastpitchhifigan_v1.10.0/tts_en_hifitts_hifigan_ft_fastpitch.nemo
+      # - TTS_SPEAKER_ID=8051
+      # - TTS_SPEAKER_ID=${TTS_SPEAKER_ID}
+
+    volumes:
+      - "/ai/server/tts/server:/app/server"
+      - "/ai/server/tts/config:/app/config:ro"
+      - "/ai/server/tts/models:/models:ro"
+      - "/ai/server/logs/tts:/app/logs"
+      - "/ai/server/state:/app/state"
+
+    working_dir: /app
+    command:
+      [
+        "uvicorn",
+        "server.app:app",
+        "--host", "0.0.0.0",
+        "--port", "9001",
+        "--log-config", "/app/config/logging.ini",
+        "--log-level", "debug"
+      ]
+
+    depends_on:
+      llm:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9001/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s

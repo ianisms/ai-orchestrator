@@ -1,0 +1,99 @@
+provider: "newsdata"
+api_key: ""
+language: "en"
+country: "us"
+default_categories: "breaking,business,technology,top"
+allowed_categories:
+  - politics
+  - science
+  - environment
+  - health
+user_agent: "home-ai-tools/1.0"
+blocked_sources:
+  - eonline.com
+  - tmz.com
+  - pagesix.com
+  - dailymail.co.uk
+  - people.com
+  - usmagazine.com
+  - buzzfeed.com
+tool:
+  description: |
+    Get latest news headlines prioritized by breaking news and source authority.
+
+    This is the authoritative tool for latest/today news requests. Call this tool before answering current-news questions.
+
+    Use this tool when the user asks for today's/latest news or news about a topic, company, person, or event.
+    Do not use this tool for general knowledge questions.
+
+    Defaults:
+    - If no query is provided, returns the latest top headlines from top-authority news sources.
+    - Default categories are breaking news, business, technology, and top stories.
+    - Sports, entertainment, food, health, lifestyle, and other categories are excluded unless the user specifically asks (e.g. "sports news", "entertainment news", "food news").
+    - Default country is "us" and default language is "en".
+    - Results are prioritized by source domain authority and recency — breaking news from major outlets appears first.
+
+    Output format:
+    - Headlines are bulleted and attributed to their source with a relative publish time.
+    - Each headline includes the source name, when it was published, the title, and a brief description.
+    - Example: "From CNN, published 2 hours ago: Title of the article: Brief description of the article."
+
+    When presenting news to the user:
+    - Present ALL returned headlines. Do not skip or omit any.
+    - Present each headline as formatted in the tool output — preserve the source attribution, publish time, title, and description.
+    - Lead with the most important or breaking stories first.
+    - Deliver the headlines naturally as a spoken summary.
+    - Always attribute the source for each headline (e.g. "From the Wall Street Journal...", "According to CNN...", "NBC is reporting...").
+    - Include enough context from the description so the listener understands the story without needing to read it.
+    - Do not just read the title. Use the description to add context.
+  params:
+    query:
+      name: "query"
+      description: |
+        Optional. Topic or keywords to search for.
+
+        Leave blank to get the latest top headlines.
+
+        Examples:
+        - "Microsoft"
+        - "AI safety"
+        - "Springfield, IL"
+    limit:
+      name: "limit"
+      description: |
+        Optional. Number of headlines to return.
+        Default is 10. Minimum is 5. Maximum is 10.
+    category:
+      name: "category"
+      description: |
+        Optional. Category filter. Only use when the user explicitly asks for a specific category.
+
+        Valid values (up to 5 comma-separated):
+        breaking, business, crime, domestic, education, entertainment, environment,
+        food, health, lifestyle, politics, science, sports, technology, top, tourism, world.
+
+        Default categories (breaking, business, technology, top) are used automatically.
+        Only pass this parameter when the user asks for a non-default category like "sports news", "entertainment news", or "food news".
+
+        Examples:
+        - "sports" for sports news
+        - "entertainment" for entertainment news
+        - "health,science" for health and science news
+    country:
+      name: "country"
+      description: |
+        Optional. 2-letter country code (default "us").
+        Pass "global" for worldwide headlines (omits country filter).
+
+        Examples:
+        - "us"
+        - "gb"
+        - "global"
+    language:
+      name: "language"
+      description: |
+        Optional. 2-letter language code (default "en").
+
+        Examples:
+        - "en"
+        - "es"

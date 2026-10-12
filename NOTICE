@@ -1,0 +1,14 @@
+ai-orchestrator
+Copyright (c) 2025-2026 Ian N. Bennett. All rights reserved except as granted in LICENSE.
+
+This repository is source available for review under the PolyForm Strict License 1.0.0 (see LICENSE).
+Any other use, including copying, modifying, distributing, or using any part of it in a product or
+service, requires prior written permission from the author (ian@bennett.codes).
+
+No trademark rights are granted.
+
+Third-party components keep their own licenses:
+- server/modules/stt/protos/riva_asr.proto, riva_audio.proto and riva_common.proto are copied from
+  nvidia-riva/common, Copyright NVIDIA Corporation, under the MIT License (SPDX headers in each file).
+- Python dependencies installed from requirements files are licensed by their respective authors and
+  are not redistributed here.

@@ -1,0 +1,18 @@
+tool:
+  description: |
+    Fast audio gate for turn-level quality checks before expensive STT/ID operations.
+  params:
+    action:
+      name: "action"
+      description: |
+        Action: check_turn_audio.
+    audio_b64:
+      name: "audio_b64"
+      description: |
+        Base64-encoded WAV PCM16 clip.
+min_duration_s: 0.35
+max_clipping_ratio: 0.02
+min_rms_dbfs: -45.0
+min_estimated_snr_db: 6.0
+max_silence_ratio: 0.80
+

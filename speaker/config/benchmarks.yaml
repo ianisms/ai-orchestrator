@@ -1,0 +1,45 @@
+profiles:
+  latency:
+    mic_frame_ms: 20
+    vad_silence_hangover_ms: 320
+    capture_skip_playback_ms: 900
+    settle_silence_ms: 160
+    settle_max_ms: 800
+    min_capture_ms: 400
+    playback_guard_ms: 200
+    stream_log_every_n: 100
+  balanced:
+    mic_frame_ms: 20
+    vad_silence_hangover_ms: 450
+    capture_skip_playback_ms: 1200
+    settle_silence_ms: 400
+    settle_max_ms: 2000
+    min_capture_ms: 600
+    playback_guard_ms: 300
+    stream_log_every_n: 50
+  robust:
+    mic_frame_ms: 20
+    vad_silence_hangover_ms: 650
+    capture_skip_playback_ms: 1500
+    settle_silence_ms: 550
+    settle_max_ms: 3000
+    min_capture_ms: 800
+    playback_guard_ms: 450
+    stream_log_every_n: 30
+  noisy:
+    # For high-background-noise environments (kitchen, TV, open-plan).
+    # Higher VAD ceiling and ceiling_high let the adaptive threshold track louder
+    # noise floors so speech is still detected with good SNR margin.
+    mic_frame_ms: 20
+    vad_silence_hangover_ms: 600
+    vad_adaptive_ceiling: 550.0
+    vad_adaptive_ceiling_high: 1100.0
+    vad_adaptive_high_noise_threshold: 220.0
+    vad_adaptive_margin: 2.0
+    vad_noise_ema_alpha: 0.05
+    capture_skip_playback_ms: 1500
+    settle_silence_ms: 500
+    settle_max_ms: 3000
+    min_capture_ms: 700
+    playback_guard_ms: 400
+    stream_log_every_n: 50

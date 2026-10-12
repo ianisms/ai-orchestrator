@@ -1,0 +1,29 @@
+FROM nvcr.io/nvidia/nemo:25.11.01
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    sox \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install server dependencies
+
+RUN pip install --no-cache-dir \
+    fastapi uvicorn[standard] \
+    grpcio grpcio-tools \
+    numpy \
+    prometheus_client \
+    pyyaml
+
+# DO NOT copy server/ — it will be mounted
+ENV PYTHONPATH=/app
+
+ENV FASTPITCH_NEMO=/models/assistant.fastpitch.nemo
+ENV HIFIGAN_NEMO=/models/assistant.hifigan.nemo
+ENV HTTP_HOST=0.0.0.0
+ENV HTTP_PORT=8000
+
+EXPOSE 8000 50051
+CMD ["python", "-m", "server.app"]

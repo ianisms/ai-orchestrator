@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Generated gRPC stubs (regenerated at build time)
+*_pb2.py
+*_pb2_grpc.py
+.gen/
+
+# Runtime state, logs, secrets
+.env
+*.env
+logs/
+*.log
+state/
+*.sqlite3*
+*.wav
+
+# Model weights and caches (never committed)
+server/llm/
+server/tts/models/
+server/stt/nim/
+*.nemo
+*.safetensors
+.hf-cache/
+
+# KiCad tool state and generated exports
+fp-info-cache
+*.kicad_prl
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*-backups/
+*.bak
+*.bak_*
+
+# IDE and AI-assistant session files
+.vscode/
+.idea/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+NEXT-PROMPT.md
+speaker/pi-release/

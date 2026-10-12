@@ -1,0 +1,128 @@
+provider: "google_places"
+text_search_url: "https://places.googleapis.com/v1/places:searchText"
+places_base_url: "https://places.googleapis.com/v1/places"
+place_summary_url: "https://places.googleapis.com/v1/places/{place_id}"
+api_key: ""
+limit: 5
+max_api_results: 20
+user_agent: "home-ai-tools/1.0 (github.com/ianisms/ai-orchestrator)"
+default_location: ""
+append_default_location_when_missing: true
+tools:
+  places:
+    description: |
+      Find places (restaurants, shops, attractions, services) using Google Places text search.
+
+      Use this tool when the user asks for places to go or things to do, like:
+      - "best sushi in Springfield, IL"
+      - "coffee near Central Park"
+      - "Spicy vegetarian food in Sydney, Australia"
+      - "closest pharmacy"
+      - "open now pizza"
+
+      Trigger phrases:
+      - "near me"
+      - "closest"
+      - "open now"
+      - "best [category] in [city]"
+
+      Do not use this tool for:
+      - weather or forecast questions
+      - stock prices, finance quotes, or tickers
+      - current time or timezone questions
+      - general knowledge questions
+
+      Output: a ranked list of places with name, address, star rating, AI place summary, and AI review summary.
+    params:
+      query:
+        name: "query"
+        description: |
+          Required. Freeform search query describing what to find and where.
+
+          Examples:
+          - "best sushi in Springfield, IL"
+          - "pizza near 100 Main St, Springfield, IL"
+          - "Spicy vegetarian food in Sydney, Australia"
+      max_results:
+        name: "max_results"
+        description: |
+          Optional. Maximum number of places to return.
+          Default is 5.
+      sort_order:
+        name: "sort_order"
+        description: |
+          Optional. Sort order for results.
+          - "rating" (default): best-rated first
+          - "relevance": closest match to the query text
+
+          Default is "rating".
+  local_places_search:
+    description: |
+      Preferred tool for local place discovery around the user's area.
+
+      Use this when the user asks "near me", "closest", "open now", or "best [category] in [city]".
+      Examples:
+      - "coffee near me"
+      - "closest gas station"
+      - "open now grocery store"
+      - "best tacos in Austin"
+      - "family friendly park nearby"
+
+      Do not use this tool for:
+      - weather or forecast
+      - stock prices or company quotes
+      - current time
+      - news lookups
+    params:
+      query:
+        name: "query"
+        description: |
+          Required. Freeform local search query.
+
+          Examples:
+          - "coffee near me"
+          - "closest pharmacy"
+          - "best brunch in Seattle"
+      max_results:
+        name: "max_results"
+        description: |
+          Optional. Maximum number of places to return.
+          Default is 5.
+      sort_order:
+        name: "sort_order"
+        description: |
+          Optional. Sort order for results.
+          - "rating" (default): best-rated first
+          - "relevance": closest match to query text
+
+          Default is "rating".
+  place_summary:
+    description: |
+      Get the AI place summary and AI review summary for a specific Google Place ID.
+
+      Use this tool only if you already have a Place ID.
+      (Most flows should use the places tool, which already returns summaries for each result.)
+    params:
+      place_id:
+        name: "place_id"
+        description: |
+          Required. Google Place ID.
+  place_details:
+    description: |
+      Get full details for a specific place by Google Place ID.
+      Returns hours, full review text, description, cuisine type, dining services, atmosphere, and a comprehensive summary.
+
+      Use this after local_places_search when the user wants to know more about a specific place, such as:
+      - "tell me more about that first restaurant"
+      - "what are the hours for that place"
+      - "what do people say about it in reviews"
+      - "do they have outdoor seating"
+      - "is it good for groups"
+      - "do they serve wine"
+
+      Do not use this tool without a Place ID. Use local_places_search first to get Place IDs.
+    params:
+      place_id:
+        name: "place_id"
+        description: |
+          Required. Google Place ID returned by local_places_search.

@@ -1,0 +1,27 @@
+tool:
+  description: |
+    Manage household user profiles and preferences.
+
+    Use this to persist preferences for voice interactions.
+  params:
+    action:
+      name: "action"
+      description: |
+        Action: upsert, get, delete, list, set_active, get_active.
+    profile_id:
+      name: "profile_id"
+      description: |
+        Profile identifier, such as "alice" or "guest".
+    display_name:
+      name: "display_name"
+      description: |
+        Optional display name for upsert.
+    preferences_json:
+      name: "preferences_json"
+      description: |
+        Optional JSON object string for preferences.
+    role:
+      name: "role"
+      description: |
+        Optional role string, such as owner, adult, child, guest.
+

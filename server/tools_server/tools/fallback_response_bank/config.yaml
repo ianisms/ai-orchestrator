@@ -1,0 +1,23 @@
+tool:
+  description: |
+    Manage short fallback response templates by category.
+
+    Use this when primary responses fail or services are degraded.
+  params:
+    action:
+      name: "action"
+      description: |
+        Action: get, list, upsert, delete, reset_defaults, clear.
+    category:
+      name: "category"
+      description: |
+        Category name, such as generic, network, tools, stt, tts, llm.
+    text:
+      name: "text"
+      description: |
+        Fallback text for upsert.
+    index:
+      name: "index"
+      description: |
+        Optional zero-based index for get/delete specific entry.
+

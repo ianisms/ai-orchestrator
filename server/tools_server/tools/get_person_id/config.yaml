@@ -1,0 +1,44 @@
+tool:
+  description: |
+    Identify who is speaking in the current turn, using turn audio captured by the
+    orchestrator.
+
+    ALWAYS call this tool before accessing any per-person resource (calendar,
+    reminders, preferences) when the tool description says person_id is required.
+
+    Call with no arguments first.  If the person cannot be identified biometrically,
+    the tool will tell you to ask the user their name and call again with stated_name.
+
+    Use this when:
+    - A tool you are about to call requires a person_id parameter.
+    - The user asks something like "what's on my calendar?" or "set a reminder for me".
+    - You need to personalise a response and do not yet know who is speaking.
+
+    Do NOT call this tool for general questions that do not require identity.
+  params:
+    session_id:
+      description: |
+        The session_id value from the current [AUDIO_REF] context tag.
+    audio_id:
+      description: |
+        The audio_id value from the current [AUDIO_REF] context tag.
+    stated_name:
+      description: |
+        If the person just told you their name (e.g. "I'm Alice"), pass the name here
+        to enroll and cache their voice.  Omit on the first call.
+
+# Path where the orchestrator writes per-turn WAV files.
+# tools_server mounts /ai/server/state as /app/state.
+audio_dir: "/app/state/client_audio"
+
+# Reuse the person_identity profile store.
+state_file: "/app/state/speaker_identity.json"
+
+# Session cache — remembers identified persons within a session TTL.
+session_db: "/app/state/person_sessions.sqlite3"
+
+# Biometric match confidence required to accept identification.
+confidence_threshold: 0.78
+
+# Session cache TTL in seconds (1 hour).
+session_ttl_s: 3600

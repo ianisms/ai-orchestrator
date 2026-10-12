@@ -1,0 +1,20 @@
+tool:
+  description: |
+    Get the current time.
+
+    This is the authoritative tool for current time/timezone questions. Call this tool before answering time requests.
+
+    Use this tool when the user asks for the time.
+    Use this tool for prompts like "what time is it", "time in New York", or "current time".
+    If no timezone is provided, it returns the server's local time.
+    Do not use this tool for weather, stock prices, or place/business search.
+
+    Tips:
+    - Prefer IANA timezone names for accuracy (e.g., "America/New_York").
+  params:
+    timezone_abbr:
+      name: "timezone_abbr"
+      description: |
+        Optional. Timezone abbreviation (e.g., "EST", "PST", "GMT") or an IANA timezone name (e.g., "America/New_York").
+
+        Default: server local time.

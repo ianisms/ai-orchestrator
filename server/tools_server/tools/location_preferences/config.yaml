@@ -1,0 +1,28 @@
+db_file: "/app/state/location_preferences.sqlite3"
+
+tool:
+  description: |
+    Manage the user's default location for local search queries.
+
+    Typical usage:
+    - resolve_query: decide if a query already contains location or needs one.
+    - set_default: save a default location.
+    - get_default: read the current default location.
+    - clear_default: remove the saved default location.
+  params:
+    action:
+      name: "action"
+      description: |
+        Action to run. Allowed values: resolve_query, set_default, get_default, clear_default.
+    query:
+      name: "query"
+      description: |
+        User query to resolve for local search.
+    location:
+      name: "location"
+      description: |
+        Location string for set_default.
+    use_default_when_missing:
+      name: "use_default_when_missing"
+      description: |
+        Optional. For resolve_query, append saved default location when query has no location. Default true.

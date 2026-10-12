@@ -1,0 +1,130 @@
+# Push notifications (ntfy)
+# NTFY_URL: "https://ntfy.sh"    # or self-hosted URL
+# NTFY_TOPIC: ""                 # your topic name — required to enable push_notify
+# NTFY_TOKEN: ""                 # bearer token for private topics
+
+# Orchestrator core + logging
+ORCH_GRPC_BIND: "[::]:7000"
+LOG_DIR: "/ai/server/modules/orchestrator/logs"
+LOG_LEVEL: "DEBUG"
+ORCH_HOT_RELOAD: false
+ORCH_SHUTDOWN_GRACE_S: 1.0
+ORCH_START_TIMEOUT_S: 2.0
+ORCH_OUTQ_MAX: 500
+ORCH_INQ_AUDIO_MAX: 300
+ORCH_INQ_TEXT_MAX: 50
+ORCH_PIPELINE_IDLE_TIMEOUT_S: 20.0
+ORCH_TURN_MAX_S: 90.0
+ORCH_LOG_KV: true
+ORCH_LOG_STREAMING: false
+ORCH_LOG_STREAM_EVERY_N: 50
+ORCH_METRICS_PORT: 9110
+ORCH_STATUS_ENABLED: true
+ORCH_STATUS_PORT: 9111
+ENABLE_STORED_HISTORY: true
+ORCH_HISTORY_DB: "/ai/server/state/orchestrator_history.sqlite3"
+ORCH_SESSION_TTL_S: 3600.0
+ORCH_SESSION_MAX: 200
+ORCH_SESSION_DEGRADE_THRESHOLD: 0.85
+ORCH_SESSION_HARD_EVICT_FACTOR: 1.25
+ORCH_HISTORY_DEGRADED_TOKENS: 512
+ORCH_TOOL_PARALLELISM: 8
+ORCH_TOOL_TIMEOUT_S: 20.0
+ORCH_READINESS_WAIT_S: 120.0
+ORCH_READINESS_POLL_S: 2.0
+
+# Audio defaults + barge-in
+DEFAULT_SAMPLE_RATE_HZ: 16000
+ENERGY_BARGE_IN: 0.02
+ORCH_BARGE_IN_MIN_BYTES: 640
+
+# STT
+STT_GRPC_TARGET: "127.0.0.1:50051"
+STT_EOS_IDLE_MS: 350
+STT_GRPC_TIMEOUT_S: 90.0
+STT_REQ_TIMEOUT_S: 0.25
+
+# LLM
+LLM_BASE_URL: "http://127.0.0.1:8000"
+# LLM_MODEL: ""  # optional; if blank, orchestrator will not pass model selection to llm
+LLM_WARMUP_DELAY_MS: 0
+LLM_WARMUP_ENABLED: true
+LLM_PROMPT_PATH: "/ai/server/config/prompt.md"
+LLM_TOOL_DESCRIPTIONS_MAX: 0
+TOOLS_MCP_URL: "http://127.0.0.1:9102/mcp"
+
+# batching (latency-oriented)
+BATCH_MAX_CHARS: 90
+BATCH_MAX_MS: 110
+
+LLM_IDLE_TIMEOUT_S: 10.0
+
+# sampling (slightly more deterministic = faster/more consistent TTFT feel)
+LLM_TEMPERATURE: 0.2
+LLM_TOP_P: 0.9
+
+# history (smaller prompt = faster TTFT)
+LLM_HISTORY_TOKENS: 1024
+LLM_MAX_TOKENS: -1  # use model default
+
+# TTS service + streaming params
+TTS_BASE_URL: "http://127.0.0.1:9001"
+TTS_HTTP_TIMEOUT_S: 30.0
+TTS_EXPAND: 1
+TTS_SENTENCE_PAUSE_MS: 120
+TTS_CROSSFADE_MS: 50
+TTS_MIN_CHUNK_CHARS: 45
+TTS_MIN_CHUNK_WORDS: 5
+TTS_HIGHPASS_HZ: 45.0
+TTS_TARGET_PEAK: 0.60
+TTS_MAX_GAIN: 3.2
+TTS_FADE_MS: 10.0
+TTS_TAIL_MS: 40.0
+TTS_GATE_DB: -80
+TTS_GATE_RATIO: 0.5
+TTS_GATE_ATTACK_MS: 4
+TTS_GATE_RELEASE_MS: 400
+TTS_PITCH_SEMITONES: 0.0
+TTS_SPEAKING_RATE: 1.0
+TTS_MOOD: "custom"
+TTS_SPEAKER_ID: null
+
+# TTS mood presets (overrides when TTS_MOOD matches)
+# "custom" is the active preset — tune these to dial in the Assistant voice.
+# Other presets are kept as reference/fallback options.
+TTS_MOODS:
+  custom:
+    pitch_semitones: 0.0
+    speaking_rate: 1.0
+    sentence_pause_ms: 120
+    highpass_hz: 45.0
+    target_peak: 0.60
+    max_gain: 3.2
+  neutral:
+    pitch_semitones: 0.0
+    speaking_rate: 1.0
+    sentence_pause_ms: 100
+    highpass_hz: 0.0
+    target_peak: 0.55
+    max_gain: 3.5
+  upbeat:
+    pitch_semitones: 0.8
+    speaking_rate: 1.08
+    sentence_pause_ms: 60
+    highpass_hz: 100.0
+    target_peak: 0.65
+    max_gain: 4.0
+  warm:
+    pitch_semitones: 0.2
+    speaking_rate: 1.02
+    sentence_pause_ms: 70
+    highpass_hz: 60.0
+    target_peak: 0.6
+    max_gain: 3.8
+  warm:
+    pitch_semitones: 0.4
+    speaking_rate: 1.04
+    sentence_pause_ms: 80
+    highpass_hz: 80.0
+    target_peak: 0.6
+    max_gain: 3.8

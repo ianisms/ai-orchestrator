@@ -1,0 +1,93 @@
+syntax = "proto3";
+package orchestrator.v1;
+
+service Orchestrator {
+  rpc Converse(stream ClientMessage) returns (stream ServerMessage);
+}
+
+message ClientMessage {
+  oneof msg {
+    Start start = 1;
+    AudioFrame audio = 2;
+    EndOfUtterance eou = 3;
+    Cancel cancel = 4;
+    TextInput text = 5;
+  }
+}
+
+message Start {
+  string session_id = 1;
+  // Client-side turn identifier (optional, but recommended)
+  string turn_id = 5;
+  // If true, discard prior context for this session_id
+  bool reset_context = 6;
+  int32 sample_rate_hz = 2;
+  string locale = 3;
+  bool request_partials = 4;
+  // If true, skip TTS audio and only stream reply text.
+  bool no_tts = 7;
+}
+
+message AudioFrame {
+  bytes pcm_s16le = 1;
+  int64 timestamp_ms = 2;
+}
+
+message EndOfUtterance {}
+
+message Cancel {
+  string reason = 1;
+}
+
+message TextInput {
+  string text = 1;
+}
+
+message ServerMessage {
+  oneof msg {
+    State state = 1;
+    Transcript transcript = 2;
+    TtsAudio audio = 3;
+    Error error = 4;
+    Reply reply = 5;
+  }
+}
+
+message State {
+  enum Phase {
+    PHASE_UNSPECIFIED = 0;
+    LISTENING = 1;
+    THINKING = 2;
+    SPEAKING = 3;
+    IDLE = 4;
+  }
+  // Echoed back turn identifier
+  string turn_id = 2;
+  Phase phase = 1;
+  // Optional server timestamp for observability.
+  int64 timestamp_ms = 3;
+}
+
+message Transcript {
+  string turn_id = 1;
+  bool is_final = 2;
+  string text = 3;
+}
+
+message TtsAudio {
+  string turn_id = 1;
+  int32 sample_rate_hz = 2;
+  bytes pcm_s16le = 3;
+  bool is_last = 4;
+}
+
+message Error {
+  string turn_id = 1;
+  string message = 2;
+}
+
+message Reply {
+  string turn_id = 1;
+  string text = 2;
+  bool is_final = 3;
+}
