@@ -1,0 +1,22 @@
+{
+  "limits": {
+    "max_chain": 2,
+    "max_token_age_s": 300
+  },
+  "tools": {
+    "github.get_pr":     {"class": "read",  "scope": "repo:read",   "resource_arg": "repo"},
+    "github.list_files": {"class": "read",  "scope": "repo:read",   "resource_arg": "repo"},
+    "github.comment":    {"class": "write", "scope": "repo:write",  "resource_arg": "repo"},
+    "github.merge_pr":   {"class": "write", "scope": "repo:write",  "resource_arg": "repo"},
+    "jira.get_issue":    {"class": "read",  "scope": "issues:read", "resource_arg": "project"},
+    "jira.create_issue": {"class": "write", "scope": "issues:write","resource_arg": "project"}
+  },
+  "agents": {
+    "mcp-gateway": {
+      "tools": ["github.get_pr", "github.list_files", "github.comment", "github.merge_pr", "jira.get_issue", "jira.create_issue"]
+    },
+    "code-review-subagent": {
+      "tools": ["github.get_pr", "github.list_files"]
+    }
+  }
+}

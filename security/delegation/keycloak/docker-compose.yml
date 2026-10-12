@@ -1,0 +1,11 @@
+# Keycloak 26.8 with RFC 8693 delegation (preview). Hop 1 only: user > mcp-gateway.
+# Copy .env.example to .env and set KC_ADMIN_PASSWORD. .env is git-ignored.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0
+    command: ["start-dev", "--features=token-exchange-delegation,parameterized-scopes"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?set KC_ADMIN_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:8080:8080"
