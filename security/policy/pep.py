@@ -70,8 +70,28 @@ class PEP:
         self.clock = clock
         self.audit_log: list[dict] = []
 
-    def build_request(self, principal, tool: str, args: dict, approved: bool) -> dict:
+    def build_request(
+        self,
+        principal,
+        tool: str,
+        args: dict,
+        approved: bool,
+        channel: str = "api",
+        voice: dict | None = None,
+        prefs: dict | None = None,
+    ) -> dict:
         resource_arg = self.catalog.get(tool, {}).get("resource_arg")
+        context: dict = {
+            "channel": channel,
+            "token_age_s": int(self.clock()) - principal.issued_at,
+            "user_approved": approved,
+            "session_resources": self.session_resources,
+        }
+        if voice is not None:
+            # Signals from the speaker front end, never from the model.
+            context["voice"] = {k: voice[k] for k in ("confidence", "local_network", "liveness") if k in voice}
+        if prefs is not None:
+            context["prefs"] = {k: prefs[k] for k in ("confirm_writes",) if k in prefs}
         return {
             "subject": {
                 "type": "user",
@@ -80,19 +100,23 @@ class PEP:
             },
             "action": {"name": tool},
             "resource": {"type": resource_arg or "unknown", "id": str(args.get(resource_arg, "")) if resource_arg else ""},
-            "context": {
-                "token_age_s": int(self.clock()) - principal.issued_at,
-                "user_approved": approved,
-                "session_resources": self.session_resources,
-            },
+            "context": context,
         }
 
-    def authorize(self, principal, tool: str, args: dict) -> Decision:
+    def authorize(
+        self,
+        principal,
+        tool: str,
+        args: dict,
+        channel: str = "api",
+        voice: dict | None = None,
+        prefs: dict | None = None,
+    ) -> Decision:
         request_id = uuid.uuid4().hex[:12]
         approved = False
         if self.catalog.get(tool, {}).get("class") == "write":
             approved = self.approvals.consume(principal.user, tool, args)
-        body = self.build_request(principal, tool, args, approved)
+        body = self.build_request(principal, tool, args, approved, channel, voice, prefs)
         started = time.perf_counter()
         try:
             r = self.pdp.post("/access/v1/evaluation", json=body, timeout=self.timeout_s)
