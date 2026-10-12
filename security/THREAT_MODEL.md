@@ -3,6 +3,8 @@
 Path: user consents at the STS > gateway exchanges for a tool token or a handoff >
 sub-agent exchanges the handoff > tool server verifies the token > PEP asks the PDP > tool runs > output returns to the model.
 
+Scope: the prototypes in delegation/ and policy/, not the live assistant, which does not use them yet.
+
 Assume breach: any agent can be steered by text it reads, and any token an agent holds can leak.
 Goal: a steered or compromised agent can do no more than the user approved, for no longer than a few minutes, and every attempt leaves a record.
 
@@ -22,7 +24,7 @@ Goal: a steered or compromised agent can do no more than the user approved, for 
 | 12 | Audit gaps | Every exchange and every tool decision logged with path, decision and reasons | Yes: counts checked in tests | Logs are in process; no tamper evidence or central sink |
 | 13 | Stolen workload credential, Docker socket exposure | Not built (prototype B) | No | SPIRE's Docker attestor needs the Docker socket and pid: host, which is root-equivalent |
 | 14 | Device posture spoofing; device-code phishing on headless agents | Not built (prototype D) | No | Posture would be a signed, short-lived input to the same policy |
-| 15 | Voice spoofing: replayed recording, cloned voice, request from outside the home | Voice requests need a match of 0.98 or better, home-network origin and a passed liveness check; missing signals fail closed; writes confirm by default and high-risk tools always confirm | Yes: low match, failed liveness, off-network and missing signals all denied; high-risk merge denied with confirmations off | The policy trusts the front end's liveness result; a real-time voice clone that passes liveness still gets read access, so writes keep the confirmation |
+| 15 | Voice spoofing: replayed recording, cloned voice, request from outside the home | Voice requests need a match of 0.98 or better, home-network origin and a passed liveness check; missing signals fail closed; writes confirm by default and high-risk tools always confirm | Yes: low match, failed liveness, off-network and missing signals all denied; high-risk merge denied with confirmations off | The policy trusts the front end's liveness result; a real-time voice clone that passes liveness still gets read access, so writes keep the confirmation. The live assistant does not send these signals yet |
 
 ## Attacks run (demo.py in delegation/ and policy/)
 
