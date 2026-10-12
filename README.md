@@ -4,7 +4,7 @@ A fully local voice assistant: a custom smart speaker built on a Raspberry Pi CM
 
 This repository is a sanitized snapshot of a personal project, published as a reference for how I design and build systems. It is not packaged for reuse; there is no one-command install. What it does show is a working end-to-end system with the tradeoffs left visible: streaming everywhere, barge-in, per-speaker identity, an MCP tool plane with authorization boundaries, and observability from the first commit.
 
-Author: Ian Bennett ([github.com/ianisms](https://github.com/ianisms)). Source available for review under the PolyForm Strict License 1.0.0; any other use needs my written permission. See LICENSE and NOTICE.
+Author: Ian Bennett ([github.com/ianisms](https://github.com/ianisms)). Source available for review under the PolyForm Strict License 1.0.0; any other use needs my written permission. See LICENSE.md and NOTICE.
 
 ## What is here
 
