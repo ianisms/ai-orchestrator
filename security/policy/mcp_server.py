@@ -25,7 +25,16 @@ class ToolServer:
         self.verifier = verifier
         self.pep = pep
 
-    def handle(self, rpc: dict, bearer: str) -> dict:
+    def handle(
+        self,
+        rpc: dict,
+        bearer: str,
+        channel: str = "api",
+        voice: dict | None = None,
+        prefs: dict | None = None,
+    ) -> dict:
+        """channel, voice and prefs come from the trusted front end (the speaker
+        pipeline or API gateway), never from the model's tool-call arguments."""
         rid = rpc.get("id")
         if rpc.get("method") != "tools/call":
             return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": "method not found"}}
@@ -36,7 +45,7 @@ class ToolServer:
 
         name = rpc["params"]["name"]
         args = rpc["params"].get("arguments", {})
-        d = self.pep.authorize(principal, name, args)
+        d = self.pep.authorize(principal, name, args, channel=channel, voice=voice, prefs=prefs)
         if not d.allow:
             return {"jsonrpc": "2.0", "id": rid, "error": {
                 "code": -32003, "message": "forbidden by policy",

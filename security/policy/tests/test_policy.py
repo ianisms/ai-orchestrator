@@ -111,3 +111,48 @@ def test_every_decision_logged_with_path_and_reasons(env):
     e = pep.audit_log[-1]
     assert e["path"] == "user:alice > mcp-gateway > code-review-subagent"
     assert e["decision"] == "deny" and e["reasons"]
+
+
+# ---- voice step-up ----------------------------------------------------------
+
+VOICE_OK = {"confidence": 0.99, "local_network": True, "liveness": True}
+
+
+def voice_call(server, tok, tool, args=PR, voice=VOICE_OK, prefs=None):
+    rpc = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": args}}
+    return server.handle(rpc, tok, channel="voice", voice=voice, prefs=prefs)
+
+
+def test_voice_read_allowed_when_checks_pass(env):
+    _, server, *_, toks = env
+    assert "result" in voice_call(server, toks["sub"], "github.get_pr")
+
+
+@pytest.mark.parametrize("override, reason", [
+    ({"confidence": 0.95}, "voice match below 0.98"),
+    ({"local_network": False}, "voice request did not come from the home network"),
+    ({"liveness": False}, "voice liveness check not passed"),
+])
+def test_voice_failed_check_denied(env, override, reason):
+    _, server, *_, toks = env
+    assert reasons(voice_call(server, toks["sub"], "github.get_pr", voice={**VOICE_OK, **override})) == [reason]
+
+
+def test_voice_missing_signals_fail_closed(env):
+    _, server, *_, toks = env
+    assert len(reasons(voice_call(server, toks["sub"], "github.get_pr", voice={}))) == 3
+
+
+def test_voice_high_risk_confirmation_cannot_be_waived(env):
+    _, server, _, approvals, toks = env
+    prefs = {"confirm_writes": False}
+    assert reasons(voice_call(server, toks["gateway"], "github.merge_pr", prefs=prefs)) == [
+        "write-class tool needs the user's approval for this exact call"]
+    approvals.approve("user:alice", "github.merge_pr", PR)
+    assert "result" in voice_call(server, toks["gateway"], "github.merge_pr", prefs=prefs)
+
+
+def test_voice_normal_write_waivable_by_user(env):
+    _, server, *_, toks = env
+    assert "error" in voice_call(server, toks["gateway"], "github.comment")
+    assert "result" in voice_call(server, toks["gateway"], "github.comment", prefs={"confirm_writes": False})

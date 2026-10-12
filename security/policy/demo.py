@@ -52,9 +52,9 @@ sub_tok = exchange("code-review-subagent", handoff, audience="tool-github")
 rows = []
 
 
-def call(label, token, tool, args):
+def call(label, token, tool, args, **front_end):
     resp = server.handle({"jsonrpc": "2.0", "id": len(rows) + 1, "method": "tools/call",
-                          "params": {"name": tool, "arguments": args}}, token)
+                          "params": {"name": tool, "arguments": args}}, token, **front_end)
     if "result" in resp:
         outcome = "ALLOWED"
     else:
@@ -76,6 +76,16 @@ call("Alice approves that exact merge, gateway retries", gateway_tok, "github.me
 call("Same approved merge replayed", gateway_tok, "github.merge_pr", pr)
 call("Approval for PR 42 used on PR 43", gateway_tok, "github.merge_pr", {"repo": "acme/widgets", "pr": 43})
 call("Token with no act chain", sts._sign({"iss": ISS, "sub": "user:alice", "aud": ["tool-github"], "iat": 0, "exp": 2**31}), "github.get_pr", pr)
+
+# Voice: the speaker front end supplies match confidence, network origin and liveness.
+good = {"confidence": 0.99, "local_network": True, "liveness": True}
+call("Voice: Alice asks for PR 42 (all checks pass)", sub_tok, "github.get_pr", pr, channel="voice", voice=good)
+call("Voice: match at 0.91", sub_tok, "github.get_pr", pr, channel="voice", voice={**good, "confidence": 0.91})
+call("Voice: replayed recording (liveness fails)", sub_tok, "github.get_pr", pr, channel="voice", voice={**good, "liveness": False})
+call("Voice: request from off the home network", sub_tok, "github.get_pr", pr, channel="voice", voice={**good, "local_network": False})
+call("Voice: front end sent no signals", sub_tok, "github.get_pr", pr, channel="voice", voice={})
+call("Voice: merge, Alice turned confirmations off", gateway_tok, "github.merge_pr", pr, channel="voice", voice=good, prefs={"confirm_writes": False})
+call("Voice: comment, Alice turned confirmations off", gateway_tok, "github.comment", pr, channel="voice", voice=good, prefs={"confirm_writes": False})
 
 opa.stop()
 call("Policy engine down, sub-agent read", sub_tok, "github.get_pr", pr)
