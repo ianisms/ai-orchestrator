@@ -20,7 +20,7 @@ python -m venv .venv && .venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 python demo.py          # chain plus attack table, no servers needed
 python -m pytest -q     # 17 tests
-python sts.py           # optional: STS on 127.0.0.1:8099, dev secrets printed to stderr
+python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. first (secrets are never printed)
 ```
 
 ## Files

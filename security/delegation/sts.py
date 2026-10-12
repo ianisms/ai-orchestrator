@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import secrets
 import sys
 import time
@@ -304,6 +305,11 @@ class STS:
             raise
 
 
+def env_var_for(client_id: str) -> str:
+    """Environment variable that holds a client's secret, e.g. STS_CLIENT_MCP_GATEWAY."""
+    return "STS_CLIENT_" + client_id.upper().replace("-", "_")
+
+
 def create_app(sts: STS) -> FastAPI:
     app = FastAPI(title="delegation-sts (dev)")
 
@@ -364,7 +370,15 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     sts = STS(issuer="http://127.0.0.1:8099")
-    print("dev client secrets (in memory, regenerated each start):", file=sys.stderr)
+    # Client secrets come from the environment and are never printed or logged.
+    # A client with no variable set keeps a random value nobody knows, so it cannot authenticate.
+    unset: list[str] = []
     for c in sts.clients.values():
-        print(f"  {c.client_id}: {c.secret}", file=sys.stderr)
+        var = env_var_for(c.client_id)
+        if os.environ.get(var):
+            c.secret = os.environ[var]
+        else:
+            unset.append(var)
+    if unset:
+        print("clients disabled until these are set: " + ", ".join(unset), file=sys.stderr)
     uvicorn.run(create_app(sts), host="127.0.0.1", port=8099)
