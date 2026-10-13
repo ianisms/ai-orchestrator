@@ -67,7 +67,7 @@ Local tools live in `tools_server/tools/<name>/` as a Python module plus a `conf
 | `current_time` | server clock, any timezone |
 | `local_places_search`, `place_details`, `place_summary` | Google Places |
 | `location_preferences` | per-device default location, SQLite, scoped by the gRPC-derived client id |
-| `get_person_id`, `speaker_identity`, `speaker_enrollment_coach` | NeMo speaker embeddings over the turn's audio reference |
+| `get_person_id`, `speaker_identity`, `speaker_enrollment_coach`, `identify_speaker` | NeMo speaker embeddings over the turn's audio reference; `identify_speaker` is hidden from the model and used only by the voice gate |
 | `household_memory`, `household_profiles` | persistent facts and per-person profiles, SQLite |
 | `timer_alarm`, `push_notify` | timers and alarms; ntfy push |
 | `translate` | Google Translate |
@@ -81,6 +81,8 @@ Upstream MCP servers are declared in `tools_server/mcp-servers.yaml` with per-se
 
 `config/prompt.md` is the system prompt. It carries the tool-routing rules the model follows, including the `[AUDIO_REF]` protocol for speaker identification and the Home Assistant naming conventions.
 
+The voice gate is configured with `VOICE_GATE_*` keys in `config/config.yaml` (defaults in `modules/orchestrator/config/settings.py`): the mode (`off`, `monitor` or `enforce`; default `monitor`), the speaker devices' CIDRs, the match threshold from `scripts/calibrate_voice_threshold.py`, and the risk tier for each tool. Pending voice enrollments are approved or rejected with `scripts/approve_enrollment.py`.
+
 ## Running
 
 1. Place model weights under `/ai/server/llm/local-models/`, the TTS checkpoints under `/ai/server/tts/models/`, and let the NIM container populate `/ai/server/stt/nim/` on first start.
@@ -91,7 +93,7 @@ Upstream MCP servers are declared in `tools_server/mcp-servers.yaml` with per-se
 
 ## Tests
 
-`test/` uses `unittest`. Coverage is on the pure parts: TTS abbreviation expansion, place-details formatting, settings coercion, and selected orchestrator behaviors. The streaming handler, tool loop, and MCP proxy are exercised by the manual harnesses in `scripts/` and by the readiness endpoints.
+`test/` mostly uses `unittest`. Coverage is on the pure parts: TTS abbreviation expansion, place-details formatting, settings coercion, and selected orchestrator behaviors. The voice gate tests (`test_voice_gate.py`, `test_voice_scripts.py`) use pytest and run in CI on every pull request; the other suites read deployment paths and run on the host. The streaming handler, tool loop, and MCP proxy are exercised by the manual harnesses in `scripts/` and by the readiness endpoints.
 
 ## Constraints this was built under
 
