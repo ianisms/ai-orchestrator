@@ -1,5 +1,7 @@
 # ai-orchestrator
 
+[![tests](https://github.com/ianisms/ai-orchestrator/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ianisms/ai-orchestrator/actions/workflows/tests.yml)
+
 A fully local voice assistant: a custom smart speaker built on a Raspberry Pi CM5 talks to a GPU server over one bidirectional gRPC stream. Speech recognition, the language model, tool calling, and speech synthesis all run on hardware in the house. Nothing in the audio path touches a cloud API.
 
 This repository is a sanitized snapshot of a personal project, published as a reference for how I design and build systems. It is not packaged for reuse; there is no one-command install. What it does show is a working end-to-end system with the tradeoffs left visible: streaming everywhere, barge-in, per-speaker identity, an MCP tool plane with authorization boundaries, and observability from the first commit.
