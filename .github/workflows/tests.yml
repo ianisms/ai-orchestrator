@@ -1,0 +1,53 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: security/delegation/requirements.txt
+
+      # OPA must be present: the policy pytest suite skips (not fails) without it.
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: 1.4.2
+
+      - name: Install dependencies
+        run: pip install -r security/delegation/requirements.txt
+
+      - name: Delegation tests (RFC 8693 token exchange)
+        working-directory: security/delegation
+        run: python -m pytest -q
+
+      - name: Rego policy tests
+        working-directory: security/policy
+        run: opa test rego -v
+
+      - name: Policy enforcement tests
+        working-directory: security/policy
+        run: python -m pytest -q -rs
+
+      - name: Voice gate tests
+        working-directory: server
+        run: python -m pytest -q test/test_voice_gate.py test/test_voice_scripts.py
+
+# server/test suites that read deployment paths (/ai/server/...) run on the host, not here.

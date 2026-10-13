@@ -674,6 +674,8 @@ class OrchestratorService(pbg.OrchestratorServicer):
             logger=log,
         )
         pipeline.set_client_key(client_key)
+        # The voice gate trusts only the transport-level peer address; x-client-* headers are client-asserted.
+        pipeline.set_peer_host(_peer_to_client_key(context.peer()))
 
         async def ingest():
             nonlocal sample_rate_hz, request_partials, language_code, session_id, last_turn_id, no_tts
@@ -1138,6 +1140,7 @@ async def main():
         "speaker_enrollment_coach",
         "context_cache",
         "fallback_response_bank",
+        str(settings.VOICE_GATE_IDENTIFY_TOOL),  # orchestrator-only; the model must not call it
     })
     tools_client = MCPToolClient(settings.TOOLS_MCP_URL, logger=log)
     tools_client.start()

@@ -56,6 +56,46 @@ class Settings(BaseModel):
     ORCH_HISTORY_DEGRADED_TOKENS: int = 512
     ORCH_TOOL_PARALLELISM: int = 1
     ORCH_TOOL_TIMEOUT_S: float = 20.0
+
+    # Voice gate (modules/orchestrator/core/voice_gate.py). Ships in monitor mode:
+    # decisions are logged, nothing is blocked, until the threshold is calibrated
+    # and the approval flows exist.
+    VOICE_GATE_MODE: str = "monitor"  # off | monitor | enforce
+    VOICE_GATE_MIN_SCORE: float | None = None  # set from scripts/calibrate_voice_threshold.py
+    VOICE_GATE_TRUSTED_SPEAKER_NETS: list[str] = []  # CIDRs of speaker devices, e.g. ["192.0.2.50/32"]
+    VOICE_GATE_IDENTIFY_TOOL: str = "identify_speaker"
+    VOICE_GATE_DEFAULT_RISK: str = "write"
+    VOICE_GATE_TOOL_RISK: dict[str, str] = {
+        "weather_forecast": "read",
+        "current_time": "read",
+        "news_search": "read",
+        "stock_quote": "read",
+        "translate": "read",
+        "local_places_search": "read",
+        "place_summary": "read",
+        "place_details": "read",
+        "network_status": "read",
+        "server_health": "read",
+        "get_person_id": "read",
+        "homeassistant__GetLiveContext": "read",
+        "homeassistant__GetDateTime": "read",
+        "timer_alarm": "write",
+        "household_memory": "write",
+        "household_profiles": "write",
+        "location_preferences": "write",
+        "homeassistant__HassTurnOn": "write",
+        "homeassistant__HassTurnOff": "write",
+        "push_notify": "high",
+        "homeassistant__HassBroadcast": "high",
+        "speaker_identity": "high",
+    }
+    VOICE_GATE_READ_ACTIONS: dict[str, list[str]] = {
+        "timer_alarm": ["status", "list"],
+        "household_memory": ["get", "search"],
+        "household_profiles": ["get", "get_active"],
+        "location_preferences": ["get_default", "resolve_query"],
+        "speaker_identity": ["verify", "identify", "list_enrollments"],
+    }
     ORCH_TOOL_RESULT_MAX_CHARS: int = 3000
     ORCH_TOOL_SUMMARY_MAX_CHARS: int = 6000
     ORCH_READINESS_WAIT_S: float = 120.0

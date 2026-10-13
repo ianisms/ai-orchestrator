@@ -39,6 +39,7 @@ from tools.registry import list_tools, parse_tool_args
 from orchestrator.tools.mcp_client import get_tools_client
 from .turn import CancelToken, new_turn_id
 from .types import SendEvent
+from .voice_gate import READ, GateConfig, TurnSignals, audit_fields, classify, decide
 
 _LOCAL_SEARCH_TOOL_NAMES = ("local_places_search",)
 _LOCAL_PLACE_PHRASE_RE = re.compile(r"\bon\s+[^.!,;\n]+\s+in\s+[^.!,;\n]+", re.IGNORECASE)
@@ -541,6 +542,7 @@ class UtteranceRunner:
         session_id: str,
         client_key: str,
         history: ChatHistory,
+        peer_host: str = "",
     ):
         self.stt = stt
         self.llm_base_url = llm_base_url
@@ -550,8 +552,57 @@ class UtteranceRunner:
         self._log = log_fn
         self._session_id = session_id
         self._client_key = client_key or ""
+        self._peer_host = peer_host or ""  # from the gRPC peer, never from client metadata
         self._history = history
         self._last_used_tools: set[str] = set()
+
+    def _gate_config(self) -> Optional[GateConfig]:
+        mode = str(settings.VOICE_GATE_MODE or "monitor").strip().lower()
+        if mode == "off":
+            return None
+        return GateConfig.build(
+            mode,
+            settings.VOICE_GATE_MIN_SCORE,
+            settings.VOICE_GATE_TRUSTED_SPEAKER_NETS,
+            settings.VOICE_GATE_TOOL_RISK,
+            settings.VOICE_GATE_DEFAULT_RISK,
+            settings.VOICE_GATE_READ_ACTIONS,
+        )
+
+    async def _gather_turn_signals(
+        self,
+        audio_ref: Optional[tuple[str, str]],
+        tools_client,
+        turn_id: str,
+    ) -> TurnSignals:
+        """Identity for this turn, computed by the orchestrator from this turn's audio.
+
+        The model has no input here: the audio reference is the orchestrator's own,
+        and the identify tool is hidden from the model's tool list.
+        Liveness and approvals stay at their failing defaults until those flows exist.
+        """
+        sig = TurnSignals(channel="voice" if audio_ref is not None else "text", peer_host=self._peer_host)
+        if audio_ref is None or tools_client is None:
+            return sig
+        sid, aid = audio_ref
+        try:
+            raw = await asyncio.wait_for(
+                tools_client.call_tool(
+                    str(settings.VOICE_GATE_IDENTIFY_TOOL),
+                    {"session_id": sid, "audio_id": aid},
+                ),
+                timeout=max(1.0, float(settings.ORCH_TOOL_TIMEOUT_S)),
+            )
+            data = json.loads(raw) if raw else {}
+            if isinstance(data, dict):
+                pid = str(data.get("profile_id") or "")
+                score = data.get("score")
+                if pid and isinstance(score, (int, float)) and not isinstance(score, bool):
+                    sig.profile_id = pid
+                    sig.score = float(score)
+        except Exception as exc:
+            self._log("warning", "voice gate identify failed", turn_id=turn_id, error=repr(exc))
+        return sig
 
     def _tools_base_url(self) -> str:
         url = str(settings.TOOLS_MCP_URL or "").strip()
@@ -1214,6 +1265,7 @@ class UtteranceRunner:
                 cancel=cancel,
                 turn_id=turn_id,
                 send=send,
+                audio_ref=audio_ref,
             )
             if tool_text:
                 if emit_reply and send:
@@ -1255,6 +1307,7 @@ class UtteranceRunner:
         *,
         send: Optional[SendEvent] = None,
         turn_id: str = "",
+        audio_ref: Optional[tuple[str, str]] = None,
     ) -> tuple[str, list[dict]]:
         async def _stream_to_text(
             *,
@@ -1322,6 +1375,39 @@ class UtteranceRunner:
         sem = asyncio.Semaphore(parallelism)
         messages = working_messages
 
+        gate_cfg = self._gate_config()
+        gate_signals: Optional[TurnSignals] = None
+        gate_lock = asyncio.Lock()
+
+        async def _turn_signals() -> TurnSignals:
+            # Identify once per turn, and only when a non-read tool is requested.
+            nonlocal gate_signals
+            async with gate_lock:
+                if gate_signals is None:
+                    gate_signals = await self._gather_turn_signals(audio_ref, tools_client, turn_id)
+                return gate_signals
+
+        async def _gate(tool_name: str, tool_args: dict) -> str:
+            """Empty string if the call may run; otherwise the reason it may not.
+
+            Monitor mode logs and always returns "". Any gate error fails closed
+            in enforce mode.
+            """
+            if gate_cfg is None:
+                return ""
+            try:
+                if classify(tool_name, tool_args, gate_cfg) == READ:
+                    sig = TurnSignals()
+                else:
+                    sig = await _turn_signals()
+                decision = decide(tool_name, tool_args, sig, gate_cfg)
+                if decision.risk != READ:
+                    self._log("info", "voice gate", turn_id=turn_id, **audit_fields(decision))
+                return "; ".join(decision.reasons) if decision.blocked else ""
+            except Exception as exc:
+                self._log("warning", "voice gate error", turn_id=turn_id, tool=tool_name, error=repr(exc))
+                return "voice gate error" if gate_cfg.mode == "enforce" else ""
+
         _HA_RETRY_TOOLS = {"homeassistant__HassTurnOn", "homeassistant__HassTurnOff"}
         _HA_LOCK_SUFFIX = " Lock"
 
@@ -1351,6 +1437,7 @@ class UtteranceRunner:
             start_call = time.monotonic()
             async with sem:
                 self._log("debug", "tool execute", turn_id=turn_id, tool=name, args=args)
+                blocked_reason = ""
                 validation_error = _validate_tool_args(name, args, working_tools)
                 if validation_error:
                     result = f"Tool error: {validation_error}"
@@ -1358,6 +1445,10 @@ class UtteranceRunner:
                 elif tools_client is None:
                     result = "Tool error: tools client unavailable"
                 else:
+                    blocked_reason = await _gate(name, args)
+                    if blocked_reason:
+                        result = f"Tool not run (voice gate): {blocked_reason}."
+                if tools_client is not None and not validation_error and not blocked_reason:
                     try:
                         result = await tools_client.call_tool(name, args)
                         self._log(
@@ -1371,7 +1462,12 @@ class UtteranceRunner:
                             retry_args = dict(args)
                             retry_args["name"] = str(args["name"]) + _HA_LOCK_SUFFIX
                             self._log("info", "HA retry with Lock suffix", turn_id=turn_id, tool=name, name=retry_args["name"])
-                            result = await tools_client.call_tool(name, retry_args)
+                            # The retry targets a lock, so it gets its own gate decision.
+                            retry_blocked = await _gate(name, retry_args)
+                            if retry_blocked:
+                                result = f"Tool not run (voice gate): {retry_blocked}."
+                            else:
+                                result = await tools_client.call_tool(name, retry_args)
                     except Exception as exc:
                         result = f"Tool error: {exc!r}"
             observe_tool_call_seconds(time.monotonic() - start_call)
