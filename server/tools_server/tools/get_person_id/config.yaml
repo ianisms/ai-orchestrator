@@ -24,8 +24,9 @@ tool:
         The audio_id value from the current [AUDIO_REF] context tag.
     stated_name:
       description: |
-        If the person just told you their name (e.g. "I'm Alice"), pass the name here
-        to enroll and cache their voice.  Omit on the first call.
+        If the person just told you their name (e.g. "I'm Alice"), pass the name here.
+        This records their voice for approval only; it does not identify them.
+        Omit on the first call.
 
 # Path where the orchestrator writes per-turn WAV files.
 # tools_server mounts /ai/server/state as /app/state.
@@ -39,6 +40,9 @@ session_db: "/app/state/person_sessions.sqlite3"
 
 # Biometric match confidence required to accept identification.
 confidence_threshold: 0.78
+
+# Voice samples from stated names wait here until approved (scripts/approve_enrollment.py).
+pending_file: "/app/state/pending_enrollments.json"
 
 # Session cache TTL in seconds (1 hour).
 session_ttl_s: 3600

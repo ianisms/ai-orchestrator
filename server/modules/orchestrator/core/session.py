@@ -33,6 +33,7 @@ class OrchestratorSession:
         self.log = logger
         self._session_id = ""
         self._client_key = ""
+        self._peer_host = ""
         self._history = history or ChatHistory(settings.LLM_HISTORY_TOKENS)
 
     def set_session_id(self, session_id: str) -> None:
@@ -40,6 +41,10 @@ class OrchestratorSession:
 
     def set_client_key(self, client_key: str) -> None:
         self._client_key = client_key or ""
+
+    def set_peer_host(self, peer_host: str) -> None:
+        """Network address of the connected client, from the gRPC peer (not client metadata)."""
+        self._peer_host = peer_host or ""
 
     def reset_context(self) -> None:
         self._history.reset()
@@ -81,6 +86,7 @@ class OrchestratorSession:
                 session_id=self._session_id,
                 client_key=self._client_key,
                 history=self._history,
+                peer_host=self._peer_host,
             )
             await runner.run(
                 client_in_q,

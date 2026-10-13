@@ -19,8 +19,14 @@ Flow
 6. If no biometric match, the tool returns a sentinel string telling the LLM
    to ask the user their name, then call again with stated_name set.
 
-7. On a stated_name call the tool enrolls the voice sample, updates the cache,
-   and returns a confirmation.
+7. On a stated_name call the tool records a PENDING enrollment and does not
+   identify the speaker. A stated name is a claim, not proof: it never joins a
+   profile and never sets the session identity. Pending enrollments take effect
+   only after approval (scripts/approve_enrollment.py today; phone approval later).
+
+8. identify_speaker is a second, orchestrator-only tool (hidden from the model)
+   that returns the best match and raw score as JSON, with no cache and no
+   enrollment. The orchestrator's voice gate applies its own threshold to it.
 
 Container paths
 ---------------
@@ -35,6 +41,7 @@ import concurrent.futures
 import json
 import logging
 import math
+import re
 import sqlite3
 import time
 import wave
@@ -51,6 +58,32 @@ _DEFAULT_AUDIO_DIR = Path("/app/state/client_audio")
 _DEFAULT_STATE_FILE = Path("/app/state/speaker_identity.json")
 _DEFAULT_SESSION_DB = Path("/app/state/person_sessions.sqlite3")
 _DEFAULT_THRESHOLD = 0.78
+_DEFAULT_PENDING_FILE = Path("/app/state/pending_enrollments.json")
+_MAX_PENDING = 20
+# session_id comes from the client; keep it to a plain token so it cannot steer the file path.
+_SAFE_REF = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+
+
+def _safe_ref(value: str) -> bool:
+    return bool(_SAFE_REF.match(value)) and ".." not in value
+
+
+def _load_pending(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        items = data.get("pending") if isinstance(data, dict) else None
+        return [x for x in items if isinstance(x, dict)] if isinstance(items, list) else []
+    except Exception:
+        return []
+
+
+def _save_pending(path: Path, items: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"pending": items[-_MAX_PENDING:]}, ensure_ascii=True, indent=2), encoding="utf-8")
+
+
 _DEFAULT_TTL_S = 3600
 
 _MODEL_CACHE: dict[str, object] = {}
@@ -272,6 +305,7 @@ def register(server) -> List[str]:
     audio_dir = Path(str(config.get("audio_dir") or _DEFAULT_AUDIO_DIR))
     state_file = Path(str(config.get("state_file") or _DEFAULT_STATE_FILE))
     session_db_path = Path(str(config.get("session_db") or _DEFAULT_SESSION_DB))
+    pending_file = Path(str(config.get("pending_file") or _DEFAULT_PENDING_FILE))
     threshold = float(config.get("confidence_threshold") or _DEFAULT_THRESHOLD)
     ttl_s = int(config.get("session_ttl_s") or _DEFAULT_TTL_S)
     max_samples = 8
@@ -331,6 +365,8 @@ def register(server) -> List[str]:
         if not sid or not aid:
             return log_tool_result(log, "get_person_id",
                                    "session_id and audio_id are required (read them from [AUDIO_REF]).")
+        if not _safe_ref(sid) or not _safe_ref(aid):
+            return log_tool_result(log, "get_person_id", "Invalid audio reference. Ask who is speaking.")
 
         db = _get_db()
         _cache_purge(db)
@@ -359,31 +395,37 @@ def register(server) -> List[str]:
             return log_tool_result(log, "get_person_id",
                                    f"Audio file unreadable: {exc}. Ask who is speaking.")
 
-        # ---- Enrollment path (stated_name provided) ----
+        # ---- Stated name: record a pending enrollment, never identify ----
+        # A stated name is a claim. It must not join an existing profile (anyone could
+        # say "I'm Alice") and must not set the session identity used for per-person data.
         if stated_name:
-            name_clean = str(stated_name).strip()
-            profile_id = name_clean.lower().replace(" ", "_")
+            name_clean = str(stated_name).strip()[:64]
+            profile_id = re.sub(r"[^a-z0-9_]", "", name_clean.lower().replace(" ", "_"))
             display_name = name_clean.title()
+            if not profile_id:
+                return log_tool_result(log, "get_person_id", "Unknown speaker. Treat them as a guest.")
             try:
                 emb = _extract_embedding(wav_path, config)
             except Exception as exc:
-                log.warning("get_person_id enrollment embedding failed: %r", exc)
+                log.warning("get_person_id pending enrollment embedding failed: %r", exc)
                 return log_tool_result(log, "get_person_id",
-                                       f"Could not process audio for enrollment: {exc}")
-
-            profiles = _load_profiles(state_file)
-            entry = profiles.get(profile_id) if isinstance(profiles.get(profile_id), dict) else {}
-            samples = entry.get("samples") if isinstance(entry.get("samples"), list) else []
-            samples.append(emb)
-            if len(samples) > max_samples:
-                samples = samples[-max_samples:]
-            mean_emb = _average_embeddings(samples)
-            profiles[profile_id] = {"samples": samples, "mean_embedding": mean_emb}
-            _save_profiles(state_file, profiles)
-
-            _cache_set(db, sid, profile_id, display_name, "stated", None, ttl_s)
-            log.info("get_person_id enrolled profile_id=%s samples=%d", profile_id, len(samples))
-            return log_tool_result(log, "get_person_id", display_name)
+                                       "Unknown speaker. Treat them as a guest for this conversation.")
+            pending = _load_pending(pending_file)
+            pending.append({
+                "profile_id": profile_id,
+                "display_name": display_name,
+                "embedding": emb,
+                "created_at": int(time.time()),
+                "session_id": sid,
+            })
+            _save_pending(pending_file, pending)
+            log.info("get_person_id pending enrollment recorded profile_id=%s", profile_id)
+            return log_tool_result(
+                log, "get_person_id",
+                f"Speaker says they are {display_name}, but this is not verified. Their voice sample is "
+                "saved for approval. Until it is approved, treat them as a guest: do not access "
+                "per-person data (calendar, reminders, preferences) for anyone."
+            )
 
         # ---- Biometric identification path ----
         try:
@@ -428,4 +470,34 @@ def register(server) -> List[str]:
             "with stated_name set to their name."
         )
 
-    return ["get_person_id"]
+    @server.tool(
+        name="identify_speaker",
+        description="Orchestrator-only. Best speaker match and raw score for a turn's audio, as JSON.",
+    )
+    def identify_speaker(session_id: str, audio_id: str) -> str:
+        sid = str(session_id or "").strip()
+        aid = str(audio_id or "").strip()
+        empty = json.dumps({"profile_id": "", "score": None})
+        if not _safe_ref(sid) or not _safe_ref(aid):
+            return empty
+        wav_path = audio_dir / f"{sid}_{aid}.wav"
+        if not wav_path.exists():
+            return empty
+        try:
+            emb = _extract_embedding(wav_path, config)
+        except Exception as exc:
+            log.warning("identify_speaker embedding failed: %r", exc)
+            return empty
+        best_id, best_score = "", None
+        for pid, entry in _load_profiles(state_file).items():
+            mean_emb = entry.get("mean_embedding") if isinstance(entry, dict) else None
+            if not isinstance(mean_emb, list):
+                continue
+            score = float(_cosine(emb, [float(x) for x in mean_emb]))
+            if best_score is None or score > best_score:
+                best_id, best_score = str(pid), score
+        log.info("identify_speaker best=%s score=%s", best_id or "-",
+                 "-" if best_score is None else f"{best_score:.3f}")
+        return json.dumps({"profile_id": best_id, "score": best_score})
+
+    return ["get_person_id", "identify_speaker"]
