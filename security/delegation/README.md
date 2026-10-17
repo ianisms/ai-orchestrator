@@ -19,7 +19,7 @@ tool-github --verify--> alice > mcp-gateway > code-review-subagent, scope repo:r
 python -m venv .venv && .venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 python demo.py          # chain, attack table and a revocation, no servers needed
-python -m pytest -q     # 32 tests
+python -m pytest -q     # 33 tests
 python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. first (secrets are never printed)
 ```
 
@@ -99,6 +99,33 @@ Enforcement, two places:
 
 Every revocation decision (revoked, noop, deny) and every refusal on the verify
 side is logged with its reason, in the same JSON form as the exchange audit log.
+
+### What RFC 7009 says, what this STS does
+
+| Topic | RFC 7009 | This STS |
+|---|---|---|
+| Endpoint and parameters | `POST` to the revocation endpoint; `token` required; `token_type_hint` optional, a wrong hint must not stop the server from finding the token | `POST /revoke`; `token` required (missing or empty is 400 `invalid_request`); `token_type_hint` accepted and ignored, since every token carries its own `token_use` and there is one token type |
+| Client authentication and ownership | Client authenticates as for the token endpoint; the server verifies the token was issued to the requesting client, else refuses | Same client secret check as `/token` (401 `invalid_client`). "Issued to" is read as: the client is the holder (named in `aud` or in the `client_id` claim) or any client in the `act` chain. Downstream never revokes upstream |
+| Invalid token | Section 2.2: respond 200 whether or not the token was valid, so the client cannot probe | 200 and no change for anything the STS cannot validate: malformed, forged, signed by another issuer, expired, no `jti` |
+| Error codes | RFC 6749 section 5.2 codes plus `unsupported_token_type`; no code is bound to "not your token" | `invalid_request`, `invalid_client`, and `unauthorized_client` for a genuine token outside the caller's authority (our choice, the spec leaves it open); `unsupported_token_type` is never returned because hints are ignored |
+| Related tokens | Revoking a refresh token SHOULD revoke the access tokens issued with it; revoking an access token MAY revoke its refresh token | No refresh tokens exist. Revoking a token revokes its lineage subtree, and revoking a user token revokes its `grant_id`. That is an extension for exchanged tokens, not a reading of 7009 |
+| Immediate effect | Section 2.1: the token is invalidated immediately | Immediate at the STS and at any verifier wired to the denylist; anywhere that is not wired, the token lives until its TTL, at most 600 s |
+
+### Where the denylist lives
+
+In the STS process. `sts.py` writes it; `verify.py` never imports the STS and
+reaches the state only through the `RevocationCheck` it was handed. In `demo.py`
+and the tests that object is the STS's own `Denylist`, so the "callback" is a
+method call in the same process. Across real PEPs the same seam becomes a push
+from the STS to each verifier, or a shared store both read; that transport is the
+part that is not built. RFC 7009 section 3 calls the interaction between the
+authorization server and the resource servers for this purpose out of scope and
+not standardized, which is why the spec leaves it open and why `verify.py` takes
+a protocol rather than an address.
+
+Size is bounded by lifetime, not by traffic: every entry expires at the latest
+`exp` in its family, and no exchanged token outlives the user token it came
+from, so the set holds at most one user-token lifetime (600 s) of revocations.
 
 Keycloak caveat: Keycloak's `/revoke` only knows tokens Keycloak issued. For hop 1
 to participate, this STS would have to introspect the subject token on every

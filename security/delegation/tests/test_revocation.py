@@ -117,6 +117,19 @@ def test_revoke_unknown_malformed_or_expired_token_succeeds_silently(http, sts):
     assert [e["decision"] for e in sts.audit_log if e["event"] == "token_revocation"] == ["noop"] * 3
 
 
+def test_revoke_without_token_is_invalid_request_not_422(http, sts):
+    base = {"client_id": "mcp-gateway", "client_secret": secret(sts, "mcp-gateway")}
+    for data in (base, {**base, "token": ""}):
+        r = http.post("/revoke", data=data)
+        assert r.status_code == 400, r.text
+        assert r.json()["error"] == "invalid_request" and r.json()["error_description"]
+    # Client authentication still comes first, as on /token.
+    r = http.post("/revoke", data={"client_id": "mcp-gateway", "client_secret": "wrong"})
+    assert r.status_code == 401 and r.json()["error"] == "invalid_client"
+    assert len(sts.denylist) == 0
+    assert [e["decision"] for e in sts.audit_log if e["event"] == "token_revocation"] == ["deny", "deny", "deny"]
+
+
 def test_revoke_requires_client_authentication(http, sts):
     user = user_token(sts)
     r = http.post("/revoke", data={"token": user, "client_id": "mcp-gateway", "client_secret": "wrong"})

@@ -433,7 +433,9 @@ class STS:
         token in a chain it participates in (see _may_revoke), and a genuine token
         outside that set is refused with unauthorized_client, as section 2.1 of the
         RFC says to inform the client. token_type_hint is accepted and ignored: this
-        STS issues one token type and no refresh tokens.
+        STS issues one token type, no refresh tokens, and tells actor tokens apart
+        by their own token_use claim. A missing or empty token is invalid_request
+        (RFC 6749 section 5.2), the one shape the endpoint will not accept silently.
 
         Extension beyond RFC 7009 (the RFC is silent on exchanged tokens): revoking
         a token revokes every token exchanged from it, by lineage, and revoking a
@@ -443,6 +445,8 @@ class STS:
         ctx: dict = {"client_id": client_id, "token_type_hint": token_type_hint}
         try:
             client = self._authenticate(client_id, client_secret)
+            if not token:
+                raise ExchangeError("invalid_request", "token required")
             try:
                 claims = jwt.decode(
                     token,
@@ -573,14 +577,15 @@ def create_app(sts: STS) -> FastAPI:
 
     @app.post("/revoke")
     def revoke(
-        token: str = Form(...),
         client_id: str = Form(...),
         client_secret: str = Form(...),
+        token: str | None = Form(None),  # required by RFC 7009; checked in STS.revoke so the error body is 6749-shaped, not a 422
         token_type_hint: str | None = Form(None),
     ):
         """RFC 7009 endpoint. 200 with an empty body on success, including for tokens
-        this STS does not know; 401 when the client fails to authenticate; 400
-        unauthorized_client when the token is genuine but not the client's to revoke."""
+        this STS does not know; 400 invalid_request when token is missing or empty;
+        401 when the client fails to authenticate; 400 unauthorized_client when the
+        token is genuine but not the client's to revoke."""
         try:
             sts.revoke(token, token_type_hint, client_id=client_id, client_secret=client_secret)
         except ExchangeError as e:
