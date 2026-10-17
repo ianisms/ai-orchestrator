@@ -1,6 +1,7 @@
 # ai-orchestrator
 
 [![tests](https://github.com/ianisms/ai-orchestrator/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ianisms/ai-orchestrator/actions/workflows/tests.yml)
+[![CodeQL](https://github.com/ianisms/ai-orchestrator/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ianisms/ai-orchestrator/actions/workflows/codeql.yml)
 
 A fully local voice assistant: a custom smart speaker built on a Raspberry Pi CM5 talks to a GPU server over one bidirectional gRPC stream. Speech recognition, the language model, tool calling, and speech synthesis all run on hardware in the house. Nothing in the audio path touches a cloud API.
 
