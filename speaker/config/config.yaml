@@ -87,3 +87,12 @@ grpc_keepalive_time_ms: 5000
 grpc_keepalive_timeout_ms: 3000
 grpc_connect_max_attempts: 8        # retries before giving up on initial connect
 grpc_connect_ready_timeout_ms: 4000 # channel_ready() timeout per attempt (raise if server loads slowly)
+
+# Device identity: boot-time challenge with the YubiKey PIV key (slot 9a).
+# Enroll first with scripts/enroll_device_key.py; see security/DEVICE_IDENTITY.md.
+device_identity_enable: false
+device_id: ""                   # defaults to session_id_base
+device_attest_url: ""           # http://<server>:9111; derived from server_target when empty
+device_pin_path: "/ai/speaker/state/device_pin"
+device_credential_path: "/ai/speaker/state/device_credential.json"
+device_yubikey_serial: 0

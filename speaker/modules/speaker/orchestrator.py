@@ -219,9 +219,45 @@ async def _health_monitor(cfg: AppConfig, stop_evt: asyncio.Event):
             pass
 
 
+def _attest_device(cfg: AppConfig):
+    """Boot-time device identity. Returns the DeviceAttestClient, or None when
+    disabled or when attestation failed (logged). Failure does not stop the
+    client today: nothing on the server refuses a stream without a credential
+    yet, and a speaker that cannot talk is worse than one that is logged as
+    unattested. That changes when enforcement lands (security/DEVICE_IDENTITY.md)."""
+    if not bool(getattr(cfg, "device_identity_enable", False)):
+        return None
+    log = logging.getLogger("speaker.device_identity")
+    try:
+        from modules.speaker.device_identity import DeviceAttestClient, HttpTransport, YubiKeyPivSigner
+
+        url = str(getattr(cfg, "device_attest_url", "") or "").strip()
+        if not url:
+            host = str(cfg.server_target).rsplit(":", 1)[0]
+            url = f"http://{host}:9111"
+        serial = int(getattr(cfg, "device_yubikey_serial", 0) or 0) or None
+        client = DeviceAttestClient(
+            device_id=str(getattr(cfg, "device_id", "") or cfg.session_id_base),
+            signer=YubiKeyPivSigner(pin_path=getattr(cfg, "device_pin_path", ""), serial=serial),
+            transport=HttpTransport(url),
+            credential_path=getattr(cfg, "device_credential_path", None) or None,
+        )
+        cred = client.current()
+        if cred is None:
+            log.error("device attestation failed; continuing without a device credential")
+        return client
+    except Exception:
+        log.exception("device identity setup failed; continuing without a device credential")
+        return None
+
+
 async def main():
     cfg = AppConfig.from_yaml()
     setup_logger("speaker", cfg.log_path, level=str(getattr(cfg, "log_level", "INFO")))
+
+    # INTEGRATION POINT: the credential this returns is what grpc_client.py would
+    # send as x-device-credential metadata on Converse. That wiring is not done.
+    device_client = await asyncio.to_thread(_attest_device, cfg)  # noqa: F841
 
     stop_evt = asyncio.Event()
     reload_evt = asyncio.Event()

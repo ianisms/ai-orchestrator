@@ -8,6 +8,10 @@ services:
       - /ai/speaker:/ai/speaker:rw
       - /run/user/1000/pulse:/run/user/1000/pulse:rw
       - /ai/speaker/config:/ai/speaker/config:rw
+      # Device identity: uncomment to let the client reach the YubiKey through the
+      # host's pcscd (apt install pcscd on the Pi). Needed only with
+      # device_identity_enable: true in config.yaml.
+      # - /run/pcscd:/run/pcscd:ro
     devices:
       - /dev/snd:/dev/snd
     environment:

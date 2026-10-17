@@ -96,6 +96,13 @@ class Settings(BaseModel):
         "location_preferences": ["get_default", "resolve_query"],
         "speaker_identity": ["verify", "identify", "list_enrollments"],
     }
+    # Device identity (modules/orchestrator/core/device_identity.py). The registry
+    # holds enrolled speaker keys; scripts/enroll_device.py manages it. The
+    # credential is checked and logged at connect; it does not gate anything yet.
+    DEVICE_REGISTRY_PATH: str = "/ai/server/state/device_registry.json"
+    DEVICE_CHALLENGE_TTL_S: int = 30
+    DEVICE_CREDENTIAL_TTL_S: int = 600  # 300 to 900
+
     ORCH_TOOL_RESULT_MAX_CHARS: int = 3000
     ORCH_TOOL_SUMMARY_MAX_CHARS: int = 6000
     ORCH_READINESS_WAIT_S: float = 120.0

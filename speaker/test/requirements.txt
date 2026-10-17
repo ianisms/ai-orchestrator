@@ -4,3 +4,4 @@ protobuf==6.33.5
 pytest==9.0.3
 prompt_toolkit
 pyyaml
+cryptography>=42      # FakeSigner and device identity tests; the YubiKey path also needs yubikey-manager
