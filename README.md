@@ -97,7 +97,7 @@ Ian Bennett is a principal engineer and architect with 27 years in software, mos
 
 ## Decisions and division of labor
 
-This repo was built the way I build now: I set the design and the rules, AI coding agents (Claude Code, Cursor, Codex) wrote most of the implementation, tests and docs against those designs, and I reviewed, pushed back, and merged. The design calls below are mine. Where an agent proposed something I rejected or changed, the final shape is what is in the tree.
+This repo was built the way I build now: I set the design and the rules, Claude (Claude Code and the Claude app) wrote most of the implementation, tests and docs against those designs, and I reviewed, pushed back, and merged. The design calls below are mine. Where an agent proposed something I rejected or changed, the final shape is what is in the tree.
 
 - The model never supplies its own identity. Speaker identity comes from the turn's audio and origin from the gRPC peer, never from headers or anything the model says. Saying "I'm Alice" queues an enrollment sample for out-of-band approval; it never changes a profile.
 - Voice gate rules: a strong speaker match, home-network origin and a liveness check as policy inputs; confirmation on by default and never waivable for high-risk tools; unknown tools treated as writes; any missing signal denies. Rolled out in monitor mode first, enforce after calibration, the same way I onboarded services to Customer Lockbox.
