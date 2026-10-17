@@ -16,7 +16,7 @@ Author: Ian Bennett ([github.com/ianisms](https://github.com/ianisms)). Source a
 | `server/` | GPU server: gRPC orchestrator, MCP tools server and proxy, custom TTS service, Docker Compose stack with Prometheus, Grafana, and Loki | ~13k lines Python |
 | `speaker/` | Pi CM5 voice client (wakeword, VAD, capture, playback, barge-in), device tree overlay, bring-up scripts, custom KiCad carrier board, 3D-printed enclosure | ~4k lines Python, plus hardware sources |
 | `docs/` | Design notes with file references | |
-| `security/` | Agent identity and authorization prototypes: token exchange delegation, a policy check before every tool call, voice step-up rules, threat model | ~1.6k lines Python and Rego |
+| `security/` | Agent identity and authorization prototypes: token exchange delegation, revocation, a policy check before every tool call, voice step-up rules, threat model | Python, with the policy grammar in Rego |
 
 Everything in `server/` is Python 3.11 with `asyncio`, gRPC, FastMCP, FastAPI, and NVIDIA NeMo. The speaker client is Python on Raspberry Pi OS in a Docker container with ALSA passthrough. Hardware sources are KiCad 9 and STEP.
 
