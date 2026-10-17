@@ -8,6 +8,11 @@ Two pieces live here:
              in-process stand-in for the pushed deny list in DIAGRAMS.md section 4.
   Issued     the STS's record of every token it minted, enough to walk a token's
              descendants (children) and ancestors (parent_jti) when one is revoked.
+  EscalationPolicy
+             thresholds for tool-initiated reports: how many strikes inside a
+             window before the STS widens a revocation from the presented token to
+             the actor's delegation, then to the whole grant. The STS owns this;
+             the reporting tool cannot change it.
 
 Both are bounded by token lifetimes, not by traffic: a tool or handoff token's
 exp never exceeds the user token it descends from (exp = min(now + ttl, subject
@@ -36,6 +41,21 @@ class Issued:
     aud: tuple[str, ...] = ()
     actors: tuple[str, ...] = ()  # act chain, earliest first
     children: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class EscalationPolicy:
+    """Strike thresholds for /revoke reports with reason anomaly or injection_suspected.
+
+    Strikes are counted per (grant_id, actor chain) inside window_s. At the first
+    strike only the presented token dies; at handoff_at the immediate actor's
+    delegation (the handoff the token descends from, or every token that actor
+    exchanged under the grant) dies; at grant_at the grant dies. cleanup never
+    counts. Defaults: 10 minutes, 2, 3.
+    """
+    window_s: int = 600
+    handoff_at: int = 2
+    grant_at: int = 3
 
 
 class Denylist:

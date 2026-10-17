@@ -35,8 +35,24 @@ Lineage claims on every issued token, so a revocation can follow the chain:
 
 Revocation (RFC 7009 on /revoke, plus a documented extension): see STS.revoke,
 STS.revoke_grant and STS.revoke_client. State lives in revocation.Denylist, which
-a verifier can share in process. Nothing here is production-grade; it is the
-smallest thing that closes threat 11 in the prototype.
+a verifier can share in process.
+
+Tool reports: /revoke takes an optional reason (cleanup, anomaly,
+injection_suspected). A tool server is a registered client with no audiences
+and no scopes, so it can authenticate and revoke exactly the tool token it was
+presented (it is the holder named in aud) and nothing above it. The STS, not
+the tool, decides whether a report widens: strikes per (grant_id, actor chain)
+inside EscalationPolicy.window_s escalate from the presented token to the
+immediate actor's delegation to the grant. Detection at the edge, authority at
+the center, blast radius bounded by policy the tool does not control.
+
+Admin: the ops-console client holds scope sts:admin, which no exchange ever
+issues. Its actor token is the bearer credential for /admin/revoke/grant,
+/admin/revoke/client and /admin/enable/client. Same client machinery as every
+other caller, so it maps onto an admin SVID later instead of a side door.
+
+Nothing here is production-grade; it is the smallest thing that closes threat 11
+in the prototype.
 """
 from __future__ import annotations
 
@@ -52,13 +68,16 @@ from typing import Callable
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Header
 from fastapi.responses import JSONResponse, Response
 
-from revocation import Denylist, Issued
+from revocation import Denylist, EscalationPolicy, Issued
 
 TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
 ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
+ADMIN_SCOPE = "sts:admin"  # held only by ops-console; never issued by exchange or login
+REVOKE_REASONS = {"cleanup", "anomaly", "injection_suspected"}
+STRIKE_REASONS = {"anomaly", "injection_suspected"}
 
 log = logging.getLogger("sts.audit")
 
@@ -98,6 +117,15 @@ def default_clients() -> list[Client]:
             scopes={"fs:read"},
             ttl=120,
         ),
+        # Tool servers: no audiences, no scopes, so they can exchange nothing. Being
+        # a client lets a tool authenticate at /revoke and report the token it was
+        # presented (it is the holder named in aud).
+        Client("tool-github", audiences=set(), scopes=set()),
+        Client("tool-jira", audiences=set(), scopes=set()),
+        Client("tool-fs", audiences=set(), scopes=set()),
+        # Operator console: the only holder of sts:admin. Its actor token is the
+        # bearer credential for the /admin routes.
+        Client("ops-console", audiences=set(), scopes={ADMIN_SCOPE}),
     ]
 
 
@@ -127,6 +155,7 @@ class STS:
         user_ttl: int = 600,
         actor_ttl: int = 60,
         clock: Callable[[], float] = time.time,
+        escalation: EscalationPolicy | None = None,
     ):
         self.issuer = issuer
         self.clients = {c.client_id: c for c in (clients or default_clients())}
@@ -134,6 +163,9 @@ class STS:
         self.user_ttl = user_ttl
         self.actor_ttl = actor_ttl
         self.clock = clock
+        self.escalation = escalation or EscalationPolicy()
+        # Strikes from tool reports: (grant_id, actor chain) -> timestamps inside the window.
+        self._strikes: dict[tuple[str, tuple[str, ...]], list[int]] = {}
         self._key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self.kid = uuid.uuid4().hex[:16]
         self.audit_log: list[dict] = []
@@ -213,6 +245,8 @@ class STS:
         token exchanged from this one, so revoking the consent kills them all.
         """
         client = self.clients[client_id]
+        if ADMIN_SCOPE in scopes:
+            raise ExchangeError("invalid_scope", f"{ADMIN_SCOPE} is never issued to a user")
         now = self._now()
         claims = {
             "iss": self.issuer,
@@ -335,6 +369,8 @@ class STS:
                 requested = set(scope.split())
             else:
                 requested = held & actor.scopes & (nxt.scopes if nxt else actor.scopes)
+            if ADMIN_SCOPE in requested or ADMIN_SCOPE in held:
+                raise ExchangeError("invalid_scope", f"{ADMIN_SCOPE} is never issued by exchange")
             if extra := requested - held:
                 raise ExchangeError("invalid_scope", f"scope exceeds what the subject holds: {' '.join(sorted(extra))}")
             if extra := requested - actor.scopes:
@@ -424,8 +460,16 @@ class STS:
             or client.client_id in act_chain(claims.get("act"))
         )
 
-    def revoke(self, token: str, token_type_hint: str | None = None, *, client_id: str, client_secret: str) -> None:
-        """RFC 7009 revocation, with one extension.
+    def revoke(
+        self,
+        token: str,
+        token_type_hint: str | None = None,
+        *,
+        client_id: str,
+        client_secret: str,
+        reason: str | None = None,
+    ) -> None:
+        """RFC 7009 revocation, with one extension and an optional report reason.
 
         Per RFC 7009: the client authenticates; an unknown, malformed, forged or
         already-expired token returns success and changes nothing (no probing
@@ -441,10 +485,18 @@ class STS:
         a token revokes every token exchanged from it, by lineage, and revoking a
         user token revokes its grant_id, so every token in the family is dead even
         if the registry no longer has it. Every outcome is audited with its reason.
+
+        reason (not in RFC 7009) is one of cleanup, anomaly, injection_suspected;
+        anything else is invalid_request. It never widens what the caller may
+        revoke. anomaly and injection_suspected add a strike for (grant_id, actor
+        chain) and the STS applies EscalationPolicy on top of the caller's
+        revocation: see _escalate. cleanup never counts.
         """
-        ctx: dict = {"client_id": client_id, "token_type_hint": token_type_hint}
+        ctx: dict = {"client_id": client_id, "token_type_hint": token_type_hint, "report_reason": reason}
         try:
             client = self._authenticate(client_id, client_secret)
+            if reason is not None and reason not in REVOKE_REASONS:
+                raise ExchangeError("invalid_request", f"reason must be one of {', '.join(sorted(REVOKE_REASONS))}")
             if not token:
                 raise ExchangeError("invalid_request", "token required")
             try:
@@ -476,46 +528,121 @@ class STS:
                 self.denylist.add_grant(claims["grant_id"], max(int(claims["exp"]), self._family_exp(jti)))
             self._audit("revoked", "grant revoked" if is_user_token else "token and descendants revoked",
                         event="token_revocation", revoked_jtis=count, **ctx)
+            if reason in STRIKE_REASONS and claims.get("grant_id"):
+                self._escalate(claims, reason)
         except ExchangeError as e:
             self._audit("deny", e.reason, event="token_revocation", error=e.error, **ctx)
             raise
 
-    def revoke_grant(self, grant_id: str) -> int:
-        """Admin: revoke a consent by its handle, not by a token string. Outside RFC 7009.
+    # ---- escalation (STS-owned policy over tool reports) ------------------
+    def _strike(self, grant_id: str, chain: tuple[str, ...]) -> int:
+        """Record a strike and return the count inside the window for this key."""
+        now = self._now()
+        floor = now - self.escalation.window_s
+        for key in [k for k, ts in self._strikes.items() if not ts or ts[-1] <= floor]:
+            del self._strikes[key]  # bounded by the window, like the denylist
+        hits = [t for t in self._strikes.get((grant_id, chain), []) if t > floor]
+        hits.append(now)
+        self._strikes[(grant_id, chain)] = hits
+        return len(hits)
 
-        Kills every live token carrying this grant_id (the user token and all
-        tokens exchanged from it). Returns how many issued tokens were denied.
-        There is no admin authentication in the prototype, so this is a method,
-        not an HTTP route.
+    def _escalate(self, claims: dict, reason: str) -> None:
+        """Widen a reported revocation by policy, never by the caller's authority.
+
+        strike 1               the presented token (already revoked by revoke())
+        strike >= handoff_at   the immediate actor's delegation: the handoff the
+                               token descends from when there is one, otherwise
+                               every token that actor exchanged under this grant
+        strike >= grant_at     the grant
+        A hostile or buggy tool can therefore cost the actor its handoff after
+        handoff_at reports and the user the grant after grant_at reports inside
+        the window. That is the deliberate trade: detection at the edge, authority
+        at the center, blast radius bounded by policy the tool does not control.
         """
+        grant_id = claims["grant_id"]
+        chain = tuple(act_chain(claims.get("act")))
+        strikes = self._strike(grant_id, chain)
+        step, denied = "token", set()
+        if strikes >= self.escalation.grant_at:
+            step, denied = "grant", self._revoke_grant(grant_id)
+        elif strikes >= self.escalation.handoff_at:
+            parent = self._issued.get(claims.get("parent_jti") or "")
+            if parent and parent.kind == "handoff":
+                step, denied = "handoff", self._revoke_subtree(parent.jti, parent.exp)
+            else:
+                step = "delegation"
+                for r in list(self._issued.values()):
+                    if r.grant_id == grant_id and r.client_id == (chain[0] if chain else None):
+                        denied |= self._revoke_subtree(r.jti, r.exp)
+        self._audit("escalated" if step != "token" else "noted", f"strike {strikes}: {step}",
+                    event="revocation_escalation", report_reason=reason, strikes=strikes, step=step,
+                    grant_id=grant_id, chain=list(chain), revoked_jtis=len(denied))
+
+    # ---- admin (handles, not token strings; outside RFC 7009) -------------
+    def _revoke_grant(self, grant_id: str) -> set[str]:
         matching = [r for r in self._issued.values() if r.grant_id == grant_id]
         exp = max((r.exp for r in matching), default=self._now() + self.user_ttl)
         self.denylist.add_grant(grant_id, exp)
         for r in matching:
             self.denylist.add_jti(r.jti, exp)
-        self._audit("revoked", "grant revoked by admin", event="grant_revocation", grant_id=grant_id, revoked_jtis=len(matching))
-        return len(matching)
+        return {r.jti for r in matching}
 
-    def revoke_client(self, client_id: str) -> int:
-        """Admin: retire an agent by its client_id handle. Outside RFC 7009.
+    def revoke_grant(self, grant_id: str, by: str = "admin") -> int:
+        """Admin: revoke a consent by its handle. Kills every live token carrying
+        this grant_id. An unknown grant_id is a no-op with count 0, still audited.
+        Returns how many issued tokens were denied."""
+        count = len(self._revoke_grant(grant_id))
+        self._audit("revoked", "grant revoked by admin", event="grant_revocation", by=by, grant_id=grant_id, revoked_jtis=count)
+        return count
+
+    def revoke_client(self, client_id: str, by: str = "admin") -> int:
+        """Admin: retire an agent by its client_id handle.
 
         Kills every live token where the client is the actor (its actor tokens and
         the tokens it requested) or appears anywhere in act, and refuses the client
-        new actor tokens and exchanges until enable_client. Returns the number of
-        issued tokens denied. Method only: no admin authentication exists here.
+        new actor tokens and exchanges until enable_client. An unknown client_id
+        changes nothing and returns 0, still audited.
         """
+        if client_id not in self.clients:
+            self._audit("noop", "unknown client", event="client_revocation", by=by, client_id=client_id, revoked_jtis=0)
+            return 0
         self.disabled_clients.add(client_id)
         denied: set[str] = set()
         for r in list(self._issued.values()):
             if r.client_id == client_id or client_id in r.actors:
                 denied |= self._revoke_subtree(r.jti, r.exp)
-        self._audit("revoked", "client revoked by admin", event="client_revocation", client_id=client_id, revoked_jtis=len(denied))
+        self._audit("revoked", "client revoked by admin", event="client_revocation", by=by, client_id=client_id, revoked_jtis=len(denied))
         return len(denied)
 
-    def enable_client(self, client_id: str) -> None:
-        """Admin: lift revoke_client. Tokens denied while it was revoked stay denied."""
+    def enable_client(self, client_id: str, by: str = "admin") -> bool:
+        """Admin: lift revoke_client. Tokens denied while it was revoked stay denied.
+        Returns whether the client is known."""
         self.disabled_clients.discard(client_id)
-        self._audit("allow", "client re-enabled by admin", event="client_revocation", client_id=client_id)
+        self._audit("allow" if client_id in self.clients else "noop", "client re-enabled by admin",
+                    event="client_revocation", by=by, client_id=client_id)
+        return client_id in self.clients
+
+    def authorize_admin(self, authorization: str | None) -> Client:
+        """Resolve a bearer actor token to a client holding sts:admin.
+
+        401 invalid_client: no bearer, not a token this STS issued, not an actor
+        token (a user or tool token presented here is refused this way), revoked,
+        or from a disabled client. 403 insufficient_scope: a real actor token
+        whose client does not hold sts:admin.
+        """
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise ExchangeError("invalid_client", "bearer actor token required", status=401)
+        try:
+            claims = self._decode("actor_token", authorization[7:].strip(), audience=self.issuer)
+            self._refuse_if_revoked("actor_token", claims)
+        except ExchangeError as e:
+            raise ExchangeError("invalid_client", e.reason, status=401)
+        client = self.clients.get(claims.get("client_id") or "")
+        if claims.get("token_use") != "actor" or client is None or client.client_id in self.disabled_clients:
+            raise ExchangeError("invalid_client", "not a live actor token", status=401)
+        if ADMIN_SCOPE not in client.scopes:
+            raise ExchangeError("insufficient_scope", f"{client.client_id} does not hold {ADMIN_SCOPE}", status=403)
+        return client
 
 
 def env_var_for(client_id: str) -> str:
@@ -538,7 +665,10 @@ def create_app(sts: STS) -> FastAPI:
         """Dev stand-in for the AS login and consent screen."""
         if client_id not in sts.clients:
             return JSONResponse({"error": "invalid_client"}, status_code=400)
-        return {"access_token": sts.issue_user_token(user, client_id, set(scope.split()), consent)}
+        try:
+            return {"access_token": sts.issue_user_token(user, client_id, set(scope.split()), consent)}
+        except ExchangeError as e:
+            return err(e)
 
     @app.post("/token")
     def token(
@@ -581,16 +711,45 @@ def create_app(sts: STS) -> FastAPI:
         client_secret: str = Form(...),
         token: str | None = Form(None),  # required by RFC 7009; checked in STS.revoke so the error body is 6749-shaped, not a 422
         token_type_hint: str | None = Form(None),
+        reason: str | None = Form(None),  # non-standard: cleanup | anomaly | injection_suspected
     ):
         """RFC 7009 endpoint. 200 with an empty body on success, including for tokens
-        this STS does not know; 400 invalid_request when token is missing or empty;
-        401 when the client fails to authenticate; 400 unauthorized_client when the
-        token is genuine but not the client's to revoke."""
+        this STS does not know; 400 invalid_request when token is missing or empty or
+        reason is unknown; 401 when the client fails to authenticate; 400
+        unauthorized_client when the token is genuine but not the client's to revoke."""
         try:
-            sts.revoke(token, token_type_hint, client_id=client_id, client_secret=client_secret)
+            sts.revoke(token, token_type_hint, client_id=client_id, client_secret=client_secret, reason=reason)
         except ExchangeError as e:
             return err(e)
         return Response(status_code=200)
+
+    # Admin routes: bearer actor token from a client holding sts:admin. Handles in,
+    # counts out; an unknown handle is 200 with zero counts, so nothing can be probed.
+    @app.post("/admin/revoke/grant")
+    def admin_revoke_grant(grant_id: str = Form(...), authorization: str | None = Header(None)):
+        try:
+            admin = sts.authorize_admin(authorization)
+        except ExchangeError as e:
+            return err(e)
+        return {"grant_id": grant_id, "revoked_jtis": sts.revoke_grant(grant_id, by=admin.client_id)}
+
+    @app.post("/admin/revoke/client")
+    def admin_revoke_client(client_id: str = Form(...), authorization: str | None = Header(None)):
+        try:
+            admin = sts.authorize_admin(authorization)
+        except ExchangeError as e:
+            return err(e)
+        count = sts.revoke_client(client_id, by=admin.client_id)
+        return {"client_id": client_id, "revoked_jtis": count, "disabled": client_id in sts.disabled_clients}
+
+    @app.post("/admin/enable/client")
+    def admin_enable_client(client_id: str = Form(...), authorization: str | None = Header(None)):
+        try:
+            admin = sts.authorize_admin(authorization)
+        except ExchangeError as e:
+            return err(e)
+        known = sts.enable_client(client_id, by=admin.client_id)
+        return {"client_id": client_id, "known": known, "disabled": client_id in sts.disabled_clients}
 
     return app
 

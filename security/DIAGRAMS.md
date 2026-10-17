@@ -123,7 +123,7 @@ just where it is.
 
 ## 3. Token exchange, as built (prototype A)
 
-Runs in `security/delegation/`, 33 tests. The chain is user > mcp-gateway >
+Runs in `security/delegation/`, 47 tests. The chain is user > mcp-gateway >
 code-review-subagent, and access narrows at every hop.
 
 ```mermaid
@@ -182,7 +182,9 @@ flowchart LR
     subgraph Today["Revocation today (prototype A and C)"]
         TTL["Short lifetimes stay<br/>user 600 s, actor 60 s, tool 120 to 300 s<br/>no refresh tokens"]
         LIN["Lineage claims on every token<br/>jti, parent_jti, grant_id<br/>sts.py"]
-        REV["RFC 7009 /revoke + subtree extension<br/>revoke a token = its descendants too<br/>revoke a user token = its grant<br/>sts.py: revoke, revoke_grant, revoke_client"]
+        REV["RFC 7009 /revoke + subtree extension<br/>revoke a token = its descendants too<br/>revoke a user token = its grant<br/>sts.py: revoke"]
+        RPT["Tool reports: /revoke with reason<br/>tool may revoke only the token it was presented<br/>STS-owned strikes per (grant, chain), 10 min window:<br/>1 token, 2 actor's delegation, 3 grant<br/>sts.py: _escalate, revocation.EscalationPolicy"]
+        ADM["Admin routes: /admin/revoke/grant, /admin/revoke/client,<br/>/admin/enable/client<br/>bearer actor token from ops-console (scope sts:admin,<br/>never issued by exchange); handles in, counts out<br/>sts.py: authorize_admin, admin.py CLI"]
         DENY["In-memory denylist by jti and grant_id<br/>entries expire with the family, bounded by 600 s<br/>revocation.py"]
         HOOK["Verify-side check after local JWT verification<br/>shared denylist in process, or a callback<br/>verify.py: RevocationCheck"]
         PUSH["Pushed deny list across PEPs<br/>NOT BUILT: a tool that does not share<br/>the object does not see revocations (threat 11)"]
@@ -190,22 +192,31 @@ flowchart LR
         LOG["In-process audit log, revocations included<br/>no tamper evidence, no central sink (threat 12)"]
     end
     LIN --> REV --> DENY --> HOOK
+    RPT --> DENY
+    ADM --> DENY
     HOOK -.-> PUSH
     TTL --> DENY
     PDPX --> LOG
     REV --> LOG
+    RPT --> LOG
+    ADM --> LOG
     classDef gap fill:#fde2e2,stroke:#b00020,color:#000;
     classDef partial fill:#fff4d6,stroke:#b58100,color:#000;
     class PUSH,LOG gap;
-    class HOOK partial;
+    class HOOK,ADM partial;
 ```
 
 Today the answer to "how do you revoke" is: call `/revoke` with the user token and
 every token exchanged from it is refused at the STS and at any tool that shares the
-denylist, within the same process. Across processes the answer is still "wait up to
-five minutes, or pull the policy." Still missing: the pushed deny list to every PEP,
-key-bound tokens (a revoked key killing every token it holds), SVID revocation for
-agents (prototype B), and the central audit sink. The first hop at Keycloak does not
+denylist, within the same process. A tool server that sees something wrong reports
+the token it was given and the STS, not the tool, decides how far that goes: one
+report kills the token, two the actor's delegation, three the grant, inside a ten
+minute window. An operator revokes a grant or retires an agent by handle through
+the admin routes, with the ops-console's own actor token as the credential. Across
+processes the answer is still "wait up to five minutes, or pull the policy." Still
+missing: the pushed deny list to every PEP, key-bound tokens (a revoked key killing
+every token it holds), SVID revocation for agents and an admin SVID for the console
+(prototype B), and the central audit sink. The first hop at Keycloak does not
 participate: Keycloak's `/revoke` knows only its own tokens, and the STS neither
 introspects the subject on exchange nor consumes Keycloak admin events.
 
@@ -258,5 +269,7 @@ Every hop is audited (threats 11, 12; "next controls" items 1, 2, 5).
 | AuthZEN-shaped PEP and OPA PDP, fail closed | built | `security/policy/` | 7, 8, 9 |
 | Sender-constrained tokens | not built | next controls item 1 | 1 |
 | Lineage claims, RFC 7009 `/revoke` with subtree extension, in-memory denylist, verify-side check | built (prototype) | `security/delegation/sts.py`, `revocation.py`, `verify.py` | 11 |
-| Revocation beyond lifetimes | partial | section 4; pushed deny list across PEPs, key-bound tokens and SVID revocation not built | 11 |
+| Tool reports with STS-owned escalation (token, delegation, grant) | built (prototype) | `security/delegation/sts.py: _escalate`, `revocation.EscalationPolicy` | 11, 7 |
+| Admin revocation routes behind an `sts:admin` actor token | built (prototype) | `security/delegation/sts.py: authorize_admin`, `admin.py` | 11 |
+| Revocation beyond lifetimes | partial | section 4; pushed deny list across PEPs, key-bound tokens, SVID revocation and an admin SVID not built | 11 |
 | Append-only audit sink | not built | next controls item 5 | 12 |
