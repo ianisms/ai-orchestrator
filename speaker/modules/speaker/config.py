@@ -92,6 +92,17 @@ class AppConfig:
     echo_suppress_enable: bool = False
     echo_suppress_max_attenuation: float = 0.35
 
+    # Device identity (modules/speaker/device_identity.py). Off by default: with
+    # it on, the client attests at boot with the YubiKey PIV key and holds a
+    # short-lived device credential. The credential is not yet attached to the
+    # gRPC stream; see security/DEVICE_IDENTITY.md.
+    device_identity_enable: bool = False
+    device_id: str = ""                      # defaults to session_id_base
+    device_attest_url: str = ""              # e.g. http://ai-server.local:9111; derived from server_target if empty
+    device_pin_path: str = "/ai/speaker/state/device_pin"
+    device_credential_path: str = "/ai/speaker/state/device_credential.json"
+    device_yubikey_serial: int = 0           # 0 = first attached YubiKey
+
     # Logging
     log_level: str = "INFO"
     verbose: bool = False

@@ -50,4 +50,13 @@ jobs:
         working-directory: server
         run: python -m pytest -q test/test_voice_gate.py test/test_voice_scripts.py
 
+      # Device identity runs with the in-memory FakeSigner; no YubiKey in CI.
+      - name: Device identity tests
+        working-directory: server
+        run: python -m pytest -q test/test_device_identity.py
+
+      - name: Speaker device identity tests
+        working-directory: speaker
+        run: python -m pytest -q test/test_device_identity.py
+
 # server/test suites that read deployment paths (/ai/server/...) run on the host, not here.

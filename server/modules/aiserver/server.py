@@ -48,6 +48,7 @@ from orchestrator.core.metrics import (
 )
 from orchestrator.core.history_store import HistoryStore
 from orchestrator.core.session import OrchestratorSession
+from orchestrator.core.device_identity import DeviceIdentityHttp, DeviceIdentityService, EnrollmentRegistry
 from stt.stream import STTStream
 from tools.registry import list_tools, set_hidden_tools
 from orchestrator.tools.mcp_client import MCPToolClient, set_tools_client
@@ -63,6 +64,7 @@ _RESOLVED_LLM_MODEL: str | None = None
 _RESOLVED_LLM_MAX_MODEL_LEN: int = 0
 _RESOLVED_HISTORY_BASE_TOKENS: int = 0
 _STATUS_HTTPD: ThreadingHTTPServer | None = None
+_DEVICE_IDENTITY: DeviceIdentityService | None = None
 _SERVER_PROTO_PATH: str = ""
 _SERVER_PROTO_SHA256: str = ""
 
@@ -425,7 +427,8 @@ def _build_readiness_payload(*, tools_connected: bool, model_resolved: bool) -> 
     }
 
 
-def _start_status_server(port: int, provider, readiness_provider, logger) -> ThreadingHTTPServer:
+def _start_status_server(port: int, provider, readiness_provider, logger,
+                         device_http: DeviceIdentityHttp | None = None) -> ThreadingHTTPServer:
     class _Handler(BaseHTTPRequestHandler):
         def _write_json(self, payload: dict, code: int = 200) -> None:
             raw = json.dumps(payload, ensure_ascii=True).encode("utf-8")
@@ -447,6 +450,23 @@ def _start_status_server(port: int, provider, readiness_provider, logger) -> Thr
                 self._write_json(provider())
                 return
             self._write_json({"status": "not_found"}, code=404)
+
+        def do_POST(self):  # noqa: N802
+            # Device identity challenge: /device/challenge and /device/attest
+            # (orchestrator/core/device_identity.py). Anything else is 404.
+            if device_http is None or self.path not in device_http.ROUTES:
+                self._write_json({"status": "not_found"}, code=404)
+                return
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                length = 0
+            if length > device_http.max_body:
+                self._write_json({"error": "body too large"}, code=413)
+                return
+            body = self.rfile.read(length) if length > 0 else b""
+            code, payload = device_http.post(self.path, body)
+            self._write_json(payload, code=code)
 
         def log_message(self, _format, *_args):
             return
@@ -599,12 +619,18 @@ class OrchestratorService(pbg.OrchestratorServicer):
                     pass
                 _record_drop("text_in", turn_id=turn_id, size=len(text))
 
+        # Device credential (orchestrator/core/device_identity.py). Verified and
+        # logged only: the stream is not refused without one and the voice gate
+        # does not read it yet. See security/DEVICE_IDENTITY.md for the gap.
+        device_cred = _DEVICE_IDENTITY.device_from_metadata(md) if _DEVICE_IDENTITY else None
         _log(
             "info",
             "client connected",
             client_key=client_key,
             client_key_source=client_key_source,
             peer=context.peer(),
+            device_id=device_cred.device_id if device_cred else "",
+            device_jkt=device_cred.thumbprint if device_cred else "",
         )
 
 
@@ -1171,7 +1197,13 @@ async def main():
             model_resolved=bool(_RESOLVED_LLM_MODEL),
         )
 
-    global _STATUS_HTTPD
+    global _STATUS_HTTPD, _DEVICE_IDENTITY
+    _DEVICE_IDENTITY = DeviceIdentityService(
+        registry=EnrollmentRegistry(settings.DEVICE_REGISTRY_PATH),
+        challenge_ttl_s=int(settings.DEVICE_CHALLENGE_TTL_S),
+        credential_ttl_s=int(settings.DEVICE_CREDENTIAL_TTL_S),
+    )
+    log.info("config DEVICE_REGISTRY_PATH=%s", settings.DEVICE_REGISTRY_PATH)
     if bool(settings.ORCH_STATUS_ENABLED):
         def _status_provider() -> dict:
             connected = bool(getattr(tools_client, "_session", None) is not None)
@@ -1182,6 +1214,7 @@ async def main():
             _status_provider,
             _readiness_provider,
             log,
+            device_http=DeviceIdentityHttp(_DEVICE_IDENTITY),
         )
 
     # Startup diagnostics: log failed readiness checks until green or timeout.

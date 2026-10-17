@@ -16,7 +16,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     procps \
+    libpcsclite-dev \
+    swig \
  && rm -rf /var/lib/apt/lists/*
+# libpcsclite-dev and swig build pyscard, which yubikey-manager needs to reach the
+# YubiKey PIV applet. At run time the container talks to the host's pcscd over
+# /run/pcscd (see docker-compose.yaml); install pcscd on the Pi.
 
 # ---- Python deps ----
 RUN python -m pip install --upgrade pip setuptools wheel \
@@ -27,7 +32,9 @@ RUN python -m pip install --upgrade pip setuptools wheel \
     pyalsaaudio==0.11.0 \
     numpy \
     openwakeword \
-    pyyaml
+    pyyaml \
+    cryptography \
+    yubikey-manager
 
 # ---- Healthcheck ----
 COPY docker/healthcheck.py /opt/app/healthcheck.py

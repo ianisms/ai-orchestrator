@@ -26,7 +26,24 @@ Voice client and hardware for a fully local voice assistant. A Raspberry Pi Comp
 
 Configuration is `config/config.yaml` with `config/benchmarks.yaml` supplying `latency`, `balanced`, `robust`, and `noisy` profiles. The Docker image (`docker/`) pins gRPC and protobuf, generates the stubs at build time, and pre-downloads the openWakeWord base models so a Pi with no network still boots.
 
-`test/test_speaker_integration.py` covers VAD calibration persistence, speech-versus-silence detection, state machine guards, and event bus isolation with synthesized PCM. `test/chat_client.py` is a text-mode client for the server. `scripts/test/oww/testit.py` is a standalone wakeword bench.
+`test/test_speaker_integration.py` covers VAD calibration persistence, speech-versus-silence detection, state machine guards, and event bus isolation with synthesized PCM. `test/test_device_identity.py` covers the device identity pieces below with an in-memory signer. `test/chat_client.py` is a text-mode client for the server. `scripts/test/oww/testit.py` is a standalone wakeword bench.
+
+## Device identity (YubiKey)
+
+Off by default. With `device_identity_enable: true` the client proves at boot that it holds a key the orchestrator enrolled, and gets a short-lived device credential back. The key lives in PIV slot 9a of a YubiKey 5 plugged into the CM5's USB port, generated on the YubiKey (touch policy never, PIN policy once) so it cannot be copied off the device. `modules/speaker/device_identity.py` holds the `Signer` interface, the `YubiKeyPivSigner`, a `FakeSigner` for tests, and the challenge client. The design, its limits and the path to a secure element on the next board revision are in `security/DEVICE_IDENTITY.md`.
+
+One-time enrollment, on the Pi with the YubiKey in:
+
+```
+sudo apt install pcscd                          # host side; the container reaches it over /run/pcscd
+printf '%s' "$PIN" > /ai/speaker/state/device_pin && chmod 600 /ai/speaker/state/device_pin
+python scripts/enroll_device_key.py generate --device-id speaker-1 --room kitchen --household home \
+    --management-key-file /root/.yk_mgmt --pin-file /ai/speaker/state/device_pin
+```
+
+That generates the key, exports the public key, and writes `/ai/speaker/state/device_enrollment.json`. Copy that file to the server host and register it: `python server/scripts/enroll_device.py add --request device_enrollment.json`. Registration is deliberately a host-side step, like approving a voice enrollment; a device cannot enroll itself over the network. `enroll_device.py revoke speaker-1` cuts a lost key off in one step. Then uncomment the `/run/pcscd` mount in `docker/docker-compose.yaml`, set `device_identity_enable: true`, and restart the container; the log line `device credential issued` confirms the challenge passed.
+
+What is not done yet: the credential is held by the client and verified by the orchestrator at connect, but `grpc_client.py` does not attach it to the Converse stream and nothing on the server is gated on it. The integration point is `DeviceAttestClient.grpc_metadata()`.
 
 ## Hardware
 

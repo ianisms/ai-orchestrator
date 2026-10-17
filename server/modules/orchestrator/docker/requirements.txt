@@ -9,3 +9,4 @@ prometheus_client==0.20.0
 nvidia-riva-client
 protobuf>=4.25,<6
 watchfiles==0.24.0
+cryptography>=42
