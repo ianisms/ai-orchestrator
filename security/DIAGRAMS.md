@@ -123,7 +123,7 @@ just where it is.
 
 ## 3. Token exchange, as built (prototype A)
 
-Runs in `security/delegation/`, 17 tests. The chain is user > mcp-gateway >
+Runs in `security/delegation/`, 32 tests. The chain is user > mcp-gateway >
 code-review-subagent, and access narrows at every hop.
 
 ```mermaid
@@ -152,10 +152,10 @@ sequenceDiagram
     STS-->>SA: actor token
     SA->>STS: token exchange<br/>subject=handoff, actor=actor token,<br/>audience=tool-github
     Note over STS: plain exchange of a token with act or may_act is refused<br/>exp = min(now + 120 s, subject exp), no refresh
-    STS-->>SA: tool token<br/>sub=alice, act=[gateway, sub-agent], scope repo:read
+    STS-->>SA: tool token<br/>sub=alice, act=[gateway, sub-agent], scope repo:read,<br/>jti, parent_jti, grant_id
 
     SA->>T: tools/call + tool token
-    T->>T: verify signature, iss, aud, exp<br/>reject any token without act
+    T->>T: verify signature, iss, aud, exp<br/>then denylist by jti, parent_jti, grant_id<br/>reject any token without act
     T->>PEP: subject (alice + act chain), action, resource, context
     PEP->>PDP: AuthZEN-shaped request
     Note over PDP: whole chain evaluated once<br/>every actor must hold the tool<br/>writes need the user's single-use approval
@@ -180,19 +180,34 @@ act-chain stripping, borrowed actor token, handoff token sent to a tool.
 ```mermaid
 flowchart LR
     subgraph Today["Revocation today (prototype A and C)"]
-        TTL["Short lifetimes only<br/>user 600 s, actor 60 s, tool 120 to 300 s<br/>no refresh tokens"]
-        NOREV["No revocation endpoint<br/>no replay cache<br/>revoking the user token does not<br/>revoke exchanged tokens (threat 11)"]
-        PDPX["PDP fail-closed is the only kill switch:<br/>OPA down or policy change = all calls denied<br/>(threat 9, by design)"]
-        LOG["In-process audit log<br/>no tamper evidence, no central sink (threat 12)"]
+        TTL["Short lifetimes stay<br/>user 600 s, actor 60 s, tool 120 to 300 s<br/>no refresh tokens"]
+        LIN["Lineage claims on every token<br/>jti, parent_jti, grant_id<br/>sts.py"]
+        REV["RFC 7009 /revoke + subtree extension<br/>revoke a token = its descendants too<br/>revoke a user token = its grant<br/>sts.py: revoke, revoke_grant, revoke_client"]
+        DENY["In-memory denylist by jti and grant_id<br/>entries expire with the family, bounded by 600 s<br/>revocation.py"]
+        HOOK["Verify-side check after local JWT verification<br/>shared denylist in process, or a callback<br/>verify.py: RevocationCheck"]
+        PUSH["Pushed deny list across PEPs<br/>NOT BUILT: a tool that does not share<br/>the object does not see revocations (threat 11)"]
+        PDPX["PDP fail-closed is a second, independent cut:<br/>OPA down or policy change = all calls denied<br/>(threat 9, by design)"]
+        LOG["In-process audit log, revocations included<br/>no tamper evidence, no central sink (threat 12)"]
     end
-    TTL --> NOREV
+    LIN --> REV --> DENY --> HOOK
+    HOOK -.-> PUSH
+    TTL --> DENY
     PDPX --> LOG
+    REV --> LOG
     classDef gap fill:#fde2e2,stroke:#b00020,color:#000;
-    class NOREV,LOG gap;
+    classDef partial fill:#fff4d6,stroke:#b58100,color:#000;
+    class PUSH,LOG gap;
+    class HOOK partial;
 ```
 
-Today the answer to "how do you revoke" is "wait up to five minutes, or pull the
-policy." That is honest and it is not enough.
+Today the answer to "how do you revoke" is: call `/revoke` with the user token and
+every token exchanged from it is refused at the STS and at any tool that shares the
+denylist, within the same process. Across processes the answer is still "wait up to
+five minutes, or pull the policy." Still missing: the pushed deny list to every PEP,
+key-bound tokens (a revoked key killing every token it holds), SVID revocation for
+agents (prototype B), and the central audit sink. The first hop at Keycloak does not
+participate: Keycloak's `/revoke` knows only its own tokens, and the STS neither
+introspects the subject on exchange nor consumes Keycloak admin events.
 
 ### Target
 
@@ -242,5 +257,6 @@ Every hop is audited (threats 11, 12; "next controls" items 1, 2, 5).
 | Tool-side verifier | built | `security/delegation/verify.py` | 5, 10 |
 | AuthZEN-shaped PEP and OPA PDP, fail closed | built | `security/policy/` | 7, 8, 9 |
 | Sender-constrained tokens | not built | next controls item 1 | 1 |
-| Revocation beyond lifetimes | not built | section 4 | 11 |
+| Lineage claims, RFC 7009 `/revoke` with subtree extension, in-memory denylist, verify-side check | built (prototype) | `security/delegation/sts.py`, `revocation.py`, `verify.py` | 11 |
+| Revocation beyond lifetimes | partial | section 4; pushed deny list across PEPs, key-bound tokens and SVID revocation not built | 11 |
 | Append-only audit sink | not built | next controls item 5 | 12 |

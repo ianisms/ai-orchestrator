@@ -20,7 +20,7 @@ Goal: a steered or compromised agent can do no more than the user approved, for 
 | 8 | Exfiltration through a read tool | Resource must be in the session's list | Partly: read of an out-of-session repo refused | Tool output is not inspected; data the user did allow can still flow back to the model |
 | 9 | PDP outage or slow PDP | PEP fails closed on timeout, 5xx and malformed answers; 500 ms budget | Yes: OPA down and PDP timeout both denied and logged | Availability cost: outage stops all tool calls, by design |
 | 10 | Forged tokens | RS256 signature checked against the STS key or JWKS; issuer and audience checked | Yes: token signed by another key refused | Key held in memory in the prototype; no rotation |
-| 11 | Revocation gap | Short lifetimes | No | Revoking the user's token does not revoke exchanged tokens (same as Keycloak 26.8) |
+| 11 | Revocation gap | Short lifetimes; lineage claims (`jti`, `parent_jti`, `grant_id`) on every token; RFC 7009 `/revoke` that also revokes a token's descendants and, for a user token, its grant; admin `revoke_grant` and `revoke_client`; STS refuses exchange of a revoked subject or lineage; tool verifier checks an in-memory denylist after local JWT verification, fail closed if the check errors | Yes: user token revoked, live tool token refused at tool and re-exchange refused at STS; sibling handoff unaffected; unknown and expired tokens succeed silently; client outside the chain refused; denylist entry gone after exp; revoked client loses actor tokens and live tool tokens; revocation works with the PDP down | Denylist is in process: a tool that does not share it sees nothing (pushed deny list across PEPs not built); no key-bound tokens, so a stolen token is only as dead as the list says; Keycloak hop 1 does not participate (its `/revoke` knows only its own tokens; no introspection or admin-event feed on exchange) |
 | 12 | Audit gaps | Every exchange and every tool decision logged with path, decision and reasons | Yes: counts checked in tests | Logs are in process; no tamper evidence or central sink |
 | 13 | Stolen workload credential, Docker socket exposure | Not built (prototype B) | No | SPIRE's Docker attestor needs the Docker socket and pid: host, which is root-equivalent |
 | 14 | Device posture spoofing; device-code phishing on headless agents | Not built (prototype D) | No | Posture would be a signed, short-lived input to the same policy |
@@ -46,7 +46,7 @@ Not gated yet: explicit location-preference commands are handled before the mode
 
 ## Attacks run (demo.py in delegation/ and policy/)
 
-Expired-token replay; exchange without `may_act`; another agent presenting the user's token; sub-agent asking for write scope; sub-agent asking for an unregistered tool; plain exchange to strip `act`; borrowed actor token; handoff token sent to a tool; injected merge via sub-agent; injected merge via gateway; out-of-session read; approval replay and reuse on a different PR; token without `act`; forged signature; OPA down; PDP timeout; voice match below threshold; replayed voice (liveness fail); off-network voice; voice with no signals; high-risk voice write with confirmations off. All refused, each with a logged reason. 33 Python tests and 22 policy tests pass.
+Expired-token replay; exchange without `may_act`; another agent presenting the user's token; sub-agent asking for write scope; sub-agent asking for an unregistered tool; plain exchange to strip `act`; borrowed actor token; handoff token sent to a tool; injected merge via sub-agent; injected merge via gateway; out-of-session read; approval replay and reuse on a different PR; token without `act`; forged signature; live tool token after the user token is revoked; re-exchange of a revoked lineage; revocation by an agent outside the chain; revoked agent's actor token; OPA down; PDP timeout; voice match below threshold; replayed voice (liveness fail); off-network voice; voice with no signals; high-risk voice write with confirmations off. All refused, each with a logged reason. 48 Python tests and 22 policy tests pass.
 
 ## Next controls, in order
 
@@ -55,6 +55,7 @@ Expired-token replay; exchange without `may_act`; another agent presenting the u
 3. A real approval channel with the call summary shown to the user (#7).
 4. Device posture as a signed policy input for write-class tools (D).
 5. Central, append-only audit sink (#12).
+6. Pushed deny list to every PEP, and a Keycloak admin-event feed into grant revocation, so #11 holds across processes and for hop 1.
 
 ## Voice gate rollout, in order
 
