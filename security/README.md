@@ -6,6 +6,7 @@ under which grant, for how long, and what stops them.
 - `delegation/` - A: RFC 8693 token exchange with a nested `act` chain (user > gateway > sub-agent), short-lived audience-scoped tokens, and a tool-side verifier that rejects any token without `act`. Keycloak 26.8 setup for the first hop.
 - `policy/` - C: AuthZEN-shaped policy check (OPA) before every MCP `tools/call`. The whole chain is evaluated once, access only narrows, write-class tools need the user's approval for the exact call (on by default, never waivable for high-risk tools), voice requests also need a strong speaker match, home-network origin and a passed liveness check, and any missing signal denies. Every decision is logged with its reasons.
 - `THREAT_MODEL.md` - E: 22 threats (15 for the prototypes, 7 for the orchestrator's voice gate), the control for each, whether it was tested, and the residual risk.
+- `DIAGRAMS.md` - current state and target state for attestation, token exchange and revocation, with each gap tied to its threat.
 
 ## Run
 
