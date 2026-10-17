@@ -1,0 +1,172 @@
+name: Clear merged branches
+
+# Manually-triggered cleanup of leftover branches. Ported from
+# ianisms/pillbox (clear-claude-branches.yml) with two changes for this
+# repo: `main` is the only integration branch, and "merged" is decided by
+# GitHub's PR state as well as git ancestry, because PRs here are squash
+# merged and a squashed branch is never an ancestor of main.
+#
+# Default behaviour is a dry-run that only lists what would be deleted;
+# set `confirm: true` when running to actually delete.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Actually delete (false = dry-run, just list)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      include_unmerged:
+        description: 'Also delete branches with no merged PR and not merged into main (dangerous)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      include_dependabot:
+        description: 'Also consider dependabot/* branches (their open PRs would close)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Identify candidates
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INCLUDE_UNMERGED: ${{ inputs.include_unmerged }}
+          INCLUDE_DEPENDABOT: ${{ inputs.include_dependabot }}
+        run: |
+          set -euo pipefail
+
+          # Branches that are off-limits no matter what.
+          PROTECTED=(main)
+          is_protected() {
+            local b=$1
+            for p in "${PROTECTED[@]}"; do
+              [[ "$b" == "$p" ]] && return 0
+            done
+            return 1
+          }
+
+          # Merged means: an ancestor of main (merge commit), or the head of
+          # a PR GitHub recorded as merged (squash or rebase merge).
+          is_merged() {
+            local b=$1
+            if git merge-base --is-ancestor "origin/$b" origin/main 2>/dev/null; then
+              return 0
+            fi
+            local n
+            n=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$b" --state merged --json number --jq 'length')
+            [[ "$n" -gt 0 ]]
+          }
+
+          has_open_pr() {
+            local b=$1
+            local n
+            n=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$b" --state open --json number --jq 'length')
+            [[ "$n" -gt 0 ]]
+          }
+
+          candidates=()
+          while IFS= read -r b; do
+            [[ -z "$b" ]] && continue
+            [[ "$b" == "HEAD" ]] && continue
+            candidates+=("$b")
+          done < <(git for-each-ref --format='%(refname:short)' "refs/remotes/origin/" | sed 's|^origin/||')
+
+          to_delete=()
+          to_skip=()
+          for b in "${candidates[@]}"; do
+            if is_protected "$b"; then
+              to_skip+=("$b (protected)")
+              continue
+            fi
+            if [[ "$b" == dependabot/* && "$INCLUDE_DEPENDABOT" != "true" ]]; then
+              to_skip+=("$b (dependabot, keeping)")
+              continue
+            fi
+            if has_open_pr "$b"; then
+              to_skip+=("$b (open PR, keeping)")
+              continue
+            fi
+            if is_merged "$b"; then
+              to_delete+=("$b")
+            elif [[ "$INCLUDE_UNMERGED" == "true" ]]; then
+              to_delete+=("$b (UNMERGED)")
+            else
+              to_skip+=("$b (unmerged, keeping)")
+            fi
+          done
+
+          {
+            echo "## Candidates"
+            echo ""
+            echo "### Would delete (${#to_delete[@]})"
+            for b in "${to_delete[@]}"; do echo "- $b"; done
+            echo ""
+            echo "### Skipping (${#to_skip[@]})"
+            for b in "${to_skip[@]}"; do echo "- $b"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          printf '%s\n' "${to_delete[@]}" > /tmp/to_delete.txt
+
+      - name: Delete (if confirmed)
+        if: ${{ inputs.confirm == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! -s /tmp/to_delete.txt ]]; then
+            echo "Nothing to delete."
+            exit 0
+          fi
+
+          deleted=0
+          failed=0
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            b="${line%% (*}"
+            if git push origin --delete "$b" 2>&1; then
+              deleted=$((deleted + 1))
+              echo "deleted: $b"
+            else
+              failed=$((failed + 1))
+              echo "failed:  $b"
+            fi
+          done < /tmp/to_delete.txt
+
+          {
+            echo ""
+            echo "## Deletion results"
+            echo "- Deleted: $deleted"
+            echo "- Failed:  $failed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [[ "$failed" -eq 0 ]]
+
+      - name: Dry-run notice
+        if: ${{ inputs.confirm != 'true' }}
+        run: |
+          echo "::notice::Dry-run mode. Re-run with confirm=true to actually delete the listed branches."
