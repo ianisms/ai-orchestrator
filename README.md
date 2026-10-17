@@ -106,6 +106,7 @@ This repo was built the way I build now: I set the design and the rules, Claude 
 - No stored secrets where federation can replace them. A tool that cannot speak OAuth sits behind a proxy that can; the proxy fetches the native credential per call and holds nothing at rest; every remaining static secret carries a migration date.
 - One broker surface for agents, with adapters underneath that use each platform's workload identity where it exists and our own where it does not. Agents never carry per-platform code.
 - Device identity for the speaker: a plugged-in YubiKey (PIV, headless) now, because it ships this month; then a secure element or SPI TPM footprint on the next carrier-board revision, because I design the board and a footprint beats a dongle. A header-mounted TPM module would also work; I am not taking that path.
+- Hardware: the enclosure design is entirely mine. The CM5 carrier board was a joint effort: I authored the KiCad files, schematic and layout; Claude advised on component selection.
 - Publication: a sanitized single-commit copy of the private repos, the MAUI client left out, PolyForm Strict in place of MIT so the code is usable only with my consent.
 
 Claims were checked against the tree in both directions. When my description outran the code (the voice gate rules, before the gate existed), the gap became a backlog item and the prototype, not a sentence in a README. When a doc outran the code (an attestation "today" story that called network origin plus voice "attestation"), the doc was cut back to what is true.
