@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -119,6 +119,7 @@ jobs:
             fi
           done
 
+          mkdir -p /tmp/cleanup
           {
             echo "## Candidates"
             echo ""
@@ -127,9 +128,18 @@ jobs:
             echo ""
             echo "### Skipping (${#to_skip[@]})"
             for b in "${to_skip[@]}"; do echo "- $b"; done
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee /tmp/cleanup/candidates.md >> "$GITHUB_STEP_SUMMARY"
 
-          printf '%s\n' "${to_delete[@]}" > /tmp/to_delete.txt
+          # Same list in the plain job log, since the mobile app does not show the summary.
+          echo "::group::Would delete (${#to_delete[@]})"
+          printf '%s\n' "${to_delete[@]}"
+          echo "::endgroup::"
+          echo "::group::Skipping (${#to_skip[@]})"
+          printf '%s\n' "${to_skip[@]}"
+          echo "::endgroup::"
+
+          printf '%s\n' "${to_delete[@]}" > /tmp/cleanup/to_delete.txt
+          printf '%s\n' "${to_skip[@]}" > /tmp/cleanup/skipped.txt
 
       - name: Delete (if confirmed)
         if: ${{ inputs.confirm == 'true' }}
@@ -138,7 +148,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! -s /tmp/to_delete.txt ]]; then
+          if [[ ! -s /tmp/cleanup/to_delete.txt ]]; then
             echo "Nothing to delete."
             exit 0
           fi
@@ -155,14 +165,14 @@ jobs:
               failed=$((failed + 1))
               echo "failed:  $b"
             fi
-          done < /tmp/to_delete.txt
+          done < /tmp/cleanup/to_delete.txt
 
           {
             echo ""
             echo "## Deletion results"
             echo "- Deleted: $deleted"
             echo "- Failed:  $failed"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a /tmp/cleanup/candidates.md >> "$GITHUB_STEP_SUMMARY"
 
           [[ "$failed" -eq 0 ]]
 
@@ -170,3 +180,11 @@ jobs:
         if: ${{ inputs.confirm != 'true' }}
         run: |
           echo "::notice::Dry-run mode. Re-run with confirm=true to actually delete the listed branches."
+
+      - name: Upload report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: branch-cleanup-${{ github.run_number }}
+          path: /tmp/cleanup/
+          retention-days: 14
