@@ -12,7 +12,7 @@ under which grant, for how long, and what stops them.
 
 ```
 cd delegation && pip install -r requirements.txt
-python demo.py && python -m pytest -q          # 32 tests
+python demo.py && python -m pytest -q          # 33 tests
 cd ../policy                                   # needs the opa binary on PATH or OPA_BIN
 opa test rego && python demo.py && python -m pytest -q   # 22 policy tests, 16 Python tests
 ```

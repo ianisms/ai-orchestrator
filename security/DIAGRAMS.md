@@ -123,7 +123,7 @@ just where it is.
 
 ## 3. Token exchange, as built (prototype A)
 
-Runs in `security/delegation/`, 32 tests. The chain is user > mcp-gateway >
+Runs in `security/delegation/`, 33 tests. The chain is user > mcp-gateway >
 code-review-subagent, and access narrows at every hop.
 
 ```mermaid
