@@ -3,7 +3,8 @@
     python demo.py
 
 Prints the user > gateway > sub-agent chain as the tool sees it, then each
-attack and the reason it was refused.
+attack and the reason it was refused, then a revocation: the user's token is
+revoked at /revoke and every token exchanged from it dies with it.
 """
 from __future__ import annotations
 
@@ -19,7 +20,9 @@ from verify import DelegationRejected, UpstreamVerifier
 ISS = "http://sts.local"
 sts = STS(issuer=ISS)
 http = TestClient(create_app(sts))
-github = UpstreamVerifier(ISS, "tool-github", key=sts.public_key)
+# The tool verifier shares the STS denylist in process (the pushed deny list in
+# DIAGRAMS.md section 4 is the target; this is the demo stand-in).
+github = UpstreamVerifier(ISS, "tool-github", key=sts.public_key, revocation=sts.denylist)
 
 
 def actor(cid: str) -> str:
@@ -42,10 +45,16 @@ def exchange(cid: str, subject: str, with_actor: bool = True, actor_tok: str | N
     return http.post("/token", data=data).json()
 
 
+def revoke(cid: str, token: str) -> int:
+    r = http.post("/revoke", data={"token": token, "client_id": cid, "client_secret": sts.clients[cid].secret})
+    return r.status_code
+
+
 def show(title: str, token: str) -> None:
     c = jwt.decode(token, options={"verify_signature": False})
     keep = {k: c[k] for k in ("sub", "aud", "scope", "act", "may_act") if k in c}
     keep["ttl_s"] = c["exp"] - c["iat"]
+    keep["lineage"] = {k: c[k][:8] for k in ("jti", "parent_jti", "grant_id") if k in c}
     print(f"\n{title}\n{json.dumps(keep, indent=2)}")
 
 
@@ -102,5 +111,40 @@ w = max(len(n) for n, _ in results)
 for name, outcome in results:
     print(f"  {name:<{w}}  {outcome}")
 
-print(f"\nAudit log: {len(sts.audit_log)} exchange decisions recorded, "
-      f"{sum(e['decision'] == 'deny' for e in sts.audit_log)} denials, each with a reason.")
+# ---- revocation -------------------------------------------------------------
+# RFC 7009 /revoke plus the lineage extension: revoking the user's token revokes
+# its grant, so the handoff and the tool token exchanged from it are dead too.
+# A sibling branch from a different user token is untouched.
+revs: list[tuple[str, str]] = []
+bob = sts.issue_user_token("bob", "mcp-gateway", {"repo:read"})
+bob_tool = exchange("mcp-gateway", bob, audience="tool-github")["access_token"]
+
+revs.append(("notes-agent revokes Alice's token (not in her chain)", f"HTTP {revoke('notes-agent', alice)} unauthorized_client"))
+revs.append(("Gateway revokes a token this STS never issued", f"HTTP {revoke('mcp-gateway', 'not-a-token')} (no probing)"))
+revs.append(("Gateway revokes Alice's user token", f"HTTP {revoke('mcp-gateway', alice)}, denylist now {len(sts.denylist)} entries"))
+try:
+    github.verify(tool_tok)
+    revs.append(("Sub-agent's live tool token replayed", "ACCEPTED (bad)"))
+except DelegationRejected as e:
+    revs.append(("Sub-agent's live tool token replayed", f"refused at tool: {e}"))
+again = exchange("code-review-subagent", handoff, audience="tool-github")
+revs.append(("Sub-agent exchanges the handoff again", f"refused at STS: {again['error_description']}" if "error" in again else "ISSUED (bad)"))
+revs.append(("Bob's token, exchanged from a different grant", f"still accepted: {github.verify(bob_tool).path}"))
+sts.revoke_client("mcp-gateway")
+try:
+    github.verify(bob_tool)
+    revs.append(("Admin retires mcp-gateway: Bob's token", "ACCEPTED (bad)"))
+except DelegationRejected as e:
+    revs.append(("Admin retires mcp-gateway: Bob's token", f"refused at tool: {e}"))
+r = http.post("/token", data={"grant_type": "client_credentials", "client_id": "mcp-gateway", "client_secret": sts.clients["mcp-gateway"].secret})
+revs.append(("Admin retires mcp-gateway: new actor token", f"refused at STS: {r.json()['error_description']}"))
+
+print("\nRevocation")
+w = max(len(n) for n, _ in revs)
+for name, outcome in revs:
+    print(f"  {name:<{w}}  {outcome}")
+
+exchanges = [e for e in sts.audit_log if e["event"] == "token_exchange"]
+revocations = [e for e in sts.audit_log if e["event"].endswith("_revocation")]
+print(f"\nAudit log: {len(exchanges)} exchange decisions ({sum(e['decision'] == 'deny' for e in exchanges)} denials) "
+      f"and {len(revocations)} revocation decisions recorded, each with a reason.")
