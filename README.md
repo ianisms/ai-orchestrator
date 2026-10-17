@@ -94,3 +94,20 @@ Secrets were never committed, but the following were stripped or generalized: LA
 ## Author
 
 Ian Bennett is a principal engineer and architect with 27 years in software, most recently at Microsoft on Azure Identity Governance and Azure Customer Lockbox. This project is where the identity and authorization thinking from that work meets a soldering iron.
+
+## Decisions and division of labor
+
+This repo was built the way I build now: I set the design and the rules, AI coding agents (Claude Code, Cursor, Codex) wrote most of the implementation, tests and docs against those designs, and I reviewed, pushed back, and merged. The design calls below are mine. Where an agent proposed something I rejected or changed, the final shape is what is in the tree.
+
+- The model never supplies its own identity. Speaker identity comes from the turn's audio and origin from the gRPC peer, never from headers or anything the model says. Saying "I'm Alice" queues an enrollment sample for out-of-band approval; it never changes a profile.
+- Voice gate rules: a strong speaker match, home-network origin and a liveness check as policy inputs; confirmation on by default and never waivable for high-risk tools; unknown tools treated as writes; any missing signal denies. Rolled out in monitor mode first, enforce after calibration, the same way I onboarded services to Customer Lockbox.
+- Agents pass delegation, never credentials. Every hop exchanges for its own tokens with its own identity; scope only narrows down the chain; depth is capped; tools reject tokens without the `act` chain.
+- Revocation cuts the narrowest thing first: a token, then a grant, then a client. The user token's `grant_id` travels unchanged down the chain so revoking it kills the whole family, which closes a gap Keycloak leaves open. Tool servers can report a token with a reason and the STS, not the tool, decides whether a report escalates.
+- No stored secrets where federation can replace them. A tool that cannot speak OAuth sits behind a proxy that can; the proxy fetches the native credential per call and holds nothing at rest; every remaining static secret carries a migration date.
+- One broker surface for agents, with adapters underneath that use each platform's workload identity where it exists and our own where it does not. Agents never carry per-platform code.
+- Device identity for the speaker: a plugged-in YubiKey (PIV, headless) now, because it ships this month; then a secure element or SPI TPM footprint on the next carrier-board revision, because I design the board and a footprint beats a dongle. A header-mounted TPM module would also work; I am not taking that path.
+- Publication: a sanitized single-commit copy of the private repos, the MAUI client left out, PolyForm Strict in place of MIT so the code is usable only with my consent.
+
+Claims were checked against the tree in both directions. When my description outran the code (the voice gate rules, before the gate existed), the gap became a backlog item and the prototype, not a sentence in a README. When a doc outran the code (an attestation "today" story that called network origin plus voice "attestation"), the doc was cut back to what is true.
+
+Still unproven: the YubiKey signer has not run on hardware, the device credential is not yet enforced on the gRPC stream, and the voice gate is in monitor mode. I would rather say that here than have you find it.
