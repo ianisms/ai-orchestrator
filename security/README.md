@@ -3,7 +3,7 @@
 Prototypes for how agents act on a user's behalf: who is acting, for whom,
 under which grant, for how long, and what stops them.
 
-- `delegation/` - A: RFC 8693 token exchange with a nested `act` chain (user > gateway > sub-agent), short-lived audience-scoped tokens, lineage claims and RFC 7009 revocation that follows the chain (in-memory denylist), and a tool-side verifier that rejects any token without `act` and, when it shares the denylist, any revoked token. Keycloak 26.8 setup for the first hop.
+- `delegation/` - A: RFC 8693 token exchange with a nested `act` chain (user > gateway > sub-agent), short-lived audience-scoped tokens, lineage claims and RFC 7009 revocation that follows the chain (in-memory denylist), tool-server reports with an STS-owned escalation policy, admin routes behind an `sts:admin` actor token, and a tool-side verifier that rejects any token without `act` and, when it shares the denylist, any revoked token. Keycloak 26.8 setup for the first hop.
 - `policy/` - C: AuthZEN-shaped policy check (OPA) before every MCP `tools/call`. The whole chain is evaluated once, access only narrows, write-class tools need the user's approval for the exact call (on by default, never waivable for high-risk tools), voice requests also need a strong speaker match, home-network origin and a passed liveness check, and any missing signal denies. Every decision is logged with its reasons.
 - `THREAT_MODEL.md` - E: 22 threats (15 for the prototypes, 7 for the orchestrator's voice gate), the control for each, whether it was tested, and the residual risk.
 - `DIAGRAMS.md` - current state and target state for attestation, token exchange and revocation, with each gap tied to its threat.
@@ -12,7 +12,7 @@ under which grant, for how long, and what stops them.
 
 ```
 cd delegation && pip install -r requirements.txt
-python demo.py && python -m pytest -q          # 33 tests
+python demo.py && python -m pytest -q          # 47 tests
 cd ../policy                                   # needs the opa binary on PATH or OPA_BIN
 opa test rego && python demo.py && python -m pytest -q   # 22 policy tests, 16 Python tests
 ```

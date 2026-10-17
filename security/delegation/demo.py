@@ -3,8 +3,10 @@
     python demo.py
 
 Prints the user > gateway > sub-agent chain as the tool sees it, then each
-attack and the reason it was refused, then a revocation: the user's token is
-revoked at /revoke and every token exchanged from it dies with it.
+attack and the reason it was refused, then revocation: the user's token is
+revoked at /revoke and every token exchanged from it dies with it; a tool
+server reports tokens it was presented and the STS escalates by its own policy;
+the ops-console retires an agent through the admin routes.
 """
 from __future__ import annotations
 
@@ -117,7 +119,7 @@ for name, outcome in results:
 # A sibling branch from a different user token is untouched.
 revs: list[tuple[str, str]] = []
 bob = sts.issue_user_token("bob", "mcp-gateway", {"repo:read"})
-bob_tool = exchange("mcp-gateway", bob, audience="tool-github")["access_token"]
+bob_direct = exchange("mcp-gateway", bob, audience="tool-github")["access_token"]
 
 revs.append(("notes-agent revokes Alice's token (not in her chain)", f"HTTP {revoke('notes-agent', alice)} unauthorized_client"))
 revs.append(("Gateway revokes a token this STS never issued", f"HTTP {revoke('mcp-gateway', 'not-a-token')} (no probing)"))
@@ -129,22 +131,69 @@ except DelegationRejected as e:
     revs.append(("Sub-agent's live tool token replayed", f"refused at tool: {e}"))
 again = exchange("code-review-subagent", handoff, audience="tool-github")
 revs.append(("Sub-agent exchanges the handoff again", f"refused at STS: {again['error_description']}" if "error" in again else "ISSUED (bad)"))
-revs.append(("Bob's token, exchanged from a different grant", f"still accepted: {github.verify(bob_tool).path}"))
-sts.revoke_client("mcp-gateway")
-try:
-    github.verify(bob_tool)
-    revs.append(("Admin retires mcp-gateway: Bob's token", "ACCEPTED (bad)"))
-except DelegationRejected as e:
-    revs.append(("Admin retires mcp-gateway: Bob's token", f"refused at tool: {e}"))
-r = http.post("/token", data={"grant_type": "client_credentials", "client_id": "mcp-gateway", "client_secret": sts.clients["mcp-gateway"].secret})
-revs.append(("Admin retires mcp-gateway: new actor token", f"refused at STS: {r.json()['error_description']}"))
+revs.append(("Bob's token, exchanged from a different grant", f"still accepted: {github.verify(bob_direct).path}"))
 
 print("\nRevocation")
 w = max(len(n) for n, _ in revs)
 for name, outcome in revs:
     print(f"  {name:<{w}}  {outcome}")
 
+# ---- tool reports and escalation ----------------------------------------------
+# tool-github is a client with no audiences and no scopes: it can authenticate at
+# /revoke and report the token it was presented, nothing above it. The STS owns
+# the escalation: strikes per (grant, actor chain) inside a 10 minute window.
+reps: list[tuple[str, str]] = []
+
+
+def report(token: str, reason: str) -> int:
+    r = http.post("/revoke", data={"token": token, "reason": reason, "client_id": "tool-github", "client_secret": sts.clients["tool-github"].secret})
+    return r.status_code
+
+
+def live(token: str) -> str:
+    try:
+        github.verify(token)
+        return "live"
+    except DelegationRejected as e:
+        return f"refused: {e}"
+
+
+bob_handoff = exchange("mcp-gateway", bob, delegate_to="code-review-subagent", scope="repo:read")["access_token"]
+b1, b2, b3 = (exchange("code-review-subagent", bob_handoff, audience="tool-github")["access_token"] for _ in range(3))
+reps.append(("tool-github tries to revoke the handoff above it", f"HTTP {report(bob_handoff, 'injection_suspected')} unauthorized_client"))
+reps.append(("Strike 1: injection_suspected on sub-agent token b1", f"HTTP {report(b1, 'injection_suspected')}; b1 {live(b1)}; sibling b2 {live(b2)}"))
+reps.append(("Strike 2: anomaly on b2", f"HTTP {report(b2, 'anomaly')}; never-reported sibling b3 {live(b3)}; gateway's own token {live(bob_direct)}"))
+bob_handoff2 = exchange("mcp-gateway", bob, delegate_to="code-review-subagent", scope="repo:read")["access_token"]
+b4 = exchange("code-review-subagent", bob_handoff2, audience="tool-github")["access_token"]
+reps.append(("Strike 3: injection_suspected on b4 (fresh handoff, same chain)", f"HTTP {report(b4, 'injection_suspected')}; gateway's own token {live(bob_direct)}"))
+again = exchange("mcp-gateway", bob, audience="tool-github")
+reps.append(("Gateway exchanges Bob's token again", f"refused at STS: {again['error_description']}" if "error" in again else "ISSUED (bad)"))
+
+print("\nTool reports and escalation")
+w = max(len(n) for n, _ in reps)
+for name, outcome in reps:
+    print(f"  {name:<{w}}  {outcome}")
+
+# ---- admin through the ops-console client --------------------------------------
+adm: list[tuple[str, str]] = []
+ops = actor("ops-console")
+gw_actor = actor("mcp-gateway")
+r = http.post("/admin/revoke/client", data={"client_id": "mcp-gateway"}, headers={"Authorization": f"Bearer {gw_actor}"})
+adm.append(("Gateway's own actor token at /admin/revoke/client", f"HTTP {r.status_code} {r.json()['error']}"))
+r = http.post("/admin/revoke/client", data={"client_id": "mcp-gateway"}, headers={"Authorization": f"Bearer {ops}"})
+adm.append(("ops-console retires mcp-gateway", f"HTTP {r.status_code} {json.dumps(r.json(), sort_keys=True)}"))
+r = http.post("/token", data={"grant_type": "client_credentials", "client_id": "mcp-gateway", "client_secret": sts.clients["mcp-gateway"].secret})
+adm.append(("mcp-gateway asks for a new actor token", f"refused at STS: {r.json()['error_description']}"))
+r = http.post("/admin/revoke/grant", data={"grant_id": "no-such-grant"}, headers={"Authorization": f"Bearer {ops}"})
+adm.append(("ops-console revokes an unknown grant", f"HTTP {r.status_code} {json.dumps(r.json(), sort_keys=True)} (no probing)"))
+
+print("\nAdmin (ops-console actor token as bearer)")
+w = max(len(n) for n, _ in adm)
+for name, outcome in adm:
+    print(f"  {name:<{w}}  {outcome}")
+
 exchanges = [e for e in sts.audit_log if e["event"] == "token_exchange"]
 revocations = [e for e in sts.audit_log if e["event"].endswith("_revocation")]
-print(f"\nAudit log: {len(exchanges)} exchange decisions ({sum(e['decision'] == 'deny' for e in exchanges)} denials) "
-      f"and {len(revocations)} revocation decisions recorded, each with a reason.")
+steps = [e for e in sts.audit_log if e["event"] == "revocation_escalation"]
+print(f"\nAudit log: {len(exchanges)} exchange decisions ({sum(e['decision'] == 'deny' for e in exchanges)} denials), "
+      f"{len(revocations)} revocation decisions and {len(steps)} escalation steps recorded, each with a reason.")

@@ -19,7 +19,7 @@ tool-github --verify--> alice > mcp-gateway > code-review-subagent, scope repo:r
 python -m venv .venv && .venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 python demo.py          # chain, attack table and a revocation, no servers needed
-python -m pytest -q     # 33 tests
+python -m pytest -q     # 47 tests
 python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. first (secrets are never printed)
 ```
 
@@ -27,7 +27,8 @@ python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GA
 
 - `sts.py` - the STS: client credentials for actor tokens, token exchange with the delegation rules, JWKS, audit log of every decision with its reason. Dev only: key and client secrets live in memory.
 - `verify.py` - the upstream check a tool server runs. Accepts tokens from this STS (key) or from Keycloak (JWKS URL). Optional `revocation=` hook, see below.
-- `revocation.py` - the in-memory denylist (jti and grant_id with expiries) and the STS's record of issued tokens, used to walk a token's descendants.
+- `revocation.py` - the in-memory denylist (jti and grant_id with expiries), the STS's record of issued tokens, used to walk a token's descendants, and the `EscalationPolicy` defaults.
+- `admin.py` - operator CLI for the admin routes: gets an ops-console actor token and calls them. `python admin.py revoke-grant <id>` from here, or `python -m delegation.admin ...` from `security/`.
 - `demo.py` - end-to-end run and attack table.
 - `tests/` - happy paths and attacks.
 - `keycloak/` - Keycloak 26.8 compose and steps for hop 1 (preview feature).
@@ -74,8 +75,8 @@ STS still remembers it. Revoking one handoff leaves its siblings alone.
 Admin paths, outside RFC 7009 and taking handles rather than token strings:
 `STS.revoke_grant(grant_id)` kills a consent, `STS.revoke_client(client_id)`
 kills every live token where that client is the actor or appears in `act` and
-refuses it new actor tokens and exchanges until `enable_client`. These are
-methods, not HTTP routes, because the prototype has no admin authentication.
+refuses it new actor tokens and exchanges until `enable_client`. They are
+reachable over HTTP through the `ops-console` client; see "Admin revocation".
 
 State is `revocation.Denylist`: revoked jtis and grant_ids, each with an expiry
 equal to the latest `exp` in the revoked family, pruned as they expire. No
@@ -127,6 +128,70 @@ Size is bounded by lifetime, not by traffic: every entry expires at the latest
 `exp` in its family, and no exchanged token outlives the user token it came
 from, so the set holds at most one user-token lifetime (600 s) of revocations.
 
+### Tool reports and escalation
+
+A tool server is a registered client with no audiences and no scopes
+(`tool-github`, `tool-jira`, `tool-fs`), so it can authenticate at `/revoke` but
+can exchange nothing. By the ownership rule above it is the holder of exactly the
+tool tokens addressed to it, so it may revoke the token it was presented and
+nothing above it: the handoff, the user token and other tools' tokens are all
+`unauthorized_client`, whatever reason it gives.
+
+`/revoke` takes an optional `reason`: `cleanup`, `anomaly` or
+`injection_suspected`; anything else is 400 `invalid_request`. The reason is
+audited on every revocation. It never widens what the caller may revoke. What it
+does is feed a strike counter the STS owns, keyed by (`grant_id`, actor chain of
+the reported token), inside `EscalationPolicy.window_s` (default 10 minutes;
+the clock is the STS clock, so tests can move it). `cleanup` never counts.
+
+| Strikes in window | What the STS revokes, on top of the caller's own revocation |
+|---|---|
+| 1 | nothing more: the presented token only |
+| 2 (`handoff_at`) | the immediate actor's delegation: the handoff the token descends from, or, for a one-actor chain, every token that actor exchanged under the grant |
+| 3 (`grant_at`) | the grant: the user token and every token under it |
+
+Every step is logged as `revocation_escalation` with the reason, the strike count,
+the step and how many jtis were denied. Thresholds and window are the
+`EscalationPolicy` dataclass passed to `STS(escalation=...)`.
+
+The trade is deliberate and worth stating plainly: a hostile or buggy tool
+server can cost the actor its handoff after two reports and the user their grant
+after three, inside the window. Detection happens at the edge, where the tool
+sees the call; authority stays at the center, where the STS applies a policy the
+tool cannot change; and the blast radius is bounded by that policy, not by what
+the reporter asks for. A tool that wants more than this gets `unauthorized_client`.
+Repeated reports of the same token count as separate strikes; de-duplicating by
+jti would be a reasonable tightening and is not done here.
+
+### Admin revocation
+
+`POST /admin/revoke/grant` (form `grant_id`), `POST /admin/revoke/client` and
+`POST /admin/enable/client` (form `client_id`) take handles, not token strings,
+and answer 200 with counts (`revoked_jtis`, `disabled`, `known`), never token
+contents. An unknown handle is 200 with zero counts and is audited, so the routes
+cannot be used to probe.
+
+The credential is a bearer actor token from the `ops-console` client, the only
+holder of scope `sts:admin`. That scope is refused by the dev login and by every
+exchange, whether requested or merely held by the subject, so it can never land
+in a user, handoff or tool token. No bearer, a user or tool token, a revoked
+actor token or one from a disabled client is 401 `invalid_client`; a live actor
+token from a client without `sts:admin` is 403 `insufficient_scope`. Both carry
+RFC 6749 section 5.2 bodies. A user token presented here is treated as "not a
+client credential" (401) rather than "a client without the scope" (403), because
+the holder of a user token is not the entity this check is about.
+
+Why the same client machinery rather than a shim: admin is just another caller
+with a credential and a scope, so it gets the same authentication, the same
+audit line (`by: ops-console`) and the same revocation (`revoke_client` on
+`ops-console` locks the console out, recovery is `enable_client` on the host).
+When agents move to SVIDs (prototype B) the console moves with them to an admin
+SVID, with nothing special-cased to rewrite. Binding the routes to loopback
+would be optional hardening on top; the scope check is the control.
+
+`admin.py` is the thin CLI: `STS_URL` and `STS_CLIENT_OPS_CONSOLE` from the
+environment, one actor token, one call, the JSON answer on stdout.
+
 Keycloak caveat: Keycloak's `/revoke` only knows tokens Keycloak issued. For hop 1
 to participate, this STS would have to introspect the subject token on every
 exchange or consume Keycloak admin events (logout, consent withdrawn) and translate
@@ -151,12 +216,19 @@ revoked at Keycloak still exchanges here until it expires.
 | User token revoked, live tool token replayed | refused at tool: token revoked |
 | User token revoked, handoff exchanged again | refused at STS: subject_token revoked |
 | Another user's token after that revocation | still accepted (different grant) |
-| Admin retires an agent | its live tokens refused at tool; no new actor tokens |
+| Tool server revokes the handoff above it, any reason | refused at STS: unauthorized_client |
+| Two reports from tool-github inside the window | never-reported sibling under the same handoff refused at tool; gateway's own token still accepted |
+| Third report, fresh handoff, same chain | grant revoked; gateway's own token refused; user token refused on exchange |
+| Gateway's actor token at an admin route | HTTP 403 insufficient_scope |
+| ops-console retires an agent | its live tokens refused at tool; no new actor tokens |
+| ops-console revokes an unknown grant | HTTP 200, zero counts (no probing) |
 
 ## Not covered here
 
 - `delegate_to` is a non-standard parameter; RFC 8693 leaves how `may_act` is set to the issuer.
 - No replay cache: within its lifetime a token can be presented more than once.
 - Revocation is in process only. A tool server that does not share the denylist, or has no checker configured, does not see revocations; the pushed deny list across PEPs and the central audit sink are not built. A Keycloak-issued user token revoked at Keycloak is not revoked here (see the caveat above).
+- Tool reports are trusted as far as the escalation policy allows and no further; nothing checks that the reported anomaly was real. The policy is static and global, not per tool or per grant.
+- The ops-console is a client secret like every other agent; an admin SVID is the target, not built.
 - No sender constraint (DPoP or mTLS-bound tokens); a stolen tool token works until it expires. Workload identity is prototype B.
 - Keycloak hop 1 follows a preview feature; nested delegation in Keycloak is untested.
