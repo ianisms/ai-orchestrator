@@ -28,15 +28,33 @@ list keeps the per-call check local and bounded (600 s of entries at most).
 A checker that raises is treated as a refusal (fail closed), and every refusal
 from the revocation check is logged with its reason in the same JSON form as
 the STS audit log.
+
+Sender constraint (RFC 9449, section 7.1 is the resource-server side). A token
+that carries cnf.jkt is bound to a key, and verify() then needs the DPoP proof
+that came with the request (the DPoP header), the method and the URI. The proof
+must be signed by the key whose thumbprint is cnf.jkt, name this method and
+URI, be no older than dpop_max_age_s, carry an ath that hashes this exact
+token, and have a jti this verifier has not seen. A bound token with no proof,
+a proof from another key, a stale or replayed proof, or a wrong ath is refused
+with the reason logged, and the revocation check runs only after the proof is
+good, so a thief with a copied token cannot even probe the deny list. The jkt
+is part of the Principal and of every audit line. A token without cnf is a
+bearer token and needs no proof unless require_dpop=True.
+
+Order inside verify(): signature, issuer, audience, expiry; then DPoP; then
+revocation; then the act chain.
 """
 from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from typing import Callable, Protocol
 
 import jwt
+
+from dpop import DPoPError, ReplayCache, verify_proof
 
 log = logging.getLogger("verify.audit")
 
@@ -78,6 +96,7 @@ class Principal:
     expires_at: int
     jti: str | None
     grant_id: str | None = None
+    jkt: str | None = None  # the key the token is bound to and the caller proved, or None for a bearer token
 
     @property
     def caller(self) -> str:
@@ -86,6 +105,11 @@ class Principal:
     @property
     def path(self) -> str:
         return " > ".join((self.user, *self.actors))
+
+
+def bound_jkt(claims: dict) -> str | None:
+    cnf = claims.get("cnf")
+    return cnf.get("jkt") if isinstance(cnf, dict) and cnf.get("jkt") else None
 
 
 class UpstreamVerifier:
@@ -98,6 +122,9 @@ class UpstreamVerifier:
         max_depth: int = 2,
         leeway: int = 0,
         revocation: RevocationCheck | None = None,
+        require_dpop: bool = False,
+        dpop_max_age_s: int = 60,
+        clock: Callable[[], float] = time.time,
     ):
         if (key is None) == (jwks_url is None):
             raise ValueError("pass exactly one of key or jwks_url")
@@ -108,6 +135,24 @@ class UpstreamVerifier:
         self.max_depth = max_depth
         self.leeway = leeway
         self.revocation = revocation
+        # DPoP. require_dpop=True refuses bearer (unbound) tokens outright; the
+        # default accepts them so a verifier for Keycloak hop 1 tokens still works.
+        self.require_dpop = require_dpop
+        self.dpop_max_age_s = dpop_max_age_s
+        self.clock = clock
+        self.dpop_seen = ReplayCache(clock=lambda: self.clock())
+
+    def _refuse(self, claims: dict, reason: str) -> None:
+        log.info(json.dumps({
+            "event": "tool_token_refused",
+            "audience": self.audience,
+            "reason": reason,
+            "sub": claims.get("sub"),
+            "jti": claims.get("jti"),
+            "grant_id": claims.get("grant_id"),
+            "jkt": bound_jkt(claims),
+        }, sort_keys=True))
+        raise DelegationRejected(reason)
 
     def _refuse_if_revoked(self, claims: dict) -> None:
         if self.revocation is None:
@@ -117,17 +162,27 @@ class UpstreamVerifier:
         except Exception as e:  # the check itself failed: fail closed
             reason = f"revocation check failed: {type(e).__name__}"
         if reason:
-            log.info(json.dumps({
-                "event": "tool_token_refused",
-                "audience": self.audience,
-                "reason": reason,
-                "sub": claims.get("sub"),
-                "jti": claims.get("jti"),
-                "grant_id": claims.get("grant_id"),
-            }, sort_keys=True))
-            raise DelegationRejected(reason)
+            self._refuse(claims, reason)
 
-    def verify(self, token: str) -> Principal:
+    def _check_dpop(self, token: str, claims: dict, dpop_proof: str | None, htm: str | None, htu: str | None) -> str | None:
+        """Returns the proved jkt for a bound token, None for a bearer token."""
+        jkt = bound_jkt(claims)
+        if jkt is None:
+            if self.require_dpop:
+                self._refuse(claims, "token is not sender-constrained (no cnf.jkt) and this tool requires DPoP")
+            return None
+        if not dpop_proof or not htm or not htu:
+            self._refuse(claims, "token is key-bound (cnf.jkt) and no DPoP proof was presented")
+        try:
+            verify_proof(dpop_proof, htm, htu, expected_jkt=jkt, ath_of=token,
+                         clock=self.clock, max_age_s=self.dpop_max_age_s, seen=self.dpop_seen)
+        except DPoPError as e:
+            self._refuse(claims, f"DPoP: {e}")
+        return jkt
+
+    def verify(self, token: str, dpop_proof: str | None = None, htm: str | None = None, htu: str | None = None) -> Principal:
+        """Verify a tool token. For a key-bound token pass the request's DPoP
+        header as dpop_proof together with its method (htm) and URI (htu)."""
         try:
             key = self.jwks.get_signing_key_from_jwt(token).key if self.jwks else self.key
             claims = jwt.decode(
@@ -146,8 +201,10 @@ class UpstreamVerifier:
         except jwt.InvalidTokenError as e:
             raise DelegationRejected(f"invalid token: {e}")
 
-        # Signature, issuer, audience and expiry are settled locally. Only then is
-        # the revocation state consulted, so a forged token never reaches it.
+        # Signature, issuer, audience and expiry are settled locally, then the
+        # sender constraint, and only then is the revocation state consulted, so
+        # neither a forged token nor a copied one reaches it.
+        jkt = self._check_dpop(token, claims, dpop_proof, htm, htu)
         self._refuse_if_revoked(claims)
 
         if "may_act" in claims:
@@ -176,4 +233,5 @@ class UpstreamVerifier:
             expires_at=int(claims["exp"]),
             jti=claims.get("jti"),
             grant_id=claims.get("grant_id"),
+            jkt=jkt,
         )

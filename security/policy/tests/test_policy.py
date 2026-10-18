@@ -1,8 +1,10 @@
 import httpx
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 
 import harness
+from dpop import ath, make_proof
 from mcp_server import ToolServer
 from pdp import create_app as create_pdp
 from pep import PEP, ApprovalStore
@@ -14,7 +16,15 @@ pytestmark = [
     pytest.mark.filterwarnings("ignore:You should not use the 'timeout' argument"),
 ]
 ISS = "http://sts.test"
+TOOL_URL = "https://tools.test/mcp"
 PR = {"repo": "acme/widgets", "pr": 42}
+
+
+def proof_for(sts, token, htu=TOOL_URL):
+    """A DPoP proof from the key the token is bound to, as its holder would send."""
+    jkt = jwt.decode(token, options={"verify_signature": False})["cnf"]["jkt"]
+    key = next(c.key for c in sts.clients.values() if c.jkt == jkt)
+    return make_proof(key, "POST", htu, ath=ath(token))
 
 
 @pytest.fixture(scope="module")
@@ -32,19 +42,23 @@ def env(opa):
     server = ToolServer(UpstreamVerifier(ISS, "tool-github", key=sts.public_key), pep)
 
     def ex(cid, subject, **kw):
-        act = sts.client_credentials(cid, sts.clients[cid].secret)["access_token"]
-        return sts.exchange(client_id=cid, client_secret=sts.clients[cid].secret, subject_token=subject, actor_token=act, **kw)["access_token"]
+        key = sts.clients[cid].key
+        act = sts.client_credentials(cid, sts.clients[cid].secret, dpop=make_proof(key, "POST", f"{ISS}/token"))["access_token"]
+        return sts.exchange(client_id=cid, client_secret=sts.clients[cid].secret, subject_token=subject, actor_token=act,
+                            dpop=make_proof(key, "POST", f"{ISS}/token"), **kw)["access_token"]
 
     alice = sts.issue_user_token("alice", "mcp-gateway", {"repo:read", "repo:write"})
     toks = {
         "gateway": ex("mcp-gateway", alice, audience="tool-github", scope="repo:read repo:write"),
         "sub": ex("code-review-subagent", ex("mcp-gateway", alice, delegate_to="code-review-subagent", scope="repo:read"), audience="tool-github"),
     }
+    server.sts = sts  # so call() can sign as the token's holder
     return sts, server, pep, approvals, toks
 
 
 def call(server, tok, tool, args=PR):
-    return server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": args}}, tok)
+    return server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": args}},
+                         tok, dpop=proof_for(server.sts, tok), htu=TOOL_URL)
 
 
 def reasons(resp):
@@ -120,7 +134,7 @@ VOICE_OK = {"confidence": 0.99, "local_network": True, "liveness": True}
 
 def voice_call(server, tok, tool, args=PR, voice=VOICE_OK, prefs=None):
     rpc = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": args}}
-    return server.handle(rpc, tok, channel="voice", voice=voice, prefs=prefs)
+    return server.handle(rpc, tok, dpop=proof_for(server.sts, tok), htu=TOOL_URL, channel="voice", voice=voice, prefs=prefs)
 
 
 def test_voice_read_allowed_when_checks_pass(env):
