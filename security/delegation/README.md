@@ -7,11 +7,15 @@ rejects any token without `act`. The chain can go one level deeper:
 user > mcp-gateway > code-review-subagent, with access narrowing at each hop.
 
 ```
-alice --consent--> user token (aud=mcp-gateway, may_act=mcp-gateway)
-mcp-gateway --exchange + actor token--> handoff token (aud=sub-agent, may_act=sub-agent, act=[gateway])
-code-review-subagent --exchange + actor token--> tool token (aud=tool-github, act=[gateway, sub-agent], 120 s)
-tool-github --verify--> alice > mcp-gateway > code-review-subagent, scope repo:read
+alice --consent--> user token (aud=mcp-gateway, may_act=mcp-gateway, cnf.jkt=gateway key)
+mcp-gateway --exchange + actor token + DPoP proof--> handoff token (aud=sub-agent, may_act=sub-agent, act=[gateway], cnf.jkt=sub-agent key)
+code-review-subagent --exchange + actor token + DPoP proof--> tool token (aud=tool-github, act=[gateway, sub-agent], 120 s, cnf.jkt=sub-agent key)
+tool-github --verify token + DPoP proof--> alice > mcp-gateway > code-review-subagent, scope repo:read, key sub-agent
 ```
+
+Every token is bound to a key (`cnf.jkt`) and every call carries a DPoP proof
+signed with that key, so a copied token is useless on its own. See "Sender
+constraint (DPoP)" below.
 
 ## Run
 
@@ -19,16 +23,18 @@ tool-github --verify--> alice > mcp-gateway > code-review-subagent, scope repo:r
 python -m venv .venv && .venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 python demo.py          # chain, attack table and a revocation, no servers needed
-python -m pytest -q     # 47 tests
-python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. first (secrets are never printed)
+python -m pytest -q     # 71 tests
+python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. (secrets) and STS_JKT_MCP_GATEWAY etc. (key thumbprints) first; nothing is printed
+python dpop.py keygen gateway.pem   # a client's DPoP key (PEM, mode 600); prints the thumbprint to register as STS_JKT_*
 ```
 
 ## Files
 
-- `sts.py` - the STS: client credentials for actor tokens, token exchange with the delegation rules, JWKS, audit log of every decision with its reason. Dev only: key and client secrets live in memory.
-- `verify.py` - the upstream check a tool server runs. Accepts tokens from this STS (key) or from Keycloak (JWKS URL). Optional `revocation=` hook, see below.
-- `revocation.py` - the in-memory denylist (jti and grant_id with expiries), the STS's record of issued tokens, used to walk a token's descendants, and the `EscalationPolicy` defaults.
-- `admin.py` - operator CLI for the admin routes: gets an ops-console actor token and calls them. `python admin.py revoke-grant <id>` from here, or `python -m delegation.admin ...` from `security/`.
+- `sts.py` - the STS: client credentials for actor tokens, token exchange with the delegation rules, DPoP binding of every token it issues, JWKS, audit log of every decision with its reason. Dev only: signing key, client secrets and client DPoP keys live in memory.
+- `dpop.py` - RFC 9449 proofs: `make_proof` (client side), `verify_proof` (STS and tool side), the bounded `ReplayCache`, the RFC 7638 thumbprint, and `keygen` for the one out-of-process path.
+- `verify.py` - the upstream check a tool server runs. Accepts tokens from this STS (key) or from Keycloak (JWKS URL). Takes the request's DPoP proof for a key-bound token. Optional `revocation=` hook, see below.
+- `revocation.py` - the in-memory denylist (jti and grant_id with expiries), the STS's record of issued tokens (with the key each is bound to), used to walk a token's descendants, and the `EscalationPolicy` defaults.
+- `admin.py` - operator CLI for the admin routes: gets an ops-console actor token with a DPoP proof and calls them under the DPoP scheme. `python admin.py revoke-grant <id>` from here, or `python -m delegation.admin ...` from `security/`.
 - `demo.py` - end-to-end run and attack table.
 - `tests/` - happy paths and attacks.
 - `keycloak/` - Keycloak 26.8 compose and steps for hop 1 (preview feature).
@@ -43,6 +49,7 @@ python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GA
 - Chain depth is capped at 2 actors, counted when a handoff is issued.
 - `exp` = min(now + actor TTL, subject exp). No refresh tokens.
 - The subject token, its grant, and every token in its lineage must be unrevoked.
+- Every `/token` call carries a DPoP proof; the proof key must be the one the actor token and the subject token are bound to (`cnf.jkt`), and a token without `cnf` is refused. The issued token is bound to the key of whoever will present it next.
 
 ## Revocation
 
@@ -166,13 +173,16 @@ jti would be a reasonable tightening and is not done here.
 ### Admin revocation
 
 `POST /admin/revoke/grant` (form `grant_id`), `POST /admin/revoke/client` and
-`POST /admin/enable/client` (form `client_id`) take handles, not token strings,
-and answer 200 with counts (`revoked_jtis`, `disabled`, `known`), never token
-contents. An unknown handle is 200 with zero counts and is audited, so the routes
-cannot be used to probe.
+`POST /admin/enable/client` (form `client_id`) and `POST /admin/revoke/key`
+(form `jkt`) take handles, not token strings, and answer 200 with counts
+(`revoked_jtis`, `disabled`, `known`), never token contents. An unknown handle is
+200 with zero counts and is audited, so the routes cannot be used to probe.
 
-The credential is a bearer actor token from the `ops-console` client, the only
-holder of scope `sts:admin`. That scope is refused by the dev login and by every
+The credential is an actor token from the `ops-console` client, the only
+holder of scope `sts:admin`, presented under the `DPoP` scheme with a proof
+over it (the resource-server side of RFC 9449, section 7.1); the same bound
+token under `Bearer`, or without a fresh proof from its key, is 401
+`invalid_dpop_proof`. That scope is refused by the dev login and by every
 exchange, whether requested or merely held by the subject, so it can never land
 in a user, handoff or tool token. No bearer, a user or tool token, a revoked
 actor token or one from a disabled client is 401 `invalid_client`; a live actor
@@ -189,14 +199,120 @@ When agents move to SVIDs (prototype B) the console moves with them to an admin
 SVID, with nothing special-cased to rewrite. Binding the routes to loopback
 would be optional hardening on top; the scope check is the control.
 
-`admin.py` is the thin CLI: `STS_URL` and `STS_CLIENT_OPS_CONSOLE` from the
-environment, one actor token, one call, the JSON answer on stdout.
+`admin.py` is the thin CLI: `STS_URL`, `STS_CLIENT_OPS_CONSOLE` (secret) and
+`STS_KEY_OPS_CONSOLE` (path to the console's DPoP key) from the environment,
+one actor token, one call, the JSON answer on stdout.
 
 Keycloak caveat: Keycloak's `/revoke` only knows tokens Keycloak issued. For hop 1
 to participate, this STS would have to introspect the subject token on every
 exchange or consume Keycloak admin events (logout, consent withdrawn) and translate
 them into grant revocations. Neither is built; today a Keycloak-issued user token
 revoked at Keycloak still exchanges here until it expires.
+
+## Sender constraint (DPoP)
+
+A bearer token is good for whoever holds the bytes. Threat 1 in
+`THREAT_MODEL.md` is exactly that: a tool token copied out of an agent's
+process works at the tool until it expires, 120 to 300 s. RFC 9449 (DPoP)
+closes it by binding a token to a key the client holds and requiring, on every
+request, a short signed proof that the client still holds it.
+
+How it works here, end to end:
+
+1. Each registered client (`mcp-gateway`, `code-review-subagent`, `notes-agent`,
+   the tool servers, `ops-console`) has an EC P-256 key next to its secret,
+   generated at startup and kept in the client object. The STS registers the
+   key's RFC 7638 thumbprint (`jkt`); the private key stays with the client.
+   The thumbprint is the same computation as `key_thumbprint` in
+   `server/modules/orchestrator/core/device_identity.py`, so an agent's token
+   and the speaker's device credential bind to a key the same way (`cnf.jkt`).
+2. Every call to `/token` carries a `DPoP` header: a JWT with `typ: dpop+jwt`,
+   `alg: ES256`, the public key in the header `jwk`, and claims `jti`, `htm`,
+   `htu`, `iat`. The STS verifies it before it looks at any token in the
+   request. A missing, malformed, stale (older than 60 s), replayed (jti seen)
+   or wrong-URI proof is 400 `invalid_dpop_proof`.
+3. The STS binds what it issues. The actor token carries `cnf.jkt` of the proof
+   key, which must be the client's registered key (a leaked secret alone mints
+   nothing). The user token is bound to the key of the agent the user
+   consented to, since that agent is its holder. On an exchange the proof key
+   must equal `cnf.jkt` of both the actor token and the subject token, and a
+   token without `cnf` is refused, so binding cannot be stepped down. The tool
+   token is bound to the requesting actor's key; the handoff is bound to the
+   delegate's registered key (below).
+4. At the tool, `verify.py` sees `cnf.jkt` and requires the request's proof:
+   same checks as the STS plus `ath`, the hash of this exact token, and the
+   thumbprint must equal `cnf.jkt`. Then, and only then, the revocation check
+   runs. The proved `jkt` is on the `Principal` and in every audit line.
+5. Admin routes take the actor token under the `DPoP` scheme with a proof
+   carrying `ath`, and `revoke_key(jkt)` (`/admin/revoke/key`, `admin.py
+   revoke-key`) denylists every live token bound to a key, with its
+   descendants, and refuses every future proof from it.
+
+Token responses say `token_type: DPoP` for actor and tool tokens; the handoff
+stays `N_A` as RFC 8693 section 2.2.1 prescribes for a token that is not for
+direct use at a resource (it goes back to the STS as a subject token).
+
+### What RFC 9449 says, what this STS does
+
+| Topic | RFC 9449 | This STS |
+|---|---|---|
+| Proof shape (section 4.2) | JWT, `typ` `dpop+jwt`, `alg` an asymmetric algorithm, header `jwk` public key; claims `jti`, `htm`, `htu`, `iat`, and `ath` when an access token is presented, `nonce` when the server issued one | Same. `alg` allowlist is ES256 only; a header `jwk` with any private member (`d`, `p`, `q`, ...) is refused; `htu` is compared without query and fragment with scheme and host case-folded |
+| Checks (section 4.3) | typ, alg, jwk, signature, htm, htu, iat within an acceptable window, jti unique, nonce, ath, and the key matches the bound token | Same list. The window is 60 s back and 5 s forward on the verifier's own clock (the injectable STS clock, so tests can move it). jti uniqueness is a per-verifier replay cache keyed by jti, expiring at `iat + max_age`, pruned on every check, so it holds at most 60 s of proofs |
+| Binding at the token endpoint (section 5) | The server binds the issued token to the proof key by `cnf.jkt`; `token_type` is `DPoP`; a bad proof is `invalid_dpop_proof` | Same for actor and tool tokens. Beyond the RFC: the proof key at `client_credentials` must be the client's registered key, and at exchange it must match the subject token's binding as well as the actor token's. The RFC binds to whatever key proves itself; this STS also requires that it be the key on file, because handoffs are bound to registered keys and a registry that any key can bypass would be decoration |
+| Exchanged tokens | RFC 9449 does not address RFC 8693; RFC 8693 says nothing about `cnf` | The handoff is bound at issuance to the delegate's registered key; the tool token to the requesting actor's. That is this STS's choice, not a reading of either RFC |
+| Resource server (section 7.1) | Checks the proof with `ath`, the `DPoP` authorization scheme, and the key against `cnf.jkt`; a bound token must not be accepted as Bearer | `verify.py` and the admin routes do this. A bound token under `Bearer` is 401 `invalid_dpop_proof`. `WWW-Authenticate: DPoP` challenge headers are not emitted |
+| Server nonces (section 8) | A server MAY require a nonce it issued (`DPoP-Nonce`, `use_dpop_nonce`) to bound the window for pre-computed proofs | Not implemented. `verify_proof` will check a nonce it is handed, but nothing issues one. The replay cache plus the 60 s window bound the same thing in a closed system where every party shares one clock; nonces earn their round trip when clients are remote with clocks the server does not trust |
+| Public clients and refresh tokens (section 5) | Refresh tokens issued to public clients are bound to the key | No refresh tokens, no public clients |
+
+### Why the handoff is bound to the delegate
+
+The gateway asks for a handoff, but the sub-agent is the party that presents
+it (as `subject_token` at the next exchange). Two ways to bind it:
+
+- At issuance, to the delegate's registered key, which is what is built. The
+  STS already knows the delegate (`delegate_to` must be on the gateway's allow
+  list and in the registry), so it knows the key. The gateway can carry the
+  handoff but cannot use it, and a handoff copied in transit is dead on
+  arrival anywhere but in the delegate's process. Cost: the delegate's key
+  must be registered ahead of time, which this prototype does anyway.
+- At pickup: bind the handoff to the gateway's key, let the delegate present
+  it with its own proof plus some evidence the gateway meant it for this
+  delegate, and re-bind on the exchange. That fits a world where delegates
+  are not pre-registered (dynamic sub-agents) at the cost of a window in
+  which the handoff is a bearer token between the two, and an extra claim or
+  signature to carry the gateway's intent. Not built; the registry makes it
+  unnecessary here.
+
+### Why DPoP first, not mTLS-bound tokens
+
+RFC 8705 binds a token to the client certificate on the TLS connection. That
+needs certificates for every agent and tool, which is what prototype B's
+X.509-SVIDs are, and it is the stated end state: once SPIRE issues SVIDs, the
+mTLS connection the gateway and tools already use for the SVID becomes the
+binding, with `cnf.x5t#S256` in place of `cnf.jkt` and no proof JWT per
+request. DPoP needs no infrastructure beyond a key in each process and a
+header on each call, so it lands now and closes the same threat at the
+application layer. The verifier's `cnf` check is the seam: a token bound by
+either method is "bound to a key the caller must prove", and the revocation
+tie-in (`revoke_key`) is the same.
+
+### The honest limit
+
+DPoP binds a token to a software key in the agent's process. It stops token
+theft: a copied token, a captured proof, a proof for another URI or another
+tool, a stale proof, all refused. It does not stop process compromise: an
+attacker inside the sub-agent's process has the key and signs proofs like the
+sub-agent does. That is the layer the hardware key and SPIFFE address, not
+this one. The speaker's device credential in `DEVICE_IDENTITY.md` is the
+hardware-key case of the same `cnf.jkt` binding: the key is in a YubiKey
+rather than a Python object, so it cannot be copied out of the process,
+only used from it. Agents will get there when their keys move to an SVID
+backed by attestation (prototype B). Until then, "bound" means "bound to this
+process's memory".
+
+Keys are generated at startup and die with the process, like the signing key.
+Rotation is not built: to replace a client's key, revoke the old thumbprint
+and register the new one.
 
 ## Attack results (from `demo.py`)
 
@@ -222,13 +338,23 @@ revoked at Keycloak still exchanges here until it expires.
 | Gateway's actor token at an admin route | HTTP 403 insufficient_scope |
 | ops-console retires an agent | its live tokens refused at tool; no new actor tokens |
 | ops-console revokes an unknown grant | HTTP 200, zero counts (no probing) |
+| Stolen tool token presented with no proof | refused at tool: key-bound and no DPoP proof |
+| Stolen tool token, thief signs with its own key | refused at tool: proof key does not match cnf.jkt |
+| Stolen token and its captured proof replayed | refused at tool: proof jti already seen |
+| Proof minted for another tool's URI | refused at tool: htu does not match |
+| Proof older than 60 s | refused at tool: too old |
+| Exchange with no proof | refused at STS: invalid_dpop_proof |
+| Gateway's actor token exchanged under another client's key | refused at STS: actor_token is bound to another key |
+| ops-console's bound token sent as a plain Bearer | HTTP 401 invalid_dpop_proof |
+| ops-console revokes the sub-agent's key | every token bound to it refused at tool; its handoff exchange and new actor tokens refused at STS; the gateway's tokens untouched |
 
 ## Not covered here
 
 - `delegate_to` is a non-standard parameter; RFC 8693 leaves how `may_act` is set to the issuer.
-- No replay cache: within its lifetime a token can be presented more than once.
+- A token can still be presented more than once within its lifetime by its holder; the replay cache is for proofs, not tokens, and a holder minting fresh proofs is the normal case.
 - Revocation is in process only. A tool server that does not share the denylist, or has no checker configured, does not see revocations; the pushed deny list across PEPs and the central audit sink are not built. A Keycloak-issued user token revoked at Keycloak is not revoked here (see the caveat above).
 - Tool reports are trusted as far as the escalation policy allows and no further; nothing checks that the reported anomaly was real. The policy is static and global, not per tool or per grant.
 - The ops-console is a client secret like every other agent; an admin SVID is the target, not built.
-- No sender constraint (DPoP or mTLS-bound tokens); a stolen tool token works until it expires. Workload identity is prototype B.
+- Sender constraint is DPoP to a software key in the agent's process (see the limit below); mTLS-bound tokens (RFC 8705) wait for SVIDs. Workload identity is prototype B.
+- DPoP server nonces are not implemented; key rotation for a client is not built (revoke the key, register a new thumbprint).
 - Keycloak hop 1 follows a preview feature; nested delegation in Keycloak is untested.

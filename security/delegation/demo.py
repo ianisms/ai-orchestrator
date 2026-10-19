@@ -6,7 +6,11 @@ Prints the user > gateway > sub-agent chain as the tool sees it, then each
 attack and the reason it was refused, then revocation: the user's token is
 revoked at /revoke and every token exchanged from it dies with it; a tool
 server reports tokens it was presented and the STS escalates by its own policy;
-the ops-console retires an agent through the admin routes.
+the ops-console retires an agent and revokes a key through the admin routes.
+
+Every call to the STS and to the tool carries a DPoP proof (RFC 9449) signed
+with the caller's key, and every token is bound to a key (cnf.jkt). The attack
+table shows what a copied token is worth without that key.
 """
 from __future__ import annotations
 
@@ -16,23 +20,38 @@ import time
 import jwt
 from fastapi.testclient import TestClient
 
+from dpop import ath, make_proof
 from sts import ACCESS_TOKEN_TYPE, STS, TOKEN_EXCHANGE, create_app
 from verify import DelegationRejected, UpstreamVerifier
 
 ISS = "http://sts.local"
+TOOL_URL = "https://tools.local/mcp"
 sts = STS(issuer=ISS)
 http = TestClient(create_app(sts))
+TOKEN_URL = str(http.base_url).rstrip("/") + "/token"
 # The tool verifier shares the STS denylist in process (the pushed deny list in
 # DIAGRAMS.md section 4 is the target; this is the demo stand-in).
 github = UpstreamVerifier(ISS, "tool-github", key=sts.public_key, revocation=sts.denylist)
 
 
+def proof(cid: str, htu: str = TOKEN_URL, token: str | None = None, **kw) -> str:
+    """A DPoP proof from cid's key for one request; ath binds it to the token it accompanies."""
+    return make_proof(sts.clients[cid].key, "POST", htu, ath=ath(token) if token else None, **kw)
+
+
+def holder(token: str) -> str:
+    """Which client's key the token is bound to."""
+    jkt = jwt.decode(token, options={"verify_signature": False}).get("cnf", {}).get("jkt")
+    return next(c.client_id for c in sts.clients.values() if c.jkt == jkt)
+
+
 def actor(cid: str) -> str:
-    r = http.post("/token", data={"grant_type": "client_credentials", "client_id": cid, "client_secret": sts.clients[cid].secret})
+    r = http.post("/token", data={"grant_type": "client_credentials", "client_id": cid, "client_secret": sts.clients[cid].secret},
+                  headers={"DPoP": proof(cid)})
     return r.json()["access_token"]
 
 
-def exchange(cid: str, subject: str, with_actor: bool = True, actor_tok: str | None = None, **extra) -> dict:
+def exchange(cid: str, subject: str, with_actor: bool = True, actor_tok: str | None = None, dpop: str | None = "", **extra) -> dict:
     data = {
         "grant_type": TOKEN_EXCHANGE,
         "client_id": cid,
@@ -44,7 +63,17 @@ def exchange(cid: str, subject: str, with_actor: bool = True, actor_tok: str | N
     if with_actor:
         data["actor_token"] = actor_tok or actor(cid)
         data["actor_token_type"] = ACCESS_TOKEN_TYPE
-    return http.post("/token", data=data).json()
+    headers = {} if dpop is None else {"DPoP": dpop or proof(cid)}
+    return http.post("/token", data=data, headers=headers).json()
+
+
+def call(token: str, as_client: str | None = None, dpop: str | None = "", htu: str = TOOL_URL, **kw):
+    """Present a token at tool-github the way its holder would: with a fresh
+    proof over this token for this URI. as_client signs with another client's
+    key (a thief with its own key); dpop=None sends no proof at all."""
+    if dpop == "":
+        dpop = proof(as_client or holder(token), htu, token, **kw)
+    return github.verify(token, dpop_proof=dpop, htm="POST", htu=TOOL_URL)
 
 
 def revoke(cid: str, token: str) -> int:
@@ -56,6 +85,7 @@ def show(title: str, token: str) -> None:
     c = jwt.decode(token, options={"verify_signature": False})
     keep = {k: c[k] for k in ("sub", "aud", "scope", "act", "may_act") if k in c}
     keep["ttl_s"] = c["exp"] - c["iat"]
+    keep["bound_to"] = f"{holder(token)} (cnf.jkt {c['cnf']['jkt'][:8]})"
     keep["lineage"] = {k: c[k][:8] for k in ("jti", "parent_jti", "grant_id") if k in c}
     print(f"\n{title}\n{json.dumps(keep, indent=2)}")
 
@@ -70,16 +100,17 @@ show("2. Gateway's handoff token for the sub-agent (not usable at a tool)", hand
 tool_tok = exchange("code-review-subagent", handoff, audience="tool-github")["access_token"]
 show("3. Sub-agent's tool token for tool-github", tool_tok)
 
-p = github.verify(tool_tok)
-print(f"\ntool-github accepts: {p.path}  scopes={sorted(p.scopes)}  caller={p.caller}")
+p = call(tool_tok)
+print(f"\ntool-github accepts: {p.path}  scopes={sorted(p.scopes)}  caller={p.caller}  key={p.jkt[:8]}")
+print("(each call above carried a DPoP proof: typ dpop+jwt, ES256, the caller's public key in the header, htm, htu, iat, jti, and ath over the token at the tool)")
 
 # ---- attacks ----------------------------------------------------------------
 results: list[tuple[str, str]] = []
 
 
-def tool_attempt(name: str, token: str) -> None:
+def tool_attempt(name: str, token: str, **how) -> None:
     try:
-        github.verify(token)
+        call(token, **how)
         results.append((name, "ACCEPTED (bad)"))
     except DelegationRejected as e:
         results.append((name, f"refused at tool: {e}"))
@@ -108,6 +139,17 @@ sts_attempt("Gateway uses notes-agent's actor token", exchange("mcp-gateway", al
 tool_attempt("Handoff token sent straight to a tool", handoff)
 results.append(("Prompt-injected write call", "covered by C (policy check before tools/call)"))
 
+# Sender constraint: the tool token is copied out of the sub-agent's process.
+tool_attempt("Stolen tool token, no proof (plain bearer use)", tool_tok, dpop=None)
+tool_attempt("Stolen tool token, notes-agent signs with its own key", tool_tok, as_client="notes-agent")
+captured = proof("code-review-subagent", TOOL_URL, tool_tok)
+call(tool_tok, dpop=captured)  # the legitimate call the thief was watching
+tool_attempt("Stolen token and its captured proof replayed", tool_tok, dpop=captured)
+tool_attempt("Proof minted for tool-jira's URI, sent to tool-github", tool_tok, htu="https://tools.local/jira")
+tool_attempt("Proof older than 60 s", tool_tok, now=int(time.time()) - 90)
+sts_attempt("Exchange with no DPoP proof", exchange("mcp-gateway", alice, audience="tool-github", dpop=None))
+sts_attempt("Gateway's actor token exchanged under notes-agent's key", exchange("mcp-gateway", alice, audience="tool-github", dpop=proof("notes-agent")))
+
 print("\nAttacks")
 w = max(len(n) for n, _ in results)
 for name, outcome in results:
@@ -125,13 +167,13 @@ revs.append(("notes-agent revokes Alice's token (not in her chain)", f"HTTP {rev
 revs.append(("Gateway revokes a token this STS never issued", f"HTTP {revoke('mcp-gateway', 'not-a-token')} (no probing)"))
 revs.append(("Gateway revokes Alice's user token", f"HTTP {revoke('mcp-gateway', alice)}, denylist now {len(sts.denylist)} entries"))
 try:
-    github.verify(tool_tok)
+    call(tool_tok)
     revs.append(("Sub-agent's live tool token replayed", "ACCEPTED (bad)"))
 except DelegationRejected as e:
     revs.append(("Sub-agent's live tool token replayed", f"refused at tool: {e}"))
 again = exchange("code-review-subagent", handoff, audience="tool-github")
 revs.append(("Sub-agent exchanges the handoff again", f"refused at STS: {again['error_description']}" if "error" in again else "ISSUED (bad)"))
-revs.append(("Bob's token, exchanged from a different grant", f"still accepted: {github.verify(bob_direct).path}"))
+revs.append(("Bob's token, exchanged from a different grant", f"still accepted: {call(bob_direct).path}"))
 
 print("\nRevocation")
 w = max(len(n) for n, _ in revs)
@@ -152,7 +194,7 @@ def report(token: str, reason: str) -> int:
 
 def live(token: str) -> str:
     try:
-        github.verify(token)
+        call(token)
         return "live"
     except DelegationRejected as e:
         return f"refused: {e}"
@@ -175,19 +217,49 @@ for name, outcome in reps:
     print(f"  {name:<{w}}  {outcome}")
 
 # ---- admin through the ops-console client --------------------------------------
+# The actor token is key-bound, so it goes under the DPoP scheme with a proof
+# over it (ath) for the admin route's URI.
 adm: list[tuple[str, str]] = []
 ops = actor("ops-console")
 gw_actor = actor("mcp-gateway")
-r = http.post("/admin/revoke/client", data={"client_id": "mcp-gateway"}, headers={"Authorization": f"Bearer {gw_actor}"})
+
+
+def admin_post(path: str, token: str, as_client: str, **form) -> object:
+    htu = str(http.base_url).rstrip("/") + path
+    return http.post(path, data=form, headers={"Authorization": f"DPoP {token}", "DPoP": proof(as_client, htu, token)})
+
+
+r = admin_post("/admin/revoke/client", gw_actor, "mcp-gateway", client_id="mcp-gateway")
 adm.append(("Gateway's own actor token at /admin/revoke/client", f"HTTP {r.status_code} {r.json()['error']}"))
 r = http.post("/admin/revoke/client", data={"client_id": "mcp-gateway"}, headers={"Authorization": f"Bearer {ops}"})
+adm.append(("ops-console's bound token sent as a plain Bearer", f"HTTP {r.status_code} {r.json()['error']}"))
+
+# Revoke a key: the sub-agent's. Every token bound to it dies and its proofs are refused.
+carol = sts.issue_user_token("carol", "mcp-gateway", {"repo:read"})
+carol_handoff = exchange("mcp-gateway", carol, delegate_to="code-review-subagent", scope="repo:read")["access_token"]
+carol_tool = exchange("code-review-subagent", carol_handoff, audience="tool-github")["access_token"]
+carol_direct = exchange("mcp-gateway", carol, audience="tool-github")["access_token"]
+sa_actor = actor("code-review-subagent")  # minted before the revocation, still unexpired
+sa_jkt = sts.clients["code-review-subagent"].jkt
+r = admin_post("/admin/revoke/key", ops, "ops-console", jkt=sa_jkt)
+adm.append(("ops-console revokes the sub-agent's key", f"HTTP {r.status_code} {json.dumps(r.json(), sort_keys=True)}"))
+adm.append(("Sub-agent's tool token, right key, after key revocation", live(carol_tool)))
+again = exchange("code-review-subagent", carol_handoff, actor_tok=sa_actor, audience="tool-github")
+adm.append(("Sub-agent exchanges its handoff with the revoked key", f"refused at STS: {again['error']}: {again['error_description']}" if "error" in again else "ISSUED (bad)"))
+r = http.post("/token", data={"grant_type": "client_credentials", "client_id": "code-review-subagent", "client_secret": sts.clients["code-review-subagent"].secret},
+              headers={"DPoP": proof("code-review-subagent")})
+adm.append(("Sub-agent asks for a new actor token with that key", f"refused at STS: {r.json()['error_description']}"))
+adm.append(("Gateway's own token for the same user, other key", live(carol_direct)))
+
+r = admin_post("/admin/revoke/client", ops, "ops-console", client_id="mcp-gateway")
 adm.append(("ops-console retires mcp-gateway", f"HTTP {r.status_code} {json.dumps(r.json(), sort_keys=True)}"))
-r = http.post("/token", data={"grant_type": "client_credentials", "client_id": "mcp-gateway", "client_secret": sts.clients["mcp-gateway"].secret})
+r = http.post("/token", data={"grant_type": "client_credentials", "client_id": "mcp-gateway", "client_secret": sts.clients["mcp-gateway"].secret},
+              headers={"DPoP": proof("mcp-gateway")})
 adm.append(("mcp-gateway asks for a new actor token", f"refused at STS: {r.json()['error_description']}"))
-r = http.post("/admin/revoke/grant", data={"grant_id": "no-such-grant"}, headers={"Authorization": f"Bearer {ops}"})
+r = admin_post("/admin/revoke/grant", ops, "ops-console", grant_id="no-such-grant")
 adm.append(("ops-console revokes an unknown grant", f"HTTP {r.status_code} {json.dumps(r.json(), sort_keys=True)} (no probing)"))
 
-print("\nAdmin (ops-console actor token as bearer)")
+print("\nAdmin (ops-console actor token under the DPoP scheme)")
 w = max(len(n) for n, _ in adm)
 for name, outcome in adm:
     print(f"  {name:<{w}}  {outcome}")
@@ -195,5 +267,7 @@ for name, outcome in adm:
 exchanges = [e for e in sts.audit_log if e["event"] == "token_exchange"]
 revocations = [e for e in sts.audit_log if e["event"].endswith("_revocation")]
 steps = [e for e in sts.audit_log if e["event"] == "revocation_escalation"]
+dpop_denials = [e for e in sts.audit_log if e.get("error") == "invalid_dpop_proof"]
 print(f"\nAudit log: {len(exchanges)} exchange decisions ({sum(e['decision'] == 'deny' for e in exchanges)} denials), "
-      f"{len(revocations)} revocation decisions and {len(steps)} escalation steps recorded, each with a reason.")
+      f"{len(revocations)} revocation decisions and {len(steps)} escalation steps recorded, each with a reason; "
+      f"{len(dpop_denials)} DPoP refusals at the STS.")

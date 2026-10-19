@@ -12,9 +12,11 @@ import sys
 import warnings
 
 import httpx
+import jwt
 from fastapi.testclient import TestClient
 
 import harness
+from dpop import ath, make_proof
 from mcp_server import ToolServer
 from pdp import create_app as create_pdp
 from pep import PEP, ApprovalStore
@@ -35,13 +37,26 @@ pep = PEP(TestClient(create_pdp(opa.url)), harness.catalog(), session_resources=
 server = ToolServer(UpstreamVerifier(ISS, "tool-github", key=sts.public_key), pep)
 
 
+TOOL_URL = "https://tools.local/mcp"
+
+
+def proof(cid, htu=f"{ISS}/token", token=None):
+    """Every call to the STS or the tool carries a DPoP proof from the caller's key."""
+    return make_proof(sts.clients[cid].key, "POST", htu, ath=ath(token) if token else None)
+
+
 def actor(cid):
-    return sts.client_credentials(cid, sts.clients[cid].secret)["access_token"]
+    return sts.client_credentials(cid, sts.clients[cid].secret, dpop=proof(cid))["access_token"]
 
 
 def exchange(cid, subject, **kw):
     return sts.exchange(client_id=cid, client_secret=sts.clients[cid].secret,
-                        subject_token=subject, actor_token=actor(cid), **kw)["access_token"]
+                        subject_token=subject, actor_token=actor(cid), dpop=proof(cid), **kw)["access_token"]
+
+
+def holder(token):
+    jkt = (jwt.decode(token, options={"verify_signature": False}).get("cnf") or {}).get("jkt")
+    return next((c.client_id for c in sts.clients.values() if c.jkt == jkt), None)
 
 
 alice = sts.issue_user_token("alice", "mcp-gateway", {"repo:read", "repo:write"})
@@ -53,8 +68,10 @@ rows = []
 
 
 def call(label, token, tool, args, **front_end):
+    cid = holder(token)
     resp = server.handle({"jsonrpc": "2.0", "id": len(rows) + 1, "method": "tools/call",
-                          "params": {"name": tool, "arguments": args}}, token, **front_end)
+                          "params": {"name": tool, "arguments": args}}, token,
+                         dpop=proof(cid, TOOL_URL, token) if cid else None, htu=TOOL_URL, **front_end)
     if "result" in resp:
         outcome = "ALLOWED"
     else:
