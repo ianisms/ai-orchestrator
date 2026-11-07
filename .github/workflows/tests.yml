@@ -46,17 +46,19 @@ jobs:
         working-directory: security/policy
         run: python -m pytest -q -rs
 
-      - name: Voice gate tests
+      - name: Voice gate, enrollment and script tests
         working-directory: server
-        run: python -m pytest -q test/test_voice_gate.py test/test_voice_scripts.py
+        run: python -m pytest -q test/test_voice_gate.py test/test_voice_scripts.py test/test_voice_enrollment.py
 
       # Device identity runs with the in-memory FakeSigner; no YubiKey in CI.
       - name: Device identity tests
         working-directory: server
         run: python -m pytest -q test/test_device_identity.py
 
-      - name: Speaker device identity tests
+      - name: Speaker device identity and stream metadata tests
         working-directory: speaker
-        run: python -m pytest -q test/test_device_identity.py
+        run: |
+          pip install -q -r test/requirements.txt
+          python -m pytest -q test/test_device_identity.py test/test_grpc_metadata.py
 
 # server/test suites that read deployment paths (/ai/server/...) run on the host, not here.
