@@ -234,7 +234,8 @@ def register(server) -> List[str]:
                 data = profiles.get(key)
                 if not isinstance(data, dict):
                     continue
-                items.append({"profile_id": key, "samples": int(len(data.get("samples") or []))})
+                items.append({"profile_id": key, "samples": int(len(data.get("samples") or [])),
+                              "threshold": data.get("threshold"), "revoked": data.get("revoked_at") is not None})
             return log_tool_result(log, "speaker_identity", _as_json({"status": "ok", "profiles": items}))
 
         if action_value == "clear_enrollments":
@@ -296,7 +297,7 @@ def register(server) -> List[str]:
             if not pid:
                 return log_tool_result(log, "speaker_identity", _as_json({"status": "error", "message": "profile_id required"}))
             entry = profiles.get(pid)
-            if not isinstance(entry, dict):
+            if not isinstance(entry, dict) or entry.get("revoked_at") is not None:
                 return log_tool_result(log, "speaker_identity", _as_json({"status": "not_found", "profile_id": pid}))
             mean_emb = entry.get("mean_embedding")
             if not isinstance(mean_emb, list):
@@ -320,8 +321,8 @@ def register(server) -> List[str]:
         best_id = ""
         best_score = -1.0
         for key, entry in profiles.items():
-            if not isinstance(entry, dict):
-                continue
+            if not isinstance(entry, dict) or entry.get("revoked_at") is not None:
+                continue  # a revoked profile (voice_enrollment.py) keeps its record, never matches
             mean_emb = entry.get("mean_embedding")
             if not isinstance(mean_emb, list):
                 continue
