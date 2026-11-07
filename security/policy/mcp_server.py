@@ -1,6 +1,7 @@
 """Minimal MCP tools/call handler showing where A and C sit.
 
-    1. verify the delegated token (A): signature, audience, expiry, act chain
+    1. verify the delegated token (A): signature, audience, expiry, the DPoP
+       proof when the token is key-bound (cnf.jkt), revocation, act chain
     2. ask the PDP about this call for the whole chain (C), fail closed
     3. only then dispatch
 
@@ -28,18 +29,23 @@ class ToolServer:
     def handle(
         self,
         rpc: dict,
-        bearer: str,
+        token: str,
+        dpop: str | None = None,
+        htu: str | None = None,
         channel: str = "api",
         voice: dict | None = None,
         prefs: dict | None = None,
     ) -> dict:
-        """channel, voice and prefs come from the trusted front end (the speaker
+        """token is the access token from the Authorization header and dpop the
+        request's DPoP header (required when the token carries cnf.jkt); htu is
+        the URI the request arrived at and the method is POST, as tools/call is.
+        channel, voice and prefs come from the trusted front end (the speaker
         pipeline or API gateway), never from the model's tool-call arguments."""
         rid = rpc.get("id")
         if rpc.get("method") != "tools/call":
             return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": "method not found"}}
         try:
-            principal = self.verifier.verify(bearer)
+            principal = self.verifier.verify(token, dpop_proof=dpop, htm="POST", htu=htu)
         except DelegationRejected as e:
             return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32001, "message": f"unauthorized: {e}"}}
 

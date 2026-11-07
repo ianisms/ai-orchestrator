@@ -47,12 +47,33 @@ immediate actor's delegation to the grant. Detection at the edge, authority at
 the center, blast radius bounded by policy the tool does not control.
 
 Admin: the ops-console client holds scope sts:admin, which no exchange ever
-issues. Its actor token is the bearer credential for /admin/revoke/grant,
-/admin/revoke/client and /admin/enable/client. Same client machinery as every
-other caller, so it maps onto an admin SVID later instead of a side door.
+issues. Its actor token is the credential for /admin/revoke/grant,
+/admin/revoke/client, /admin/enable/client and /admin/revoke/key. Same client
+machinery as every other caller, so it maps onto an admin SVID later instead
+of a side door.
 
-Nothing here is production-grade; it is the smallest thing that closes threat 11
-in the prototype.
+Sender constraint (RFC 9449 DPoP, threat 1): every registered client holds an
+EC P-256 key, generated at startup next to its secret. With require_dpop=True
+(the default) /token needs a DPoP proof on every call and every token this STS
+issues carries cnf.jkt, the RFC 7638 thumbprint of the key that may present it:
+
+  actor token    the proof key, which must be the client's registered key
+  user token     the key of the client the user consented to (it is the holder)
+  tool token     the requesting actor's key (the proof key)
+  handoff token  the delegate's registered key (the next actor), chosen at
+                 issuance rather than at pickup; see the README for the alternative
+
+At exchange the proof key must equal cnf.jkt of both the actor token and the
+subject token, and a token without cnf is refused, so binding cannot be
+downgraded by presenting an unbound token. A missing, malformed, stale or
+replayed proof is 400 invalid_dpop_proof (RFC 9449 section 5). The verifier
+in verify.py does the matching check at the tool with ath over the token.
+revoke_key(jkt) denylists every token bound to a key and refuses new proofs
+from it. Server nonces are not implemented (see dpop.py). require_dpop=False
+restores the previous bearer behaviour, kept so the diff is a flag.
+
+Nothing here is production-grade; it is the smallest thing that closes threats
+1 and 11 in the prototype.
 """
 from __future__ import annotations
 
@@ -68,9 +89,10 @@ from typing import Callable
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
-from fastapi import FastAPI, Form, Header
+from fastapi import FastAPI, Form, Header, Request
 from fastapi.responses import JSONResponse, Response
 
+from dpop import DPoPError, Proof, ReplayCache, generate_key, thumbprint, verify_proof
 from revocation import Denylist, EscalationPolicy, Issued
 
 TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
@@ -78,6 +100,7 @@ ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
 ADMIN_SCOPE = "sts:admin"  # held only by ops-console; never issued by exchange or login
 REVOKE_REASONS = {"cleanup", "anomaly", "injection_suspected"}
 STRIKE_REASONS = {"anomaly", "injection_suspected"}
+DPOP_PROOF_MAX_AGE_S = 60
 
 log = logging.getLogger("sts.audit")
 
@@ -90,6 +113,15 @@ class Client:
     may_delegate_to: set[str] = field(default_factory=set)
     ttl: int = 300
     secret: str = field(default_factory=lambda: secrets.token_urlsafe(24), repr=False)
+    # DPoP key. In process (demo, tests) the client object holds the private key
+    # and signs its own proofs. The STS only ever needs the thumbprint: a
+    # standalone sts.py registers jkt from the environment and leaves key None.
+    key: object | None = field(default_factory=generate_key, repr=False)
+    jkt: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.jkt and self.key is not None:
+            self.jkt = thumbprint(self.key)
 
     @property
     def sub(self) -> str:
@@ -156,6 +188,8 @@ class STS:
         actor_ttl: int = 60,
         clock: Callable[[], float] = time.time,
         escalation: EscalationPolicy | None = None,
+        require_dpop: bool = True,
+        dpop_max_age_s: int = DPOP_PROOF_MAX_AGE_S,
     ):
         self.issuer = issuer
         self.clients = {c.client_id: c for c in (clients or default_clients())}
@@ -164,6 +198,12 @@ class STS:
         self.actor_ttl = actor_ttl
         self.clock = clock
         self.escalation = escalation or EscalationPolicy()
+        # Sender constraint. True: /token needs a proof and every token is bound.
+        # False: the pre-DPoP bearer behaviour (a proof, if sent, is still honoured).
+        self.require_dpop = require_dpop
+        self.dpop_max_age_s = dpop_max_age_s
+        self.dpop_seen = ReplayCache(clock=lambda: self.clock())
+        self.revoked_keys: set[str] = set()  # thumbprints refused on every future proof
         # Strikes from tool reports: (grant_id, actor chain) -> timestamps inside the window.
         self._strikes: dict[tuple[str, tuple[str, ...]], list[int]] = {}
         self._key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -227,6 +267,7 @@ class STS:
             client_id=client_id,
             aud=tuple(claims.get("aud", ())),
             actors=tuple(act_chain(claims.get("act"))),
+            jkt=(claims.get("cnf") or {}).get("jkt"),
         )
         self._issued[rec.jti] = rec
         if rec.parent_jti and (parent := self._issued.get(rec.parent_jti)):
@@ -243,6 +284,11 @@ class STS:
 
         Mints grant_id: the handle for this consent, carried unchanged by every
         token exchanged from this one, so revoking the consent kills them all.
+
+        With require_dpop the token is bound (cnf.jkt) to the registered key of
+        client_id: the user hands this token to that agent, so the agent is its
+        holder and the only party that can prove possession at the exchange. A
+        separate key for the user's own device is not modelled here.
         """
         client = self.clients[client_id]
         if ADMIN_SCOPE in scopes:
@@ -260,8 +306,40 @@ class STS:
         }
         if consent:
             claims["may_act"] = {"sub": client.sub, "client_id": client.client_id, "iss": self.issuer}
+        if self.require_dpop:
+            claims["cnf"] = {"jkt": client.jkt}
         self._record(claims, "user", client_id=None)
         return self._sign(claims)
+
+    # ---- DPoP -------------------------------------------------------------
+    def _check_proof(self, dpop: str | None, htm: str, htu: str, expected_jkt: str | None = None) -> Proof | None:
+        """Verify the proof on a /token call. None means the flag is off and no
+        proof was sent (bearer mode). Any failure is 400 invalid_dpop_proof."""
+        if dpop is None and not self.require_dpop:
+            return None
+        try:
+            proof = verify_proof(
+                dpop, htm, htu, expected_jkt=expected_jkt,
+                clock=self.clock, max_age_s=self.dpop_max_age_s, seen=self.dpop_seen,
+            )
+        except DPoPError as e:
+            raise ExchangeError("invalid_dpop_proof", str(e))
+        if proof.jkt in self.revoked_keys:
+            raise ExchangeError("invalid_dpop_proof", f"key {proof.jkt[:8]} is revoked")
+        return proof
+
+    @staticmethod
+    def _check_binding(name: str, claims: dict, proof: Proof | None) -> None:
+        """A token presented at /token must be bound to the proof key. In bearer
+        mode (proof None) nothing is checked; in DPoP mode an unbound token is
+        refused too, so binding cannot be stepped down by presenting one."""
+        if proof is None:
+            return
+        jkt = (claims.get("cnf") or {}).get("jkt") if isinstance(claims.get("cnf"), dict) else None
+        if not jkt:
+            raise ExchangeError("invalid_grant", f"{name} is not sender-constrained (no cnf.jkt)")
+        if jkt != proof.jkt:
+            raise ExchangeError("invalid_grant", f"{name} is bound to another key")
 
     def _authenticate(self, client_id: str, client_secret: str) -> Client:
         client = self.clients.get(client_id)
@@ -271,8 +349,26 @@ class STS:
             raise ExchangeError("invalid_client", f"client {client_id} is revoked", status=401)
         return client
 
-    def client_credentials(self, client_id: str, client_secret: str) -> dict:
-        client = self._authenticate(client_id, client_secret)
+    def client_credentials(
+        self,
+        client_id: str,
+        client_secret: str,
+        dpop: str | None = None,
+        htm: str = "POST",
+        htu: str | None = None,
+    ) -> dict:
+        """Actor token. With require_dpop the proof must come from the client's
+        registered key (secret and key are both needed, so a leaked secret alone
+        mints nothing usable) and the token is bound to it."""
+        ctx: dict = {"client_id": client_id}
+        try:
+            client = self._authenticate(client_id, client_secret)
+            proof = self._check_proof(dpop, htm, htu or f"{self.issuer}/token")
+            if proof is not None and proof.jkt != client.jkt:
+                raise ExchangeError("invalid_dpop_proof", f"proof key is not the registered key for {client_id}")
+        except ExchangeError as e:
+            self._audit("deny", e.reason, event="client_credentials", error=e.error, **ctx)
+            raise
         now = self._now()
         claims = {
             "iss": self.issuer,
@@ -284,8 +380,14 @@ class STS:
             "jti": uuid.uuid4().hex,
             "token_use": "actor",
         }
+        if proof is not None:
+            claims["cnf"] = {"jkt": proof.jkt}
         self._record(claims, "actor", client_id=client.client_id)
-        return {"access_token": self._sign(claims), "token_type": "Bearer", "expires_in": self.actor_ttl}
+        return {
+            "access_token": self._sign(claims),
+            "token_type": "DPoP" if proof is not None else "Bearer",
+            "expires_in": self.actor_ttl,
+        }
 
     def _refuse_if_revoked(self, name: str, claims: dict) -> None:
         """Deny when the token, its grant, or any ancestor by lineage is revoked."""
@@ -313,10 +415,18 @@ class STS:
         audience: str | None = None,
         scope: str | None = None,
         delegate_to: str | None = None,
+        dpop: str | None = None,
+        htm: str = "POST",
+        htu: str | None = None,
     ) -> dict:
         ctx: dict = {"client_id": client_id, "audience": audience, "delegate_to": delegate_to, "requested_scope": scope}
         try:
             actor = self._authenticate(client_id, client_secret)
+            # The proof is checked before anything about the tokens, so a bad proof
+            # never learns whether the tokens it came with would have been accepted.
+            proof = self._check_proof(dpop, htm, htu or f"{self.issuer}/token")
+            if proof is not None:
+                ctx["jkt"] = proof.jkt
 
             if not actor_token:
                 subj = self._decode("subject_token", subject_token, audience=None)
@@ -328,11 +438,15 @@ class STS:
             if act_claims.get("token_use") != "actor" or act_claims.get("client_id") != actor.client_id:
                 raise ExchangeError("invalid_grant", "actor_token does not belong to the authenticated client")
             self._refuse_if_revoked("actor_token", act_claims)
+            self._check_binding("actor_token", act_claims, proof)
 
             subj = self._decode("subject_token", subject_token, audience=actor.client_id)
             ctx["sub"] = subj["sub"]
             ctx["grant_id"] = subj.get("grant_id")
             self._refuse_if_revoked("subject_token", subj)
+            # The subject (user token or handoff) was bound to this actor's key when
+            # it was issued; the same proof must cover it.
+            self._check_binding("subject_token", subj, proof)
             prior = subj.get("act")
             ctx["chain_in"] = act_chain(prior)
 
@@ -403,13 +517,25 @@ class STS:
                 claims["parent_jti"] = subj["jti"]
             if nxt:
                 claims["may_act"] = {"sub": nxt.sub, "client_id": nxt.client_id, "iss": self.issuer}
+            if proof is not None:
+                # Binding choice: a tool token is bound to the key that just proved
+                # itself (the requesting actor presents it at the tool). A handoff is
+                # bound at issuance to the delegate's registered key, because the
+                # delegate, not the gateway, presents it at the next exchange; the
+                # gateway can carry it but cannot use it. The alternative, binding at
+                # pickup (the delegate exchanges a gateway-bound handoff with its own
+                # proof and the STS re-binds), is discussed in the README.
+                claims["cnf"] = {"jkt": nxt.jkt if nxt else proof.jkt}
             self._record(claims, "handoff" if nxt else "tool", client_id=actor.client_id)
             token = self._sign(claims)
-            self._audit("allow", "issued", **ctx, chain_out=act_chain(act), scope=claims["scope"], exp=exp)
+            self._audit("allow", "issued", **ctx, chain_out=act_chain(act), scope=claims["scope"], exp=exp,
+                        bound_to=claims.get("cnf", {}).get("jkt"))
             return {
                 "access_token": token,
                 "issued_token_type": ACCESS_TOKEN_TYPE,
-                "token_type": "N_A" if nxt else "Bearer",
+                # RFC 8693 section 2.2.1: N_A when the issued token is not for direct
+                # use at a resource; the handoff goes back to this STS as a subject.
+                "token_type": "N_A" if nxt else ("DPoP" if proof is not None else "Bearer"),
                 "expires_in": exp - now,
                 "scope": claims["scope"],
             }
@@ -622,24 +748,66 @@ class STS:
                     event="client_revocation", by=by, client_id=client_id)
         return client_id in self.clients
 
-    def authorize_admin(self, authorization: str | None) -> Client:
-        """Resolve a bearer actor token to a client holding sts:admin.
+    def revoke_key(self, jkt: str, by: str = "admin") -> int:
+        """Admin: revoke a DPoP key by its thumbprint.
 
-        401 invalid_client: no bearer, not a token this STS issued, not an actor
-        token (a user or tool token presented here is refused this way), revoked,
-        or from a disabled client. 403 insufficient_scope: a real actor token
-        whose client does not hold sts:admin.
+        Denylists every live token bound to the key (cnf.jkt in the issuance
+        registry) together with each one's descendants, and refuses every future
+        proof from the key at /token. A client whose registered key this is can
+        no longer obtain actor tokens until it is re-registered with a new key
+        (rotation is not built). An unknown thumbprint is recorded and returns 0,
+        so the answer does not reveal whether the key was ever seen.
         """
-        if not authorization or not authorization.lower().startswith("bearer "):
-            raise ExchangeError("invalid_client", "bearer actor token required", status=401)
+        self.revoked_keys.add(jkt)
+        denied: set[str] = set()
+        for r in list(self._issued.values()):
+            if r.jkt == jkt:
+                denied |= self._revoke_subtree(r.jti, r.exp)
+        self._audit("revoked", "key revoked by admin", event="key_revocation", by=by, jkt=jkt, revoked_jtis=len(denied))
+        return len(denied)
+
+    def authorize_admin(
+        self,
+        authorization: str | None,
+        dpop: str | None = None,
+        htm: str = "POST",
+        htu: str | None = None,
+    ) -> Client:
+        """Resolve an actor token to a client holding sts:admin.
+
+        401 invalid_client: no token, not a token this STS issued, not an actor
+        token (a user or tool token presented here is refused this way), revoked,
+        or from a disabled client. 401 invalid_dpop_proof: a key-bound actor token
+        without the DPoP scheme or without a fresh proof from its key, with ath
+        over the token (RFC 9449 section 7.1, the resource-server side). 403
+        insufficient_scope: a real actor token whose client does not hold sts:admin.
+        """
+        scheme, _, token = (authorization or "").partition(" ")
+        scheme = scheme.lower()
+        if scheme not in ("bearer", "dpop") or not token.strip():
+            raise ExchangeError("invalid_client", "actor token required", status=401)
+        token = token.strip()
         try:
-            claims = self._decode("actor_token", authorization[7:].strip(), audience=self.issuer)
+            claims = self._decode("actor_token", token, audience=self.issuer)
             self._refuse_if_revoked("actor_token", claims)
         except ExchangeError as e:
             raise ExchangeError("invalid_client", e.reason, status=401)
         client = self.clients.get(claims.get("client_id") or "")
         if claims.get("token_use") != "actor" or client is None or client.client_id in self.disabled_clients:
             raise ExchangeError("invalid_client", "not a live actor token", status=401)
+        jkt = (claims.get("cnf") or {}).get("jkt") if isinstance(claims.get("cnf"), dict) else None
+        if jkt:
+            if scheme != "dpop":
+                raise ExchangeError("invalid_dpop_proof", "key-bound token must use the DPoP scheme", status=401)
+            try:
+                verify_proof(dpop, htm, htu or f"{self.issuer}/admin", expected_jkt=jkt, ath_of=token,
+                             clock=self.clock, max_age_s=self.dpop_max_age_s, seen=self.dpop_seen)
+            except DPoPError as e:
+                raise ExchangeError("invalid_dpop_proof", str(e), status=401)
+            if jkt in self.revoked_keys:
+                raise ExchangeError("invalid_dpop_proof", f"key {jkt[:8]} is revoked", status=401)
+        elif self.require_dpop:
+            raise ExchangeError("invalid_client", "actor token is not sender-constrained", status=401)
         if ADMIN_SCOPE not in client.scopes:
             raise ExchangeError("insufficient_scope", f"{client.client_id} does not hold {ADMIN_SCOPE}", status=403)
         return client
@@ -648,6 +816,13 @@ class STS:
 def env_var_for(client_id: str) -> str:
     """Environment variable that holds a client's secret, e.g. STS_CLIENT_MCP_GATEWAY."""
     return "STS_CLIENT_" + client_id.upper().replace("-", "_")
+
+
+def jkt_env_var_for(client_id: str) -> str:
+    """Environment variable that holds a client's registered DPoP key thumbprint,
+    e.g. STS_JKT_MCP_GATEWAY. The STS never holds a client's private key; the
+    client makes one with `python dpop.py keygen <file>` and registers the printed jkt."""
+    return "STS_JKT_" + client_id.upper().replace("-", "_")
 
 
 def create_app(sts: STS) -> FastAPI:
@@ -672,6 +847,7 @@ def create_app(sts: STS) -> FastAPI:
 
     @app.post("/token")
     def token(
+        request: Request,
         grant_type: str = Form(...),
         client_id: str = Form(...),
         client_secret: str = Form(...),
@@ -682,10 +858,12 @@ def create_app(sts: STS) -> FastAPI:
         audience: str | None = Form(None),
         scope: str | None = Form(None),
         delegate_to: str | None = Form(None),  # non-standard: names the next actor for a handoff token
+        dpop: str | None = Header(None),  # RFC 9449 section 4.1: the DPoP header; htm and htu come from the request itself
     ):
+        htm, htu = request.method, str(request.url)
         try:
             if grant_type == "client_credentials":
-                return sts.client_credentials(client_id, client_secret)
+                return sts.client_credentials(client_id, client_secret, dpop=dpop, htm=htm, htu=htu)
             if grant_type != TOKEN_EXCHANGE:
                 raise ExchangeError("unsupported_grant_type", grant_type)
             for name, typ in (("subject_token_type", subject_token_type), ("actor_token_type", actor_token_type if actor_token else ACCESS_TOKEN_TYPE)):
@@ -701,6 +879,9 @@ def create_app(sts: STS) -> FastAPI:
                 audience=audience,
                 scope=scope,
                 delegate_to=delegate_to,
+                dpop=dpop,
+                htm=htm,
+                htu=htu,
             )
         except ExchangeError as e:
             return err(e)
@@ -723,33 +904,45 @@ def create_app(sts: STS) -> FastAPI:
             return err(e)
         return Response(status_code=200)
 
-    # Admin routes: bearer actor token from a client holding sts:admin. Handles in,
-    # counts out; an unknown handle is 200 with zero counts, so nothing can be probed.
+    # Admin routes: actor token from a client holding sts:admin, presented with the
+    # DPoP scheme and a proof over the token when the token is key-bound. Handles
+    # in, counts out; an unknown handle is 200 with zero counts, so nothing can be probed.
+    def admin(request: Request, authorization: str | None, dpop: str | None) -> Client:
+        return sts.authorize_admin(authorization, dpop=dpop, htm=request.method, htu=str(request.url))
+
     @app.post("/admin/revoke/grant")
-    def admin_revoke_grant(grant_id: str = Form(...), authorization: str | None = Header(None)):
+    def admin_revoke_grant(request: Request, grant_id: str = Form(...), authorization: str | None = Header(None), dpop: str | None = Header(None)):
         try:
-            admin = sts.authorize_admin(authorization)
+            who = admin(request, authorization, dpop)
         except ExchangeError as e:
             return err(e)
-        return {"grant_id": grant_id, "revoked_jtis": sts.revoke_grant(grant_id, by=admin.client_id)}
+        return {"grant_id": grant_id, "revoked_jtis": sts.revoke_grant(grant_id, by=who.client_id)}
 
     @app.post("/admin/revoke/client")
-    def admin_revoke_client(client_id: str = Form(...), authorization: str | None = Header(None)):
+    def admin_revoke_client(request: Request, client_id: str = Form(...), authorization: str | None = Header(None), dpop: str | None = Header(None)):
         try:
-            admin = sts.authorize_admin(authorization)
+            who = admin(request, authorization, dpop)
         except ExchangeError as e:
             return err(e)
-        count = sts.revoke_client(client_id, by=admin.client_id)
+        count = sts.revoke_client(client_id, by=who.client_id)
         return {"client_id": client_id, "revoked_jtis": count, "disabled": client_id in sts.disabled_clients}
 
     @app.post("/admin/enable/client")
-    def admin_enable_client(client_id: str = Form(...), authorization: str | None = Header(None)):
+    def admin_enable_client(request: Request, client_id: str = Form(...), authorization: str | None = Header(None), dpop: str | None = Header(None)):
         try:
-            admin = sts.authorize_admin(authorization)
+            who = admin(request, authorization, dpop)
         except ExchangeError as e:
             return err(e)
-        known = sts.enable_client(client_id, by=admin.client_id)
+        known = sts.enable_client(client_id, by=who.client_id)
         return {"client_id": client_id, "known": known, "disabled": client_id in sts.disabled_clients}
+
+    @app.post("/admin/revoke/key")
+    def admin_revoke_key(request: Request, jkt: str = Form(...), authorization: str | None = Header(None), dpop: str | None = Header(None)):
+        try:
+            who = admin(request, authorization, dpop)
+        except ExchangeError as e:
+            return err(e)
+        return {"jkt": jkt, "revoked_jtis": sts.revoke_key(jkt, by=who.client_id)}
 
     return app
 
@@ -759,8 +952,10 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     sts = STS(issuer="http://127.0.0.1:8099")
-    # Client secrets come from the environment and are never printed or logged.
-    # A client with no variable set keeps a random value nobody knows, so it cannot authenticate.
+    # Client secrets and registered key thumbprints come from the environment and
+    # are never printed or logged. A client with no variable set keeps a random
+    # secret nobody knows and a random in-process key nobody else holds, so it
+    # cannot authenticate. Out of process the STS holds only the thumbprint.
     unset: list[str] = []
     for c in sts.clients.values():
         var = env_var_for(c.client_id)
@@ -768,6 +963,11 @@ if __name__ == "__main__":
             c.secret = os.environ[var]
         else:
             unset.append(var)
+        jvar = jkt_env_var_for(c.client_id)
+        if os.environ.get(jvar):
+            c.key, c.jkt = None, os.environ[jvar].strip()
+        else:
+            unset.append(jvar)
     if unset:
         print("clients disabled until these are set: " + ", ".join(unset), file=sys.stderr)
     uvicorn.run(create_app(sts), host="127.0.0.1", port=8099)
