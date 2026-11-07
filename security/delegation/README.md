@@ -314,6 +314,40 @@ Keys are generated at startup and die with the process, like the signing key.
 Rotation is not built: to replace a client's key, revoke the old thumbprint
 and register the new one.
 
+## Device-bound user tokens (v2.0)
+
+`../SESSION_BINDING.md` has the reasoning; this is what the STS does.
+
+- `register_device(device_id, jkt)` or `load_device_registry(path)` (the
+  orchestrator's `device_registry.json`) names the speakers whose hardware key a
+  user token may be bound to.
+- `issue_user_token(..., device_jkt=..., assurance=...)` binds the token to the
+  speaker's key instead of the consented client's software key: `cnf.jkt` is
+  the device thumbprint, a `device` claim names the device, and `assurance`
+  carries what the orchestrator's voice gate measured for the session. The
+  `/dev/login` stand-in takes both as form fields.
+- At `/token`, the consented client exchanges such a token by sending
+  `device_jkt`, the thumbprint it verified on the live stream it is acting for.
+  The STS requires it to equal the subject's `cnf.jkt` and to name a live
+  device. The client's own actor token must still be bound to its own key and
+  covered by its proof, and `may_act` must still name it: asserting the device
+  replaces only the possession proof the client cannot give, nothing else.
+- Only the root user token is device-bound. A handoff carries `device` and
+  `assurance` as facts and is bound to the delegate's key as before; so is the
+  tool token, bound to the requester. Both claims are copied unchanged at every
+  hop and anything a client sends for them is ignored.
+- `revoke_device(jkt)` (CLI `admin.py revoke-device`, route
+  `/admin/revoke/device`) marks the device so no new token binds to it and no
+  exchange asserts it, and calls `revoke_key` so every live token bound to it
+  and every descendant dies now.
+- `verify.Principal` exposes `device` and `assurance` for the tool's own policy.
+
+The trust this adds is one fact, not one party: the orchestrator already
+asserts who is speaking; now it also asserts which device the stream came
+from. A compromised orchestrator can lie about the device; the thumbprint is
+on every record, so the lie is attributable. The speaker performing the
+exchange itself is the target once it is an STS client.
+
 ## Attack results (from `demo.py`)
 
 | Attack | Result |

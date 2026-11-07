@@ -97,6 +97,11 @@ class Principal:
     jti: str | None
     grant_id: str | None = None
     jkt: str | None = None  # the key the token is bound to and the caller proved, or None for a bearer token
+    # Session facts carried unchanged from the user token (SESSION_BINDING.md):
+    # the speaker the user was at, and what the voice gate measured. A tool
+    # reads them for its own policy; nothing here grants on them.
+    device: dict | None = None
+    assurance: dict | None = None
 
     @property
     def caller(self) -> str:
@@ -234,4 +239,6 @@ class UpstreamVerifier:
             jti=claims.get("jti"),
             grant_id=claims.get("grant_id"),
             jkt=jkt,
+            device=dict(claims["device"]) if isinstance(claims.get("device"), dict) else None,
+            assurance=dict(claims["assurance"]) if isinstance(claims.get("assurance"), dict) else None,
         )
