@@ -1,7 +1,7 @@
 """Operator CLI for the STS admin routes (prototype).
 
     STS_URL=http://127.0.0.1:8099 STS_CLIENT_OPS_CONSOLE=<secret> STS_KEY_OPS_CONSOLE=<path to PEM> \\
-        python admin.py revoke-grant <grant_id> | revoke-client <client_id> | enable-client <client_id> | revoke-key <jkt>
+        python admin.py revoke-grant <grant_id> | revoke-client <client_id> | enable-client <client_id> | revoke-key <jkt> | revoke-device <jkt>
 
 Also runs as `python -m delegation.admin ...` from security/ (namespace package,
 no __init__.py needed). It obtains an ops-console actor token with the client
@@ -26,6 +26,7 @@ COMMANDS = {
     "revoke-client": ("/admin/revoke/client", "client_id"),
     "enable-client": ("/admin/enable/client", "client_id"),
     "revoke-key": ("/admin/revoke/key", "jkt"),
+    "revoke-device": ("/admin/revoke/device", "jkt"),
 }
 
 

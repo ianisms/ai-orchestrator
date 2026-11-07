@@ -52,9 +52,10 @@ Files:
 | Registry (JSON, `device_id`, `room`, `household`, public key PEM, thumbprint, `enrolled_at`, `revoked_at`) | `server/modules/orchestrator/core/device_identity.py`, file at `DEVICE_REGISTRY_PATH` | built |
 | Admin: add, list, revoke, remove | `server/scripts/enroll_device.py` | built |
 | Challenge, verify, credential mint and verify | `DeviceIdentityService`, routes on the status server | built |
-| Credential read from gRPC metadata at connect | `server/modules/aiserver/server.py`, `device_from_metadata` | partial: verified and logged, not enforced |
-| Speaker attaches the credential to the Converse stream | `DeviceAttestClient.grpc_metadata()` | not wired: `grpc_client.py` does not send it yet |
-| Voice gate reads the device credential | | not built |
+| Credential read from gRPC metadata at connect | `server/modules/aiserver/server.py`, `device_from_metadata` | built: verified and logged; refused with UNAUTHENTICATED when `DEVICE_IDENTITY_REQUIRE` is on (off by default) |
+| Speaker attaches the credential to the Converse stream | `DeviceAttestClient.grpc_metadata()` via `OrchestratorGrpcConfig.metadata_provider` | built: sent at every connect, re-attested when stale |
+| Voice gate reads the device credential | `core/voice_gate.py`, `origin_trusted`; `core/utterance.py`, `set_device` | built: origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` bounds on the credential's expiry per turn |
+| User token bound to the device key | `security/delegation/sts.py`, `issue_user_token(device_jkt=...)` | built (prototype): `SESSION_BINDING.md` |
 
 Key policy: ECCP256, touch policy never (nobody is there to touch it), PIN
 policy once with the PIN in a mode 600 file the client reads at boot. The
@@ -87,8 +88,9 @@ present", not "this is the trustworthy kitchen speaker". Mitigations, in the
 order they apply:
 
 1. Key-bound tokens are limited to low-risk scopes. The device credential
-   carries `cnf.jkt`; anything minted against it (not built yet) stays at the
-   read tier of the voice gate.
+   carries `cnf.jkt`; a user token bound to it (`SESSION_BINDING.md`) carries
+   the gate's assurance record, and policy keeps a device-only signal at the
+   read tier: writes still need the voice match plus confirmation.
 2. High-risk actions still need voice plus challenge. A credential never
    replaces the speaker match, the liveness check (not built) or the phone
    approval (not built) for writes and high-risk calls.
@@ -121,7 +123,9 @@ the `Signer` interface, an enrollment registry keyed by thumbprint, a challenge
 with a short nonce, a short-lived key-bound credential. The TPM variant adds a
 quote to the attest request and a PCR policy to the verifier.
 
-After the key is in silicon the remaining pieces land in order: the speaker
-presents the credential on the stream (or the stream moves to mTLS with the
-device key), the voice gate takes the device identity as a signal in place of
-the address check, and tokens minted for the device are bound to its key.
+The remaining pieces landed ahead of the silicon (`SESSION_BINDING.md`): the
+speaker presents the credential on the stream, the voice gate takes the device
+identity as its origin signal in place of the address check, and user tokens
+minted for the session are bound to the device key, with the orchestrator
+asserting the thumbprint it verified at the exchange. Moving the key into a
+secure element or TPM changes the signer, not the shape.

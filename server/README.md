@@ -67,7 +67,7 @@ Local tools live in `tools_server/tools/<name>/` as a Python module plus a `conf
 | `current_time` | server clock, any timezone |
 | `local_places_search`, `place_details`, `place_summary` | Google Places |
 | `location_preferences` | per-device default location, SQLite, scoped by the gRPC-derived client id |
-| `get_person_id`, `speaker_identity`, `speaker_enrollment_coach`, `identify_speaker` | NeMo speaker embeddings over the turn's audio reference; `identify_speaker` is hidden from the model and used only by the voice gate |
+| `get_person_id`, `speaker_identity`, `speaker_enrollment_coach`, `identify_speaker`, `enrollment_sample` | NeMo speaker embeddings over the turn's audio reference; `identify_speaker` (match, score and the person's own threshold) and `enrollment_sample` (embedding plus clip quality) are hidden from the model and used only by the voice gate and the enrollment session |
 | `household_memory`, `household_profiles` | persistent facts and per-person profiles, SQLite |
 | `timer_alarm`, `push_notify` | timers and alarms; ntfy push |
 | `translate` | Google Translate |
@@ -81,7 +81,7 @@ Upstream MCP servers are declared in `tools_server/mcp-servers.yaml` with per-se
 
 `config/prompt.md` is the system prompt. It carries the tool-routing rules the model follows, including the `[AUDIO_REF]` protocol for speaker identification and the Home Assistant naming conventions.
 
-The voice gate is configured with `VOICE_GATE_*` keys in `config/config.yaml` (defaults in `modules/orchestrator/config/settings.py`): the mode (`off`, `monitor` or `enforce`; default `monitor`), the speaker devices' CIDRs, the match threshold from `scripts/calibrate_voice_threshold.py`, and the risk tier for each tool. Pending voice enrollments are approved or rejected with `scripts/approve_enrollment.py`.
+The voice gate is configured with `VOICE_GATE_*` keys in `config/config.yaml` (defaults in `modules/orchestrator/config/settings.py`): the mode (`off`, `monitor` or `enforce`; default `monitor`), the origin signal (`VOICE_GATE_REQUIRE_DEVICE: true` takes the verified device credential on the stream; otherwise the speaker devices' CIDRs), the global match floor from `scripts/calibrate_voice_threshold.py` (each enrolled person's own threshold sits on top of it), and the risk tier for each tool. `DEVICE_IDENTITY_REQUIRE: true` refuses a stream that presents no valid device credential. New voices are enrolled in an admin-run session with `scripts/enroll_voice.py` (`security/VOICE_ENROLLMENT.md`); pending samples from a stated name are approved or rejected with `scripts/approve_enrollment.py`.
 
 ## Running
 

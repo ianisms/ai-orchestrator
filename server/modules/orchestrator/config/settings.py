@@ -61,8 +61,12 @@ class Settings(BaseModel):
     # decisions are logged, nothing is blocked, until the threshold is calibrated
     # and the approval flows exist.
     VOICE_GATE_MODE: str = "monitor"  # off | monitor | enforce
-    VOICE_GATE_MIN_SCORE: float | None = None  # set from scripts/calibrate_voice_threshold.py
+    VOICE_GATE_MIN_SCORE: float | None = None  # global floor; a profile's own threshold (enrollment) sits on top
     VOICE_GATE_TRUSTED_SPEAKER_NETS: list[str] = []  # CIDRs of speaker devices, e.g. ["192.0.2.50/32"]
+    # Origin signal: False = the gRPC peer address must be in the trusted nets; True = the
+    # turn must carry a verified device credential (security/SESSION_BINDING.md). Turn this
+    # on once every speaker attests (DEVICE_IDENTITY_REQUIRE).
+    VOICE_GATE_REQUIRE_DEVICE: bool = False
     VOICE_GATE_IDENTIFY_TOOL: str = "identify_speaker"
     VOICE_GATE_DEFAULT_RISK: str = "write"
     VOICE_GATE_TOOL_RISK: dict[str, str] = {
@@ -98,10 +102,23 @@ class Settings(BaseModel):
     }
     # Device identity (modules/orchestrator/core/device_identity.py). The registry
     # holds enrolled speaker keys; scripts/enroll_device.py manages it. The
-    # credential is checked and logged at connect; it does not gate anything yet.
+    # credential is verified at connect, enforced when DEVICE_IDENTITY_REQUIRE is on,
+    # and read by the voice gate when VOICE_GATE_REQUIRE_DEVICE is on.
     DEVICE_REGISTRY_PATH: str = "/ai/server/state/device_registry.json"
     DEVICE_CHALLENGE_TTL_S: int = 30
     DEVICE_CREDENTIAL_TTL_S: int = 600  # 300 to 900
+    # Refuse a Converse stream that presents no valid x-device-credential (fail closed).
+    # Off until every speaker runs with device_identity_enable; then on.
+    DEVICE_IDENTITY_REQUIRE: bool = False
+
+    # Admin-run voice enrollment (modules/orchestrator/core/voice_enrollment.py,
+    # scripts/enroll_voice.py, security/VOICE_ENROLLMENT.md). Sessions are bound to a
+    # device; a stream with no device identity never enters enrollment unless the
+    # development switch below is set.
+    VOICE_ENROLLMENT_SESSIONS_PATH: str = "/ai/server/state/voice_enrollment_sessions.json"
+    VOICE_ENROLLMENT_PROFILES_PATH: str = "/ai/server/state/speaker_identity.json"
+    VOICE_ENROLLMENT_SAMPLE_TOOL: str = "enrollment_sample"
+    VOICE_ENROLLMENT_ALLOW_UNBOUND_DEVICE: bool = False
 
     ORCH_TOOL_RESULT_MAX_CHARS: int = 3000
     ORCH_TOOL_SUMMARY_MAX_CHARS: int = 6000

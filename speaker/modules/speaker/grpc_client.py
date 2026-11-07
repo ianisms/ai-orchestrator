@@ -5,7 +5,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import AsyncIterator, Optional, Tuple
+from typing import AsyncIterator, Callable, Optional, Sequence, Tuple
 
 import grpc
 from modules.speaker.protos import orchestrator_pb2 as pb
@@ -31,6 +31,11 @@ class OrchestratorGrpcConfig:
     keepalive_timeout_ms: int = 3000
     keepalive_permit_without_calls: bool = True
     stop_on_thinking: bool = True
+    # Metadata to send with the Converse call, computed at connect time: the
+    # device credential (x-device-credential) comes from here so a re-attested
+    # credential is picked up on every reconnect. May block (it can talk to the
+    # YubiKey and the orchestrator), so it is run off the event loop.
+    metadata_provider: Optional[Callable[[], Sequence[tuple[str, str]]]] = None
 
 
 class OrchestratorGrpcClient:
@@ -133,7 +138,8 @@ class OrchestratorGrpcClient:
                     return
                 yield msg
 
-        stream = self.stub.Converse(req_iter())
+        metadata = await self._call_metadata()
+        stream = self.stub.Converse(req_iter(), metadata=metadata or None)
 
         async def rx_loop():
             try:
@@ -159,6 +165,23 @@ class OrchestratorGrpcClient:
 
         self._rx_task = asyncio.create_task(rx_loop(), name="grpc_rx")
         self._connected = True
+
+    async def _call_metadata(self) -> tuple[tuple[str, str], ...]:
+        """Per-call metadata from the provider, or none. A provider failure is
+        logged and the call goes out without the pair: the orchestrator decides
+        what a missing credential means (DEVICE_IDENTITY_REQUIRE)."""
+        provider = self.cfg.metadata_provider
+        if provider is None:
+            return ()
+        try:
+            pairs = await asyncio.to_thread(provider)
+        except Exception as exc:
+            self.log.warning("call metadata provider failed: %r", exc)
+            return ()
+        out = tuple((str(k).lower(), str(v)) for k, v in (pairs or ()) if k and v)
+        if out:
+            self.log.info("connect metadata keys=%s", ",".join(k for k, _ in out))
+        return out
 
     async def close(self):
         if self._closing:

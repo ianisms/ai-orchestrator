@@ -39,6 +39,7 @@ from tools.registry import list_tools, parse_tool_args
 from orchestrator.tools.mcp_client import get_tools_client
 from .turn import CancelToken, new_turn_id
 from .types import SendEvent
+from .voice_enrollment import EnrollmentError, VoiceEnrollmentService
 from .voice_gate import READ, GateConfig, TurnSignals, audit_fields, classify, decide
 
 _LOCAL_SEARCH_TOOL_NAMES = ("local_places_search",)
@@ -555,6 +556,25 @@ class UtteranceRunner:
         self._peer_host = peer_host or ""  # from the gRPC peer, never from client metadata
         self._history = history
         self._last_used_tools: set[str] = set()
+        # Device identity for this stream (security/SESSION_BINDING.md): set by the
+        # server from the verified x-device-credential, never from client-asserted
+        # metadata. expires_at bounds device_verified on later turns.
+        self._device_id = ""
+        self._device_jkt = ""
+        self._device_exp: float = 0.0
+        self._enrollment: Optional[VoiceEnrollmentService] = None
+
+    def set_device(self, device_id: str, device_jkt: str, expires_at: float) -> None:
+        """The verified device on this stream. Called once at connect by the server."""
+        self._device_id = str(device_id or "")
+        self._device_jkt = str(device_jkt or "")
+        self._device_exp = float(expires_at or 0.0)
+
+    def set_enrollment(self, service: Optional[VoiceEnrollmentService]) -> None:
+        self._enrollment = service
+
+    def _device_verified(self) -> bool:
+        return bool(self._device_jkt) and self._device_exp > time.time()
 
     def _gate_config(self) -> Optional[GateConfig]:
         mode = str(settings.VOICE_GATE_MODE or "monitor").strip().lower()
@@ -567,6 +587,7 @@ class UtteranceRunner:
             settings.VOICE_GATE_TOOL_RISK,
             settings.VOICE_GATE_DEFAULT_RISK,
             settings.VOICE_GATE_READ_ACTIONS,
+            require_device=bool(getattr(settings, "VOICE_GATE_REQUIRE_DEVICE", False)),
         )
 
     async def _gather_turn_signals(
@@ -581,7 +602,13 @@ class UtteranceRunner:
         and the identify tool is hidden from the model's tool list.
         Liveness and approvals stay at their failing defaults until those flows exist.
         """
-        sig = TurnSignals(channel="voice" if audio_ref is not None else "text", peer_host=self._peer_host)
+        sig = TurnSignals(
+            channel="voice" if audio_ref is not None else "text",
+            peer_host=self._peer_host,
+            device_id=self._device_id,
+            device_jkt=self._device_jkt,
+            device_verified=self._device_verified(),
+        )
         if audio_ref is None or tools_client is None:
             return sig
         sid, aid = audio_ref
@@ -600,6 +627,9 @@ class UtteranceRunner:
                 if pid and isinstance(score, (int, float)) and not isinstance(score, bool):
                     sig.profile_id = pid
                     sig.score = float(score)
+                    own = data.get("threshold")  # the person's own threshold from enrollment, or null
+                    if isinstance(own, (int, float)) and not isinstance(own, bool):
+                        sig.profile_threshold = float(own)
         except Exception as exc:
             self._log("warning", "voice gate identify failed", turn_id=turn_id, error=repr(exc))
         return sig
@@ -1608,6 +1638,69 @@ class UtteranceRunner:
             return content2.strip(), storable_tool_msgs
         return tool_output_text, storable_tool_msgs
 
+    async def _enrollment_turn(
+        self,
+        text: str,
+        audio_ref: Optional[tuple[str, str]],
+        turn_id: str,
+    ) -> Optional[str]:
+        """If an enrollment session is open for this stream's device, consume the
+        turn as a sample and return what to say. None means: not enrolling.
+
+        The session is matched by the device identity the server verified on
+        the stream. With no device identity the turn is never an enrollment
+        turn, unless VOICE_ENROLLMENT_ALLOW_UNBOUND_DEVICE (development only)
+        lets a session opened for device "unbound" match any stream.
+        """
+        svc = self._enrollment
+        if svc is None:
+            return None
+        device_id, device_jkt = self._device_id, self._device_jkt
+        if not (device_id and self._device_verified()):
+            if not bool(getattr(settings, "VOICE_ENROLLMENT_ALLOW_UNBOUND_DEVICE", False)):
+                return None
+            device_id, device_jkt = "unbound", ""
+        try:
+            session = await asyncio.get_running_loop().run_in_executor(None, svc.open_for_device, device_id, device_jkt)
+        except Exception as exc:
+            self._log("warning", "enrollment lookup failed", turn_id=turn_id, error=repr(exc))
+            return None
+        if session is None:
+            return None
+        if audio_ref is None:
+            return "Voice enrollment needs the speaker's microphone. Please say the sentence out loud."
+        embedding, quality, error = None, None, ""
+        tools_client = get_tools_client()
+        if tools_client is None:
+            error = "tools unavailable"
+        else:
+            sid, aid = audio_ref
+            try:
+                raw = await asyncio.wait_for(
+                    tools_client.call_tool(str(settings.VOICE_ENROLLMENT_SAMPLE_TOOL), {"session_id": sid, "audio_id": aid}),
+                    timeout=max(1.0, float(settings.ORCH_TOOL_TIMEOUT_S)),
+                )
+                data = json.loads(raw) if raw else {}
+                if isinstance(data, dict):
+                    embedding = data.get("embedding")
+                    quality = data.get("quality")
+                    error = str(data.get("error") or "")
+            except Exception as exc:
+                error = f"sample failed: {exc!r}"
+        try:
+            session, say, accepted = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: svc.add_sample(session.session_id, device_id=device_id, device_jkt=device_jkt,
+                                       transcript=text, embedding=embedding, quality=quality, error=error),
+            )
+        except EnrollmentError as exc:
+            self._log("warning", "enrollment sample refused", turn_id=turn_id, reason=str(exc))
+            return "That enrollment session is no longer open."
+        self._log("info", "enrollment turn", turn_id=turn_id, session_id=session.session_id,
+                  profile_id=session.profile_id, accepted=accepted, status=session.status,
+                  samples=len(session.samples), device_id=device_id)
+        return say
+
     async def _think_and_speak(
         self,
         text: str,
@@ -1624,6 +1717,17 @@ class UtteranceRunner:
         if not turn_id:
             turn_id = new_turn_id()
             await send("state", {"phase": "THINKING", "turn_id": turn_id})
+
+        enrollment_reply = await self._enrollment_turn(text, audio_ref, turn_id)
+        if enrollment_reply is not None:
+            # An admin-run enrollment session owns this device: the turn is a sample,
+            # not a conversation. No model, no tools, no history.
+            await send("reply", {"turn_id": turn_id, "text": enrollment_reply, "is_final": True})
+            if no_tts:
+                await send("state", {"phase": "IDLE", "turn_id": turn_id})
+                return
+            await self._speak(turn_id, enrollment_reply, send, cancel)
+            return
 
         self._last_used_tools = set()
         speak_text = ""

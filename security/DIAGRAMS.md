@@ -257,7 +257,7 @@ flowchart TD
     AUDIT["Append-only audit sink:<br/>every revocation and every refused call,<br/>with the reason"]
 
     subgraph Binding["What makes it stick"]
-        KB["Key-bound tokens: a revoked key<br/>kills every token it holds<br/>built for agents (DPoP, revoke_key);<br/>device credential carries cnf.jkt, nothing minted against it yet"]
+        KB["Key-bound tokens: a revoked key<br/>kills every token it holds<br/>built for agents (DPoP, revoke_key)<br/>and for the speaker (revoke_device, SESSION_BINDING.md)"]
         TTL2["Short lifetimes stay: revocation is for<br/>the minutes a token is still live"]
         CACHE["Speaker token cache: short TTL,<br/>cleared at session end,<br/>validated server-side on every call"]
     end
@@ -270,8 +270,10 @@ Order of operations, narrowest first: scope, then grant, then credential. A gate
 deny-list entry is the immediate cut at any tier while the slower revocation lands.
 Every hop is audited (threats 11, 12; "next controls" items 1, 2, 5). The key-bound
 box is true for agents today: `revoke_key` in `sts.py` denylists everything bound
-to a thumbprint and refuses its proofs. It is not yet true for the speaker, whose
-device credential carries `cnf.jkt` but has nothing minted against it.
+to a thumbprint and refuses its proofs. With v2.0 it is true for the speaker too:
+the session's user token is bound to the device key and `revoke_device` kills it
+with its subtree (`SESSION_BINDING.md`). Diagram 1 (attestation today) predates
+that change; the flows are drawn in `SESSION_BINDING.md` section 4.
 
 ## Where each piece lives
 
@@ -281,7 +283,8 @@ device credential carries `cnf.jkt` but has nothing minted against it.
 | Speaker identification on the turn's audio | built | `server/modules/orchestrator/core/audio_tap.py`, identity tool | 16 |
 | Liveness check | not built | rollout step 3 | 15, 21 |
 | Spoken confirmation and phone approval | not built | rollout step 2 | 17, 19 |
-| Hardware device key, enrollment registry, mTLS from device | not built | section 2 | 18 |
+| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; secure element or TPM not built; mTLS from device not taken, see `SESSION_BINDING.md` 3.1) | `DEVICE_IDENTITY.md`, `SESSION_BINDING.md` | 18, 1 |
+| Admin-run voice enrollment with per-user thresholds | built | `VOICE_ENROLLMENT.md` | 17, 15 |
 | Client-secret actor credentials | built (prototype) | `security/delegation/sts.py` | 6 |
 | SPIFFE/SPIRE workload identity | not built (prototype B) | section 2 | 6, 13 |
 | RFC 8693 exchange with nested `act` chain | built | `security/delegation/sts.py` | 2, 3, 4, 5 |

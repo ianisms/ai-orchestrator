@@ -29,6 +29,7 @@ class CaptureStreamer:
         fsm: Optional[SpeakerStateMachine] = None,
         barge_q: Optional[asyncio.Queue] = None,
         barge_in_evt: Optional[asyncio.Event] = None,
+        metadata_provider=None,
     ):
         self.cfg = cfg
         self.capture_q = capture_q
@@ -73,6 +74,7 @@ class CaptureStreamer:
                 connect_ready_timeout_ms=int(getattr(cfg, "grpc_connect_ready_timeout_ms", 4000)),
                 verbose=bool(getattr(cfg, "verbose", False)),
                 stream_log_every_n=max(1, int(getattr(cfg, "stream_log_every_n", 50))),
+                metadata_provider=metadata_provider,
             )
         )
         self.log = logging.getLogger("speaker.capture")

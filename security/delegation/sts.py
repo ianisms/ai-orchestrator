@@ -204,6 +204,11 @@ class STS:
         self.dpop_max_age_s = dpop_max_age_s
         self.dpop_seen = ReplayCache(clock=lambda: self.clock())
         self.revoked_keys: set[str] = set()  # thumbprints refused on every future proof
+        # Device registry (SESSION_BINDING.md): thumbprint -> device_id for the
+        # speakers whose hardware key a user token may be bound to. Loaded from the
+        # orchestrator's device_registry.json or registered in process; revoking a
+        # device marks it here and revokes its key.
+        self.devices: dict[str, dict] = {}
         # Strikes from tool reports: (grant_id, actor chain) -> timestamps inside the window.
         self._strikes: dict[tuple[str, tuple[str, ...]], list[int]] = {}
         self._key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -279,20 +284,73 @@ class STS:
         for jti in [j for j, r in self._issued.items() if r.exp <= now]:
             del self._issued[jti]
 
-    def issue_user_token(self, user: str, client_id: str, scopes: set[str], consent: bool = True) -> str:
+    # ---- devices (SESSION_BINDING.md) ---------------------------------------
+    def register_device(self, device_id: str, jkt: str) -> None:
+        """A speaker whose hardware key a user token may be bound to."""
+        if not device_id or not jkt:
+            raise ExchangeError("invalid_request", "device_id and jkt required")
+        self.devices[jkt] = {"device_id": device_id, "revoked": False}
+
+    def load_device_registry(self, path: str) -> int:
+        """Read the orchestrator's device_registry.json (server/modules/orchestrator/
+        core/device_identity.py): enrolled devices register, revoked ones register
+        as revoked. Returns how many entries were read."""
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        devices = data.get("devices") if isinstance(data, dict) else None
+        n = 0
+        for raw in (devices or {}).values():
+            if not isinstance(raw, dict) or not raw.get("thumbprint") or not raw.get("device_id"):
+                continue
+            self.devices[str(raw["thumbprint"])] = {"device_id": str(raw["device_id"]),
+                                                    "revoked": raw.get("revoked_at") is not None}
+            n += 1
+        return n
+
+    def _device_live(self, jkt: str | None) -> dict | None:
+        d = self.devices.get(jkt or "")
+        return d if d and not d.get("revoked") else None
+
+    def revoke_device(self, jkt: str, by: str = "admin") -> int:
+        """Admin: a speaker's key is gone (stolen YubiKey, decommissioned board).
+        Marks the device revoked so no new user token binds to it and no exchange
+        asserts it, and revokes the key so every live token bound to it, and
+        every descendant, dies now."""
+        d = self.devices.setdefault(jkt, {"device_id": "", "revoked": False})
+        d["revoked"] = True
+        n = self.revoke_key(jkt, by=by)
+        self._audit("revoked", "device revoked by admin", event="device_revocation", by=by, jkt=jkt,
+                    device_id=d.get("device_id", ""), revoked_jtis=n)
+        return n
+
+    def issue_user_token(self, user: str, client_id: str, scopes: set[str], consent: bool = True,
+                         device_jkt: str | None = None, assurance: dict | None = None) -> str:
         """Stands in for the AS login. consent=True means the user approved client_id acting for them.
 
         Mints grant_id: the handle for this consent, carried unchanged by every
         token exchanged from this one, so revoking the consent kills them all.
 
-        With require_dpop the token is bound (cnf.jkt) to the registered key of
-        client_id: the user hands this token to that agent, so the agent is its
-        holder and the only party that can prove possession at the exchange. A
-        separate key for the user's own device is not modelled here.
+        Binding (cnf.jkt), with require_dpop:
+          device_jkt given   the token is bound to the speaker's hardware key
+                             (SESSION_BINDING.md). The consented client exchanges
+                             it by asserting the thumbprint it verified on the
+                             live stream; it cannot prove possession itself and
+                             is not asked to. The token carries a `device` claim.
+          otherwise          bound to the registered key of client_id, the
+                             agent that holds and presents it (PR #16 behaviour).
+
+        assurance: what the orchestrator's voice gate measured for this session
+        (method, score, threshold and its source, device, confirmation state).
+        Carried as a claim, copied down the chain, never widened.
         """
         client = self.clients[client_id]
         if ADMIN_SCOPE in scopes:
             raise ExchangeError("invalid_scope", f"{ADMIN_SCOPE} is never issued to a user")
+        device = None
+        if device_jkt:
+            device = self._device_live(device_jkt)
+            if device is None:
+                raise ExchangeError("invalid_request", f"device key {device_jkt[:8]} is not registered or is revoked")
         now = self._now()
         claims = {
             "iss": self.issuer,
@@ -306,8 +364,13 @@ class STS:
         }
         if consent:
             claims["may_act"] = {"sub": client.sub, "client_id": client.client_id, "iss": self.issuer}
-        if self.require_dpop:
+        if device is not None:
+            claims["device"] = {"id": device["device_id"], "jkt": device_jkt}
+            claims["cnf"] = {"jkt": device_jkt}
+        elif self.require_dpop:
             claims["cnf"] = {"jkt": client.jkt}
+        if isinstance(assurance, dict) and assurance:
+            claims["assurance"] = dict(assurance)
         self._record(claims, "user", client_id=None)
         return self._sign(claims)
 
@@ -340,6 +403,17 @@ class STS:
             raise ExchangeError("invalid_grant", f"{name} is not sender-constrained (no cnf.jkt)")
         if jkt != proof.jkt:
             raise ExchangeError("invalid_grant", f"{name} is bound to another key")
+
+    def _check_device_binding(self, subj: dict, device_jkt: str | None) -> None:
+        bound = (subj.get("cnf") or {}).get("jkt") if isinstance(subj.get("cnf"), dict) else None
+        if not bound:
+            raise ExchangeError("invalid_grant", "subject_token names a device but is not bound to its key")
+        if not device_jkt:
+            raise ExchangeError("invalid_grant", "subject_token is device-bound: device_jkt from the live stream required")
+        if device_jkt != bound:
+            raise ExchangeError("invalid_grant", "device_jkt does not match the key the subject_token is bound to")
+        if device_jkt in self.revoked_keys or self._device_live(device_jkt) is None:
+            raise ExchangeError("invalid_grant", f"device {device_jkt[:8]} is revoked or unknown")
 
     def _authenticate(self, client_id: str, client_secret: str) -> Client:
         client = self.clients.get(client_id)
@@ -418,7 +492,15 @@ class STS:
         dpop: str | None = None,
         htm: str = "POST",
         htu: str | None = None,
+        device_jkt: str | None = None,
     ) -> dict:
+        """RFC 8693 exchange with a nested act chain.
+
+        device_jkt: for a subject token bound to a speaker's hardware key, the
+        thumbprint the exchanging client verified on the live stream it is
+        acting for (SESSION_BINDING.md 3.3). Required for such a subject, must
+        equal its cnf.jkt and name a live device; ignored otherwise.
+        """
         ctx: dict = {"client_id": client_id, "audience": audience, "delegate_to": delegate_to, "requested_scope": scope}
         try:
             actor = self._authenticate(client_id, client_secret)
@@ -444,9 +526,21 @@ class STS:
             ctx["sub"] = subj["sub"]
             ctx["grant_id"] = subj.get("grant_id")
             self._refuse_if_revoked("subject_token", subj)
-            # The subject (user token or handoff) was bound to this actor's key when
-            # it was issued; the same proof must cover it.
-            self._check_binding("subject_token", subj, proof)
+            device = subj.get("device") if isinstance(subj.get("device"), dict) else None
+            if device is not None and "act" not in subj:
+                # A device-bound subject (the root user token: it names a device and
+                # has no act chain yet). The actor cannot sign with the speaker's key.
+                # It asserts the thumbprint it verified on the stream; the STS checks
+                # that it is the bound one and that the device is still live. The
+                # actor must still be the consented client (may_act, below) and must
+                # still prove its own key (actor token binding, above). A handoff
+                # carries `device` as a fact and is bound to the delegate's key.
+                self._check_device_binding(subj, device_jkt)
+                ctx["device_id"] = device.get("id")
+            else:
+                # The subject (user token or handoff) was bound to this actor's key when
+                # it was issued; the same proof must cover it.
+                self._check_binding("subject_token", subj, proof)
             prior = subj.get("act")
             ctx["chain_in"] = act_chain(prior)
 
@@ -515,6 +609,11 @@ class STS:
                 claims["grant_id"] = subj["grant_id"]
             if subj.get("jti"):
                 claims["parent_jti"] = subj["jti"]
+            # Session facts travel unchanged too: which device the user was at and
+            # what the gate measured. A tool or a policy reads them; nothing adds to them.
+            for carried in ("device", "assurance"):
+                if isinstance(subj.get(carried), dict):
+                    claims[carried] = dict(subj[carried])
             if nxt:
                 claims["may_act"] = {"sub": nxt.sub, "client_id": nxt.client_id, "iss": self.issuer}
             if proof is not None:
@@ -836,12 +935,20 @@ def create_app(sts: STS) -> FastAPI:
         return sts.jwks()
 
     @app.post("/dev/login")
-    def dev_login(user: str = Form(...), client_id: str = Form(...), scope: str = Form(...), consent: bool = Form(True)):
-        """Dev stand-in for the AS login and consent screen."""
+    def dev_login(user: str = Form(...), client_id: str = Form(...), scope: str = Form(...), consent: bool = Form(True),
+                  device_jkt: str | None = Form(None), assurance: str | None = Form(None)):
+        """Dev stand-in for the AS login and consent screen. device_jkt binds the
+        token to a registered speaker key; assurance is the gate's JSON record."""
         if client_id not in sts.clients:
             return JSONResponse({"error": "invalid_client"}, status_code=400)
         try:
-            return {"access_token": sts.issue_user_token(user, client_id, set(scope.split()), consent)}
+            a = json.loads(assurance) if assurance else None
+        except ValueError:
+            return JSONResponse({"error": "invalid_request", "error_description": "assurance is not JSON"}, status_code=400)
+        try:
+            return {"access_token": sts.issue_user_token(user, client_id, set(scope.split()), consent,
+                                                         device_jkt=device_jkt or None,
+                                                         assurance=a if isinstance(a, dict) else None)}
         except ExchangeError as e:
             return err(e)
 
@@ -858,6 +965,7 @@ def create_app(sts: STS) -> FastAPI:
         audience: str | None = Form(None),
         scope: str | None = Form(None),
         delegate_to: str | None = Form(None),  # non-standard: names the next actor for a handoff token
+        device_jkt: str | None = Form(None),  # non-standard: the speaker key the actor verified on the live stream
         dpop: str | None = Header(None),  # RFC 9449 section 4.1: the DPoP header; htm and htu come from the request itself
     ):
         htm, htu = request.method, str(request.url)
@@ -882,6 +990,7 @@ def create_app(sts: STS) -> FastAPI:
                 dpop=dpop,
                 htm=htm,
                 htu=htu,
+                device_jkt=device_jkt or None,
             )
         except ExchangeError as e:
             return err(e)
@@ -943,6 +1052,16 @@ def create_app(sts: STS) -> FastAPI:
         except ExchangeError as e:
             return err(e)
         return {"jkt": jkt, "revoked_jtis": sts.revoke_key(jkt, by=who.client_id)}
+
+    @app.post("/admin/revoke/device")
+    def admin_revoke_device(request: Request, jkt: str = Form(...), authorization: str | None = Header(None), dpop: str | None = Header(None)):
+        """A speaker's key is gone: no new binding to it, no exchange asserting it,
+        and every live token bound to it dies with its descendants."""
+        try:
+            who = admin(request, authorization, dpop)
+        except ExchangeError as e:
+            return err(e)
+        return {"jkt": jkt, "revoked_jtis": sts.revoke_device(jkt, by=who.client_id)}
 
     return app
 

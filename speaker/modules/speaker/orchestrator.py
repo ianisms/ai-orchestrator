@@ -221,10 +221,12 @@ async def _health_monitor(cfg: AppConfig, stop_evt: asyncio.Event):
 
 def _attest_device(cfg: AppConfig):
     """Boot-time device identity. Returns the DeviceAttestClient, or None when
-    disabled or when attestation failed (logged). Failure does not stop the
-    client today: nothing on the server refuses a stream without a credential
-    yet, and a speaker that cannot talk is worse than one that is logged as
-    unattested. That changes when enforcement lands (security/DEVICE_IDENTITY.md)."""
+    disabled or when setup failed (logged). A failed first attestation does not
+    stop the client: the credential is re-requested on every connect through
+    the gRPC metadata provider, so a speaker that boots before the orchestrator
+    still attests once the orchestrator is up. If the orchestrator runs with
+    DEVICE_IDENTITY_REQUIRE it refuses the stream until that succeeds
+    (security/SESSION_BINDING.md)."""
     if not bool(getattr(cfg, "device_identity_enable", False)):
         return None
     log = logging.getLogger("speaker.device_identity")
@@ -255,9 +257,10 @@ async def main():
     cfg = AppConfig.from_yaml()
     setup_logger("speaker", cfg.log_path, level=str(getattr(cfg, "log_level", "INFO")))
 
-    # INTEGRATION POINT: the credential this returns is what grpc_client.py would
-    # send as x-device-credential metadata on Converse. That wiring is not done.
-    device_client = await asyncio.to_thread(_attest_device, cfg)  # noqa: F841
+    # The device credential rides on every Converse call as x-device-credential:
+    # the streamer asks the attest client for a live credential at each connect
+    # (DeviceAttestClient.grpc_metadata re-attests when it is missing or stale).
+    device_client = await asyncio.to_thread(_attest_device, cfg)
 
     stop_evt = asyncio.Event()
     reload_evt = asyncio.Event()
@@ -347,6 +350,7 @@ async def main():
         fsm=fsm,
         barge_q=barge_q if bool(getattr(cfg, "barge_in_enable", True)) else None,
         barge_in_evt=barge_in_evt if bool(getattr(cfg, "barge_in_enable", True)) else None,
+        metadata_provider=device_client.grpc_metadata if device_client is not None else None,
     )
 
     playback_worker = PlaybackWorker(

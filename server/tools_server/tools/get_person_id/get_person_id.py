@@ -112,6 +112,24 @@ def _load_profiles(state_file: Path) -> dict[str, Any]:
         return {}
 
 
+def _live_profiles(profiles: dict[str, Any]) -> dict[str, Any]:
+    """Profiles that may identify someone: a revoked profile (voice_enrollment.py
+    revoke) keeps its record but is never matched against."""
+    return {pid: e for pid, e in profiles.items()
+            if isinstance(e, dict) and e.get("revoked_at") is None and isinstance(e.get("mean_embedding"), list)}
+
+
+def _profile_threshold(entry: dict[str, Any]) -> float | None:
+    """The per-user match threshold fixed at enrollment, if the profile has one."""
+    raw = entry.get("threshold") if isinstance(entry, dict) else None
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def _save_profiles(state_file: Path, profiles: dict[str, Any]) -> None:
     state_file.parent.mkdir(parents=True, exist_ok=True)
     state_file.write_text(
@@ -225,6 +243,54 @@ def _extract_embedding(wav_path: Path, config: dict[str, Any]) -> list[float]:
     if norm > 0:
         vals = [v / norm for v in vals]
     return vals
+
+
+# ------------------------------------------------------------------ #
+# Clip quality (same measures as speaker_enrollment_coach, from a file) #
+# ------------------------------------------------------------------ #
+
+def _percentile(values: list[float], p: float) -> float:
+    if not values:
+        return 0.0
+    s = sorted(values)
+    idx = int(round((len(s) - 1) * p))
+    return s[max(0, min(len(s) - 1, idx))]
+
+
+def _clip_quality(wav_path: Path) -> dict[str, float]:
+    """Duration, peak, clipping ratio, RMS level, silence ratio and an SNR
+    estimate for a PCM16 WAV. The enrollment session compares these against its
+    policy; a clip that fails is spoken back as a tip and never embedded."""
+    with wave.open(str(wav_path), "rb") as wf:
+        channels = int(wf.getnchannels())
+        sample_width = int(wf.getsampwidth())
+        sample_rate = int(wf.getframerate())
+        frame_count = int(wf.getnframes())
+        frames = wf.readframes(frame_count)
+    if sample_width != 2 or channels < 1 or frame_count <= 0:
+        raise ValueError("WAV must be PCM16 with at least one channel and one frame")
+    ints = [int.from_bytes(frames[i:i + 2], "little", signed=True) for i in range(0, len(frames), 2)]
+    if channels > 1:
+        ints = [int(round(sum(ints[i:i + channels]) / channels)) for i in range(0, len(ints), channels)]
+    samples = [v / 32768.0 for v in ints]
+    n = max(1, len(samples))
+    peak = max(abs(v) for v in samples) if samples else 0.0
+    rms = math.sqrt(sum(v * v for v in samples) / n)
+    frame = max(160, int(sample_rate * 0.02))
+    hop = max(80, int(sample_rate * 0.01))
+    frame_rms = [math.sqrt(sum(v * v for v in samples[i:i + frame]) / frame)
+                 for i in range(0, max(0, len(samples) - frame), hop)]
+    noise = _percentile(frame_rms, 0.20) if frame_rms else rms
+    speech = _percentile(frame_rms, 0.90) if frame_rms else rms
+    return {
+        "duration_s": round(n / max(1, sample_rate), 3),
+        "sample_rate_hz": float(sample_rate),
+        "peak": round(peak, 5),
+        "clipping_ratio": round(sum(1 for v in samples if abs(v) >= 0.995) / n, 5),
+        "rms_dbfs": round(20.0 * math.log10(max(rms, 1e-9)), 2),
+        "silence_ratio": round(sum(1 for v in samples if abs(v) < 0.01) / n, 5),
+        "estimated_snr_db": round(20.0 * math.log10(max(speech, 1e-9) / max(noise, 1e-9)), 2),
+    }
 
 
 # ------------------------------------------------------------------ #
@@ -447,18 +513,17 @@ def register(server) -> List[str]:
 
         best_id = ""
         best_score = -1.0
-        for pid, entry in profiles.items():
-            if not isinstance(entry, dict):
-                continue
-            mean_emb = entry.get("mean_embedding")
-            if not isinstance(mean_emb, list):
-                continue
-            score = float(_cosine(emb, [float(x) for x in mean_emb]))
+        best_threshold = threshold
+        for pid, entry in _live_profiles(profiles).items():
+            score = float(_cosine(emb, [float(x) for x in entry["mean_embedding"]]))
             if score > best_score:
                 best_score = score
                 best_id = str(pid)
+                # The person's own threshold from enrollment wins over the tool default.
+                own = _profile_threshold(entry)
+                best_threshold = max(threshold, own) if own is not None else threshold
 
-        if best_score >= threshold and best_id:
+        if best_score >= best_threshold and best_id:
             display_name = best_id.replace("_", " ").title()
             _cache_set(db, sid, best_id, display_name, "biometric", best_score, ttl_s)
             log.info("get_person_id identified profile_id=%s score=%.3f", best_id, best_score)
@@ -488,16 +553,47 @@ def register(server) -> List[str]:
         except Exception as exc:
             log.warning("identify_speaker embedding failed: %r", exc)
             return empty
-        best_id, best_score = "", None
-        for pid, entry in _load_profiles(state_file).items():
-            mean_emb = entry.get("mean_embedding") if isinstance(entry, dict) else None
-            if not isinstance(mean_emb, list):
-                continue
-            score = float(_cosine(emb, [float(x) for x in mean_emb]))
+        best_id, best_score, best_threshold = "", None, None
+        for pid, entry in _live_profiles(_load_profiles(state_file)).items():
+            score = float(_cosine(emb, [float(x) for x in entry["mean_embedding"]]))
             if best_score is None or score > best_score:
-                best_id, best_score = str(pid), score
-        log.info("identify_speaker best=%s score=%s", best_id or "-",
-                 "-" if best_score is None else f"{best_score:.3f}")
-        return json.dumps({"profile_id": best_id, "score": best_score})
+                best_id, best_score, best_threshold = str(pid), score, _profile_threshold(entry)
+        log.info("identify_speaker best=%s score=%s threshold=%s", best_id or "-",
+                 "-" if best_score is None else f"{best_score:.3f}",
+                 "-" if best_threshold is None else f"{best_threshold:.3f}")
+        # threshold: the matched person's own threshold from enrollment, or null. The
+        # orchestrator's voice gate floors it with VOICE_GATE_MIN_SCORE.
+        return json.dumps({"profile_id": best_id, "score": best_score, "threshold": best_threshold})
 
-    return ["get_person_id", "identify_speaker"]
+    @server.tool(
+        name="enrollment_sample",
+        description="Orchestrator-only. Embedding and clip quality for one enrollment turn's audio, as JSON.",
+    )
+    def enrollment_sample(session_id: str, audio_id: str) -> str:
+        """One sample for the admin-run enrollment session (core/voice_enrollment.py).
+
+        Returns the normalised embedding plus the quality metrics the enrollment
+        coach uses, so the orchestrator can refuse a clip that is too short, too
+        quiet, clipped or noisy before it ever reaches a profile. Writes nothing:
+        the session, not this tool, decides what becomes a profile.
+        """
+        sid = str(session_id or "").strip()
+        aid = str(audio_id or "").strip()
+        if not _safe_ref(sid) or not _safe_ref(aid):
+            return json.dumps({"error": "bad reference"})
+        wav_path = audio_dir / f"{sid}_{aid}.wav"
+        if not wav_path.exists():
+            return json.dumps({"error": "audio not found"})
+        try:
+            quality = _clip_quality(wav_path)
+        except Exception as exc:
+            log.warning("enrollment_sample quality failed: %r", exc)
+            return json.dumps({"error": f"audio decode failed: {exc}"})
+        try:
+            emb = _extract_embedding(wav_path, config)
+        except Exception as exc:
+            log.warning("enrollment_sample embedding failed: %r", exc)
+            return json.dumps({"error": f"embedding failed: {exc}", "quality": quality})
+        return json.dumps({"embedding": emb, "quality": quality})
+
+    return ["get_person_id", "identify_speaker", "enrollment_sample"]

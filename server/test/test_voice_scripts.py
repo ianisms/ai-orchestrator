@@ -68,3 +68,44 @@ def test_reject_leaves_profiles_untouched(tmp_path):
 def test_bad_index_changes_nothing(tmp_path):
     (tmp_path / "pending_enrollments.json").write_text(json.dumps({"pending": []}))
     assert approve_enrollment.main(["approve", "3", "--state-dir", str(tmp_path)]) == 2
+
+
+# ---- enroll_voice.py (admin-run enrollment sessions) -------------------------
+
+import enroll_voice  # noqa: E402
+
+
+def test_enroll_voice_open_list_status_abort(tmp_path, capsys):
+    sd = str(tmp_path)
+    assert enroll_voice.main(["--state-dir", sd, "open", "alice", "--name", "Alice", "--device", "kitchen",
+                              "--by", "ian", "--consent", "spoken"]) == 0
+    out = capsys.readouterr().out
+    assert "opened" in out and "on kitchen by ian" in out and "first prompt:" in out
+    sid = out.split()[1].rstrip(":")
+    assert enroll_voice.main(["--state-dir", sd, "list"]) == 0
+    assert "alice" in capsys.readouterr().out
+    assert enroll_voice.main(["--state-dir", sd, "status", sid]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["status"] == "open" and status["opened_by"] == "ian" and status["consent"] == "spoken"
+    # a second session on the same speaker is refused while the first is open
+    assert enroll_voice.main(["--state-dir", sd, "open", "bob", "--device", "kitchen", "--by", "ian"]) == 1
+    assert "refused" in capsys.readouterr().err
+    assert enroll_voice.main(["--state-dir", sd, "abort", sid, "--by", "ian"]) == 0
+    assert "aborted" in capsys.readouterr().out
+    assert enroll_voice.main(["--state-dir", sd, "status", sid]) == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "aborted"
+
+
+def test_enroll_voice_revoke_profile(tmp_path, capsys):
+    state = tmp_path / "speaker_identity.json"
+    _write_profiles(state, {"alice": _voice(1, 4)})
+    assert enroll_voice.main(["--state-dir", str(tmp_path), "revoke-profile", "alice", "--by", "ian"]) == 0
+    assert json.loads(state.read_text())["profiles"]["alice"]["revoked_by"] == "ian"
+    assert enroll_voice.main(["--state-dir", str(tmp_path), "revoke-profile", "nobody"]) == 1
+
+
+def test_enroll_voice_custom_prompts_need_min_count(tmp_path, capsys):
+    f = tmp_path / "p.txt"
+    f.write_text("only one\n")
+    assert enroll_voice.main(["--state-dir", str(tmp_path), "open", "alice", "--device", "k", "--by", "ian",
+                              "--prompts", str(f)]) == 1
