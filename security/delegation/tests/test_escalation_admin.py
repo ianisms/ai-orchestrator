@@ -7,9 +7,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 import admin as admin_cli
+from dpop import ath, make_proof
 from revocation import EscalationPolicy
 from sts import ADMIN_SCOPE, STS, create_app
-from test_delegation import ISS, actor_token, exchange, secret, user_token
+from test_delegation import ISS, actor_token, exchange, holder_of, secret, user_token
 from test_revocation import checked_tool, claims, full_chain, revoke
 from verify import DelegationRejected
 
@@ -36,7 +37,16 @@ def subagent_tools(http, sts, user, n):
 
 
 def admin_call(http, sts, path, bearer=None, **form):
-    headers = {"Authorization": f"Bearer {bearer}"} if bearer else {}
+    """Call an admin route with a token. A key-bound token whose holder we are
+    goes under the DPoP scheme with a proof over it; anything else goes as Bearer."""
+    headers = {}
+    if bearer:
+        holder = holder_of(sts, bearer)
+        if holder is not None:
+            htu = str(http.base_url).rstrip("/") + path
+            headers = {"Authorization": f"DPoP {bearer}", "DPoP": make_proof(holder.key, "POST", htu, ath=ath(bearer))}
+        else:
+            headers = {"Authorization": f"Bearer {bearer}"}
     return http.post(path, data=form, headers=headers)
 
 
@@ -164,7 +174,7 @@ def test_admin_scope_cannot_be_obtained_through_exchange_or_login(http, sts):
     sts.clients["mcp-gateway"].scopes.add(ADMIN_SCOPE)
     now = int(time.time())
     forged_login = sts._sign({"iss": ISS, "sub": "user:alice", "aud": ["mcp-gateway"], "iat": now, "exp": now + 60, "jti": "x",
-                              "scope": f"{ADMIN_SCOPE} repo:read",
+                              "scope": f"{ADMIN_SCOPE} repo:read", "cnf": {"jkt": sts.clients["mcp-gateway"].jkt},
                               "may_act": {"sub": "client:mcp-gateway", "client_id": "mcp-gateway", "iss": ISS}})
     for scope in (ADMIN_SCOPE, None):
         r = exchange(http, sts, "mcp-gateway", forged_login, audience="tool-github", **({"scope": scope} if scope else {}))
@@ -224,12 +234,13 @@ def test_admin_revoke_and_enable_client_over_http(http, sts):
 def test_admin_cli_drives_the_routes(http, sts, capsys):
     user, handoff, tool_tok = full_chain(http, sts)
     gid = claims(user)["grant_id"]
-    assert admin_cli.run(["revoke-grant", gid], http, secret(sts, "ops-console")) == 0
+    key = sts.clients["ops-console"].key
+    assert admin_cli.run(["revoke-grant", gid], http, secret(sts, "ops-console"), key) == 0
     assert '"revoked_jtis": 3' in capsys.readouterr().out
     with pytest.raises(DelegationRejected, match="revoked"):
         checked_tool(sts).verify(tool_tok)
-    assert admin_cli.run(["revoke-grant", gid], http, "wrong-secret") == 1
-    assert admin_cli.run(["frobnicate", gid], http, secret(sts, "ops-console")) == 2
+    assert admin_cli.run(["revoke-grant", gid], http, "wrong-secret", key) == 1
+    assert admin_cli.run(["frobnicate", gid], http, secret(sts, "ops-console"), key) == 2
 
 
 def test_revoked_ops_console_loses_admin(http, sts):

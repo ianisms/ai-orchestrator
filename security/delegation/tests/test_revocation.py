@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sts import STS, create_app
-from test_delegation import ISS, actor_token, exchange, secret, tool, user_token
+from test_delegation import ISS, ProvingVerifier, actor_token, exchange, secret, tool, user_token
 from verify import CallbackRevocationCheck, DelegationRejected, UpstreamVerifier
 
 
@@ -36,8 +36,9 @@ def revoke(http, sts, cid, token, hint=None):
 
 
 def checked_tool(sts, aud="tool-github"):
-    """A tool verifier that shares the STS denylist in process."""
-    return UpstreamVerifier(ISS, aud, key=sts.public_key, revocation=sts.denylist)
+    """A tool verifier that shares the STS denylist in process (and, being a
+    ProvingVerifier, presents each token with a proof from its holder's key)."""
+    return ProvingVerifier(sts, aud, revocation=sts.denylist)
 
 
 def full_chain(http, sts):
@@ -230,8 +231,8 @@ def test_verifier_without_checker_stays_offline_and_unaware(http, sts):
 def test_callback_check_stands_in_for_a_pushed_deny_list(http, sts):
     user, handoff, tool_tok = full_chain(http, sts)
     pushed: set[str] = set()
-    github = UpstreamVerifier(ISS, "tool-github", key=sts.public_key,
-                              revocation=CallbackRevocationCheck(lambda jti, parent, grant: bool(pushed & {jti, parent, grant})))
+    github = ProvingVerifier(sts, "tool-github",
+                             revocation=CallbackRevocationCheck(lambda jti, parent, grant: bool(pushed & {jti, parent, grant})))
     github.verify(tool_tok)
     pushed.add(claims(user)["grant_id"])
     with pytest.raises(DelegationRejected, match="deny list"):
@@ -247,8 +248,8 @@ def test_callback_check_stands_in_for_a_pushed_deny_list(http, sts):
 
 def test_forged_token_never_reaches_the_revocation_check(sts):
     calls = []
-    github = UpstreamVerifier(ISS, "tool-github", key=sts.public_key,
-                              revocation=CallbackRevocationCheck(lambda *a: calls.append(a) or False))
+    github = ProvingVerifier(sts, "tool-github",
+                             revocation=CallbackRevocationCheck(lambda *a: calls.append(a) or False))
     other = STS(issuer=ISS)
     forged = other._sign({"iss": ISS, "sub": "user:alice", "aud": ["tool-github"], "iat": int(time.time()), "exp": int(time.time()) + 60, "act": {"client_id": "mcp-gateway"}})
     with pytest.raises(DelegationRejected, match="invalid token"):

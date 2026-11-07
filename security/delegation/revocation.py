@@ -40,6 +40,7 @@ class Issued:
     client_id: str | None = None  # the client the token was issued to (actor) or that requested it (exchange)
     aud: tuple[str, ...] = ()
     actors: tuple[str, ...] = ()  # act chain, earliest first
+    jkt: str | None = None  # cnf.jkt: the key the token is bound to, so revoke_key can find it
     children: list[str] = field(default_factory=list)
 
 

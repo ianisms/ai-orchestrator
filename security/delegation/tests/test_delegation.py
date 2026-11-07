@@ -4,10 +4,12 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
+from dpop import ath, make_proof
 from sts import ACCESS_TOKEN_TYPE, STS, TOKEN_EXCHANGE, create_app
 from verify import DelegationRejected, UpstreamVerifier
 
 ISS = "http://sts.test"
+TOOL_URL = "https://tools.test/mcp"  # the URI tool calls are addressed to; proofs name it as htu
 
 
 @pytest.fixture
@@ -24,13 +26,35 @@ def secret(sts, cid):
     return sts.clients[cid].secret
 
 
+def token_url(http):
+    return str(http.base_url).rstrip("/") + "/token"
+
+
+def proof_for(sts, cid, htm, htu, token=None, **kw):
+    """A DPoP proof signed with a registered client's key, iat on the STS clock."""
+    kw.setdefault("now", int(sts.clock()))
+    return make_proof(sts.clients[cid].key, htm, htu, ath=ath(token) if token else None, **kw)
+
+
+def holder_of(sts, token):
+    """The registered client whose key a token is bound to (cnf.jkt), or None."""
+    try:
+        jkt = (jwt.decode(token, options={"verify_signature": False}).get("cnf") or {}).get("jkt")
+    except jwt.InvalidTokenError:
+        return None
+    return next((c for c in sts.clients.values() if c.jkt == jkt), None)
+
+
 def actor_token(http, sts, cid):
-    r = http.post("/token", data={"grant_type": "client_credentials", "client_id": cid, "client_secret": secret(sts, cid)})
+    r = http.post("/token", data={"grant_type": "client_credentials", "client_id": cid, "client_secret": secret(sts, cid)},
+                  headers={"DPoP": proof_for(sts, cid, "POST", token_url(http))})
     assert r.status_code == 200, r.text
     return r.json()["access_token"]
 
 
-def exchange(http, sts, cid, subject, actor=True, **extra):
+def exchange(http, sts, cid, subject, actor=True, dpop=True, **extra):
+    """Exchange as client cid. dpop=True signs a proof with cid's key; a string is
+    sent as the DPoP header verbatim; None sends no header."""
     data = {
         "grant_type": TOKEN_EXCHANGE,
         "client_id": cid,
@@ -42,11 +66,36 @@ def exchange(http, sts, cid, subject, actor=True, **extra):
     if actor:
         data["actor_token"] = actor_token(http, sts, cid) if actor is True else actor
         data["actor_token_type"] = ACCESS_TOKEN_TYPE
-    return http.post("/token", data=data)
+    headers = {}
+    if dpop is True:
+        headers["DPoP"] = proof_for(sts, cid, "POST", token_url(http))
+    elif dpop:
+        headers["DPoP"] = dpop
+    return http.post("/token", data=data, headers=headers)
+
+
+class ProvingVerifier(UpstreamVerifier):
+    """Test stand-in for 'the holder calls the tool': verify(token) signs a fresh
+    proof with the key the token is bound to, as the legitimate holder would,
+    so the pre-DPoP tests keep their shape and now run the bound path. A token
+    with no cnf, or bound to a key no registered client holds, is presented
+    bare, which is what a thief without the key can do."""
+
+    def __init__(self, sts, aud, **kw):
+        super().__init__(ISS, aud, key=sts.public_key, **kw)
+        self.sts = sts
+
+    def verify(self, token, dpop_proof=None, htm=None, htu=None):
+        if dpop_proof is None:
+            holder = holder_of(self.sts, token)
+            if holder is not None:
+                dpop_proof = make_proof(holder.key, "POST", TOOL_URL, ath=ath(token), now=int(self.clock()))
+                htm, htu = "POST", TOOL_URL
+        return super().verify(token, dpop_proof=dpop_proof, htm=htm, htu=htu)
 
 
 def tool(sts, aud):
-    return UpstreamVerifier(ISS, aud, key=sts.public_key)
+    return ProvingVerifier(sts, aud)
 
 
 def user_token(sts, consent=True, scopes=("repo:read", "repo:write", "issues:read")):
