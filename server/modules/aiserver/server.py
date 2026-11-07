@@ -49,6 +49,7 @@ from orchestrator.core.metrics import (
 from orchestrator.core.history_store import HistoryStore
 from orchestrator.core.session import OrchestratorSession
 from orchestrator.core.device_identity import DeviceIdentityHttp, DeviceIdentityService, EnrollmentRegistry
+from orchestrator.core.voice_enrollment import EnrollmentPolicy, VoiceEnrollmentService
 from stt.stream import STTStream
 from tools.registry import list_tools, set_hidden_tools
 from orchestrator.tools.mcp_client import MCPToolClient, set_tools_client
@@ -65,6 +66,7 @@ _RESOLVED_LLM_MAX_MODEL_LEN: int = 0
 _RESOLVED_HISTORY_BASE_TOKENS: int = 0
 _STATUS_HTTPD: ThreadingHTTPServer | None = None
 _DEVICE_IDENTITY: DeviceIdentityService | None = None
+_VOICE_ENROLLMENT: VoiceEnrollmentService | None = None
 _SERVER_PROTO_PATH: str = ""
 _SERVER_PROTO_SHA256: str = ""
 
@@ -619,9 +621,10 @@ class OrchestratorService(pbg.OrchestratorServicer):
                     pass
                 _record_drop("text_in", turn_id=turn_id, size=len(text))
 
-        # Device credential (orchestrator/core/device_identity.py). Verified and
-        # logged only: the stream is not refused without one and the voice gate
-        # does not read it yet. See security/DEVICE_IDENTITY.md for the gap.
+        # Device credential (orchestrator/core/device_identity.py). Verified at
+        # connect; with DEVICE_IDENTITY_REQUIRE the stream is refused without a
+        # valid one (fail closed), and the verified device is handed to the turn
+        # pipeline for the voice gate and enrollment (security/SESSION_BINDING.md).
         device_cred = _DEVICE_IDENTITY.device_from_metadata(md) if _DEVICE_IDENTITY else None
         _log(
             "info",
@@ -632,6 +635,11 @@ class OrchestratorService(pbg.OrchestratorServicer):
             device_id=device_cred.device_id if device_cred else "",
             device_jkt=device_cred.thumbprint if device_cred else "",
         )
+        if bool(getattr(settings, "DEVICE_IDENTITY_REQUIRE", False)) and device_cred is None:
+            _log("warning", "stream refused: device credential required", client_key=client_key, peer=context.peer(),
+                 presented=bool(md.get("x-device-credential")))
+            await context.abort(grpc.StatusCode.UNAUTHENTICATED, "device credential required")
+            return
 
 
         async def emit_state(phase: str, turn_id: str = ""):
@@ -702,6 +710,9 @@ class OrchestratorService(pbg.OrchestratorServicer):
         pipeline.set_client_key(client_key)
         # The voice gate trusts only the transport-level peer address; x-client-* headers are client-asserted.
         pipeline.set_peer_host(_peer_to_client_key(context.peer()))
+        if device_cred is not None:
+            pipeline.set_device(device_cred.device_id, device_cred.thumbprint, float(device_cred.expires_at))
+        pipeline.set_enrollment(_VOICE_ENROLLMENT)
 
         async def ingest():
             nonlocal sample_rate_hz, request_partials, language_code, session_id, last_turn_id, no_tts
@@ -1197,13 +1208,21 @@ async def main():
             model_resolved=bool(_RESOLVED_LLM_MODEL),
         )
 
-    global _STATUS_HTTPD, _DEVICE_IDENTITY
+    global _STATUS_HTTPD, _DEVICE_IDENTITY, _VOICE_ENROLLMENT
     _DEVICE_IDENTITY = DeviceIdentityService(
         registry=EnrollmentRegistry(settings.DEVICE_REGISTRY_PATH),
         challenge_ttl_s=int(settings.DEVICE_CHALLENGE_TTL_S),
         credential_ttl_s=int(settings.DEVICE_CREDENTIAL_TTL_S),
     )
-    log.info("config DEVICE_REGISTRY_PATH=%s", settings.DEVICE_REGISTRY_PATH)
+    log.info("config DEVICE_REGISTRY_PATH=%s DEVICE_IDENTITY_REQUIRE=%s VOICE_GATE_REQUIRE_DEVICE=%s",
+             settings.DEVICE_REGISTRY_PATH, bool(getattr(settings, "DEVICE_IDENTITY_REQUIRE", False)),
+             bool(getattr(settings, "VOICE_GATE_REQUIRE_DEVICE", False)))
+    _VOICE_ENROLLMENT = VoiceEnrollmentService(
+        settings.VOICE_ENROLLMENT_SESSIONS_PATH,
+        settings.VOICE_ENROLLMENT_PROFILES_PATH,
+        policy=EnrollmentPolicy(floor=settings.VOICE_GATE_MIN_SCORE),
+    )
+    log.info("config VOICE_ENROLLMENT_SESSIONS_PATH=%s", settings.VOICE_ENROLLMENT_SESSIONS_PATH)
     if bool(settings.ORCH_STATUS_ENABLED):
         def _status_provider() -> dict:
             connected = bool(getattr(tools_client, "_session", None) is not None)
