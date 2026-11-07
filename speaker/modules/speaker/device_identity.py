@@ -309,9 +309,10 @@ class DeviceAttestClient:
             return None
 
     def grpc_metadata(self) -> list[tuple[str, str]]:
-        """INTEGRATION POINT, not wired: the metadata pair the gRPC client would add
-        to its Converse call so the orchestrator can bind the stream to this device.
-        grpc_client.py does not call this yet; see security/DEVICE_IDENTITY.md."""
+        """The metadata pair the gRPC client adds to its Converse call so the
+        orchestrator can bind the stream to this device. Called by
+        OrchestratorGrpcClient at every connect (capture_streamer.py passes it as
+        metadata_provider); a stale credential is renewed here first."""
         cred = self.current()
         return [(CREDENTIAL_HEADER, cred.token)] if cred else []
 

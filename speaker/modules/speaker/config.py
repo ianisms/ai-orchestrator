@@ -93,9 +93,9 @@ class AppConfig:
     echo_suppress_max_attenuation: float = 0.35
 
     # Device identity (modules/speaker/device_identity.py). Off by default: with
-    # it on, the client attests at boot with the YubiKey PIV key and holds a
-    # short-lived device credential. The credential is not yet attached to the
-    # gRPC stream; see security/DEVICE_IDENTITY.md.
+    # it on, the client attests at boot with the YubiKey PIV key, holds a
+    # short-lived device credential, and sends it as x-device-credential on
+    # every Converse call (renewed at connect). See security/SESSION_BINDING.md.
     device_identity_enable: bool = False
     device_id: str = ""                      # defaults to session_id_base
     device_attest_url: str = ""              # e.g. http://ai-server.local:9111; derived from server_target if empty
