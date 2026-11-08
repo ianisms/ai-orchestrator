@@ -14,7 +14,7 @@ parent_jti, grant_id). Two implementations ship:
   revocation.Denylist      the STS's own denylist, shared in process. The demo
                            and tests use this.
   CallbackRevocationCheck  wraps any callable, standing in for a deny list pushed
-                           to each PEP (DIAGRAMS.md, revocation): the verifier asks
+                           to each PEP (delegation/README.md, revocation future state): the verifier asks
                            a local structure, never a remote service, per call.
 
 With no checker configured the verifier stays fully offline and does not know

@@ -1,23 +1,21 @@
 # Device identity for the speaker
 
 How the orchestrator decides that the thing on the other end of the gRPC stream
-is the kitchen speaker and not some other host on the same network. The
-session that builds on this identity (credential on the stream, gate origin,
-device-bound user token) is in `SESSION_BINDING.md`; the flows are drawn there.
+is the kitchen speaker and not some other host on the same network. What the
+session does with that identity is in `SESSION_BINDING.md`.
 
 Status key, same as elsewhere in `security/`: built = runs with tests; partial =
 runs but with a documented gap; not built = design only.
 
 ## Current state
 
-The speaker proves which device it is with a key that it holds and cannot
-export. It proves possession of the key at boot and carries the resulting
-credential on the stream. When `VOICE_GATE_REQUIRE_DEVICE` is on, the voice
-gate uses that credential as its origin signal. When it is off, the gate falls
-back to checking the gRPC peer address against
-`VOICE_GATE_TRUSTED_SPEAKER_NETS`, a check that any host on a trusted address
-passes (threat 18). The identity of the person speaking is established
-separately, from the audio of each turn.
+The speaker proves which device it is with a key it holds and cannot export,
+once at boot, and carries the resulting credential on the stream. With
+`VOICE_GATE_REQUIRE_DEVICE` on, that credential is the gate's origin signal.
+With it off, the gate falls back to the gRPC peer address against
+`VOICE_GATE_TRUSTED_SPEAKER_NETS`, which any host on a trusted address passes
+(threat 18). Who is speaking is a separate question, answered from each turn's
+audio.
 
 A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
 generated on the YubiKey and cannot be exported. At boot the speaker proves it
@@ -118,12 +116,10 @@ order they apply:
 ## Future state
 
 The next carrier-board revision (`speaker/hardware/pcb/theboard/`, rev 3.7
-today) places a TPM 2.0 on the PCB over SPI. The key is generated inside the
-TPM and never leaves it, there is no pluggable part to remove, and the TPM
-provides PCR measurements, so the orchestrator can require a quote over the
-boot chain before it issues the credential. That completes the attestation
-path the future-state diagram describes: the device proves what software it
-runs as well as which key it holds.
+today) puts a TPM 2.0 on the PCB over SPI. The key is generated in the TPM and
+never leaves it, nothing is pluggable, and the TPM's PCRs let the orchestrator
+require a quote over the boot chain before issuing the credential. The device
+then proves what software it runs as well as which key it holds.
 
 ```mermaid
 sequenceDiagram
@@ -142,14 +138,9 @@ sequenceDiagram
     O-->>S: credential only if the key and the measured state both pass
 ```
 
-The orchestrator side keeps the same structure, with a signer behind the
-`Signer` interface, an enrollment registry keyed by thumbprint, a challenge
-with a short nonce and a short-lived key-bound credential. The TPM adds a
-quote to the attest request and a PCR policy to the verifier.
-
-The session pieces are already in place (`SESSION_BINDING.md`): the speaker
-presents the credential on the stream, the voice gate takes the device
-identity as its origin signal, and user tokens minted for the session are
-bound to the device key, with the orchestrator asserting the thumbprint it
-verified at the exchange. Moving the key from the YubiKey into the TPM
-changes the signer and nothing else.
+The orchestrator side keeps its shape: a signer behind the `Signer`
+interface, an enrollment registry keyed by thumbprint, a short nonce, a
+short-lived key-bound credential. The TPM adds a quote to the attest request
+and a PCR policy to the verifier. The session pieces in `SESSION_BINDING.md`
+do not change; moving the key from the YubiKey into the TPM changes the signer
+and nothing else.

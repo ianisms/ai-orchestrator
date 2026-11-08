@@ -5,7 +5,7 @@ Two pieces live here:
   Denylist   revoked token ids (jti) and revoked grants (grant_id), each with the
              expiry after which the entry no longer matters. The STS writes to it;
              any verifier holding the same object reads from it. This is the
-             in-process stand-in for the pushed deny list in DIAGRAMS.md, revocation.
+             in-process stand-in for the pushed deny list in README.md, revocation future state.
   Issued     the STS's record of every token it minted, enough to walk a token's
              descendants (children) and ancestors (parent_jti) when one is revoked.
   EscalationPolicy

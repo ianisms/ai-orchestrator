@@ -1,11 +1,11 @@
 # Voice enrollment
 
-How a voice becomes a profile the voice gate trusts. The reasoning is in
-`SESSION_BINDING.md` under "Enrollment criteria". This page covers the procedure, the
-acceptance criteria and the record each profile carries. Code: `server/modules/orchestrator/core/voice_enrollment.py`
-(sessions, criteria, profile writes), `server/scripts/enroll_voice.py` (admin),
-`server/tools_server/tools/get_person_id` (`enrollment_sample`, hidden from the
-model), `server/modules/orchestrator/core/utterance.py` (`_enrollment_turn`).
+How a voice becomes a profile the voice gate trusts: the procedure, the
+criteria, the record. Reasoning is in `SESSION_BINDING.md` under "Enrollment
+criteria". Code: `core/voice_enrollment.py` (sessions, criteria, profile
+writes), `scripts/enroll_voice.py` (admin), `enrollment_sample` in
+`tools_server/tools/get_person_id` (hidden from the model),
+`core/utterance.py` (`_enrollment_turn`).
 
 Status key: built = runs with tests; partial = runs but with a documented gap;
 not built = design only.
@@ -19,9 +19,8 @@ not built = design only.
 | Stated name ("I'm Alice") | the person, mid-conversation | one pending sample; joins nothing until `scripts/approve_enrollment.py approve` | built (unchanged) |
 | Admin session | an admin on the host, for one person on one speaker | a profile with its own threshold and a record, after the criteria hold | built (v2.0) |
 
-New voices are enrolled through the admin session. The stated-name path
-remains for adding a sample to a voice that already has a profile, one
-approval at a time.
+New voices go through the admin session. The stated-name path stays for
+adding a sample to an existing profile, one approval at a time.
 
 ### Procedure
 
@@ -54,8 +53,8 @@ sequenceDiagram
     A->>E: status / abort / revoke-profile as needed
 ```
 
-1. On the server host, open the session. The device is the speaker the person
-   will talk to; `--device-jkt` pins it to that speaker's current key.
+1. On the server host, open the session for the speaker the person will talk
+   to; `--device-jkt` pins it to that speaker's current key.
 
    ```
    python scripts/enroll_voice.py open alice --name "Alice" --device kitchen \
@@ -63,19 +62,18 @@ sequenceDiagram
        --consent "asked and agreed in the kitchen, 2026-11-07" --ttl 900
    ```
 
-   The command prints the session id and the first prompt. One open session
-   per device and per profile; an existing profile needs `--replace`.
+   Prints the session id and the first prompt. One open session per device
+   and per profile; an existing profile needs `--replace`.
 
-2. The person wakes the speaker and says the prompt. The orchestrator, seeing
-   an open session for the device on this stream, treats the turn as a sample:
-   no model, no tools, no history. It asks the tool server for the embedding
-   and clip quality (`enrollment_sample`), checks the transcript against the
-   prompt, and speaks back either a tip and the same prompt, the next prompt,
-   or the result.
+2. The person wakes the speaker and says the prompt. With a session open for
+   this device, the orchestrator treats the turn as a sample, with no model,
+   tools or history. It gets the embedding and clip quality from
+   `enrollment_sample`, checks the transcript against the prompt, and speaks
+   back a tip and the same prompt, the next prompt, or the result.
 
-3. After `min_samples` (default 6) the session is evaluated after every
+3. From `min_samples` (default 6) the session is evaluated after every
    accepted clip. It completes when the criteria hold, fails at `max_samples`
-   (default 12) when they do not, expires at the time limit, or is aborted:
+   (default 12), expires at the time limit, or is aborted:
 
    ```
    python scripts/enroll_voice.py status <session_id>
@@ -83,8 +81,8 @@ sequenceDiagram
    ```
 
 4. On completion the profile is written to `speaker_identity.json` and the
-   voice gate uses it on the next turn. Revoking later keeps the record and
-   stops identification:
+   gate uses it on the next turn. Revoking keeps the record and stops
+   identification:
 
    ```
    python scripts/enroll_voice.py revoke-profile alice
@@ -199,16 +197,15 @@ removed by the normal five minute cleanup of the client audio directory.
 
 ### Fail closed
 
-- A sample from a stream whose device id or key thumbprint is not the
-  session's is refused and the session is untouched.
-- A stream with no verified device identity never enters enrollment. The
-  development switch `VOICE_ENROLLMENT_ALLOW_UNBOUND_DEVICE` matches a
-  session opened for device `unbound` to any stream; it is for a bench with
-  no YubiKey and must be off in the house.
-- A clip that fails quality or the prompt check is spoken back and not stored.
+- A sample from a stream whose device id or thumbprint is not the session's
+  is refused; the session is untouched.
+- A stream with no verified device identity never enters enrollment.
+  `VOICE_ENROLLMENT_ALLOW_UNBOUND_DEVICE` matches a session opened for device
+  `unbound` to any stream; bench use only, off in the house.
+- A clip that fails quality or the prompt check is spoken back, not stored.
 - A session that cannot meet the criteria by `max_samples` fails and writes
-  no profile. A revoked profile never matches and is never used as an
-  impostor reference.
+  no profile. A revoked profile never matches and is never an impostor
+  reference.
 
 ### Limits
 
