@@ -1,7 +1,13 @@
 # Threat model: agent delegation path (prototypes A and C)
 
-Path: user consents at the STS > gateway exchanges for a tool token or a handoff >
-sub-agent exchanges the handoff > tool server verifies the token > PEP asks the PDP > tool runs > output returns to the model.
+The path, in order:
+
+1. The user consents at the STS.
+2. The gateway exchanges for a tool token or a handoff.
+3. A sub-agent exchanges the handoff.
+4. The tool server verifies the token.
+5. The PEP asks the PDP.
+6. The tool runs and its output returns to the model.
 
 Scope: the prototypes in delegation/ and policy/ (threats 1-15), and the voice gate in the live orchestrator (threats 16-22). The live assistant does not use the delegation and policy prototypes yet.
 
@@ -42,11 +48,67 @@ Mode: monitor. Every non-read decision is logged as `allow` or `would_deny`; not
 | 21 | Gate failure or misconfiguration | Gate errors fail closed in enforce; an unknown mode falls back to monitor, never off; an unset threshold verifies no voice; any missing signal fails | Partly: mode, threshold and missing-signal cases tested; error handling reviewed | Monitor mode blocks nothing by design until rollout |
 | 22 | Path injection through the client-supplied session id | Session and audio ids are validated to a plain token before they reach a file path | No | Sessions are still keyed by a client-supplied id |
 
-Not gated yet: explicit location-preference commands are handled before the model and do not pass the gate. 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`) run in CI.
+Explicit location-preference commands are not gated yet. They are handled before the model and do not pass the gate. 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`) run in CI.
 
 ## Attacks run (demo.py in delegation/ and policy/)
 
-Expired-token replay; exchange without `may_act`; another agent presenting the user's token; sub-agent asking for write scope; sub-agent asking for an unregistered tool; plain exchange to strip `act`; borrowed actor token; handoff token sent to a tool; injected merge via sub-agent; injected merge via gateway; out-of-session read; approval replay and reuse on a different PR; token without `act`; forged signature; live tool token after the user token is revoked; re-exchange of a revoked lineage; revocation by an agent outside the chain; revoked agent's actor token; tool server revoking the handoff above it; escalation to the actor's delegation and to the grant from repeated tool reports; `sts:admin` requested through exchange; admin route with a non-admin actor token; stolen tool token without a proof, with another client's key, with a replayed proof, with a proof for another URI, with a stale proof; exchange without a proof and under another client's key; bound admin token sent as Bearer; revoked key; device-bound user token exchanged without the device assertion, with another device, without the actor's own proof, by a client the user did not consent to, with a device claim but another key's binding; assurance widened at exchange (ignored); revoked device (live tool token, re-exchange and new login all refused); OPA down; PDP timeout; voice match below threshold; replayed voice (liveness fail); off-network voice; voice with no signals; high-risk voice write with confirmations off. All refused, each with a logged reason. 103 Python tests and 22 policy tests pass.
+Every attack below is refused with a logged reason. 103 Python tests and 22
+policy tests pass.
+
+Exchange and chain (delegation/):
+
+- expired-token replay
+- exchange without `may_act`
+- another agent presenting the user's token
+- sub-agent asking for write scope
+- sub-agent asking for an unregistered tool
+- plain exchange to strip `act`
+- borrowed actor token
+- handoff token sent to a tool
+- token without `act`
+- forged signature
+- `sts:admin` requested through exchange
+- admin route with a non-admin actor token
+
+Sender constraint (delegation/):
+
+- stolen tool token without a proof, with another client's key, with a
+  replayed proof, with a proof for another URI, with a stale proof
+- exchange without a proof and under another client's key
+- bound admin token sent as Bearer
+- revoked key
+
+Device binding (delegation/):
+
+- device-bound user token exchanged without the device assertion, with another
+  device, without the actor's own proof, by a client the user did not consent
+  to, with a device claim but another key's binding
+- assurance widened at exchange (ignored)
+- revoked device: live tool token, re-exchange and new login all refused
+
+Revocation (delegation/):
+
+- live tool token after the user token is revoked
+- re-exchange of a revoked lineage
+- revocation by an agent outside the chain
+- revoked agent's actor token
+- tool server revoking the handoff above it
+- escalation to the actor's delegation and to the grant from repeated tool
+  reports
+
+Policy (policy/):
+
+- injected merge via sub-agent
+- injected merge via gateway
+- out-of-session read
+- approval replay and reuse on a different PR
+- OPA down
+- PDP timeout
+- voice match below threshold
+- replayed voice (liveness fail)
+- off-network voice
+- voice with no signals
+- high-risk voice write with confirmations off
 
 ## Future state: next controls, in order
 

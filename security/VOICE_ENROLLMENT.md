@@ -1,7 +1,7 @@
 # Voice enrollment
 
-How a voice becomes a profile the voice gate trusts: the procedure, the
-criteria, the record. Reasoning is in `SESSION_BINDING.md` under "Enrollment
+How a voice becomes a profile the voice gate trusts. This covers the
+procedure, the criteria and the record. Reasoning is in `SESSION_BINDING.md` under "Enrollment
 criteria". Code: `core/voice_enrollment.py` (sessions, criteria, profile
 writes), `scripts/enroll_voice.py` (admin), `enrollment_sample` in
 `tools_server/tools/get_person_id` (hidden from the model),
@@ -185,9 +185,9 @@ impostor_pairs, threshold, ok, reasons}, revoked_at (null), revoked_by
 Sessions (`voice_enrollment_sessions.json`) keep every accepted sample with
 its prompt, transcript, match score, quality metrics and time, and the
 evaluation that closed the session. The audit log (`voice_enrollment.audit`)
-records opened, each sample accepted or rejected with the reason, needs-more,
-complete, failed, expired, aborted and profile revoked, each with the session,
-profile, device and admin.
+records every event with the session, profile, device and admin. The events
+are opened, sample accepted, sample rejected with the reason, needs more,
+complete, failed, expired, aborted and profile revoked.
 
 Embeddings are stored and audio is not. The WAV file each turn produces is
 removed by the normal five minute cleanup of the client audio directory.

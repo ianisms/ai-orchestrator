@@ -1,7 +1,7 @@
 # security/ - identity and authorization for agents
 
-Prototypes for how agents act on a user's behalf: who is acting, for whom,
-under which grant, for how long, and what stops them.
+Prototypes for how agents act on a user's behalf. They answer who is acting,
+for whom, under which grant, for how long, and what stops them.
 
 - `delegation/` - A: RFC 8693 token exchange with a nested `act` chain (user > gateway > sub-agent), short-lived audience-scoped tokens, every token DPoP-bound (RFC 9449) to the key of the client that presents it with a proof on every call, lineage claims and RFC 7009 revocation that follows the chain (in-memory denylist) plus key revocation, tool-server reports with an STS-owned escalation policy, admin routes behind an `sts:admin` actor token, and a tool-side verifier that checks the proof for a bound token, rejects any token without `act` and, when it shares the denylist, any revoked token. Keycloak 26.8 setup for the first hop.
 - `policy/` - C: AuthZEN-shaped policy check (OPA) before every MCP `tools/call`. The whole chain is evaluated once, access only narrows, write-class tools need the user's approval for the exact call (on by default, never waivable for high-risk tools), voice requests also need a strong speaker match, home-network origin and a passed liveness check, and any missing signal denies. Every decision is logged with its reasons.
@@ -19,13 +19,13 @@ cd ../policy                                   # needs the opa binary on PATH or
 opa test rego && python demo.py && python -m pytest -q   # 22 policy tests, 16 Python tests
 ```
 
-CI (`.github/workflows/tests.yml`) runs these suites, the voice gate, enrollment and script tests in `server/`, and the device identity and stream metadata tests in `server/` and `speaker/` (with an in-memory signer, no YubiKey) on every pull request. OPA is installed in CI so the policy tests run instead of skipping. `tests` is a required check on `main`.
+CI (`.github/workflows/tests.yml`) runs these suites on every pull request. It also runs the voice gate, enrollment and script tests in `server/`. The device identity and stream metadata tests in `server/` and `speaker/` run with an in-memory signer and no YubiKey. OPA is installed in CI so the policy tests run instead of skipping. `tests` is a required check on `main`.
 
 ## Current state
 
-Prototypes, not production: keys and secrets live in memory, and the consent and approval channels are simulated. `delegation/` and `policy/` run on their own with tests and are not wired into the orchestrator.
+These are prototypes and are not production code. Keys and secrets live in memory, and the consent and approval channels are simulated. `delegation/` and `policy/` run on their own with tests and are not wired into the orchestrator.
 
-The voice rules are the exception. `server/modules/orchestrator/core/voice_gate.py` applies the same tiers inside the live orchestrator, in Python rather than OPA. The orchestrator identifies the speaker for each turn itself, never the model; origin comes from the verified device credential on the stream (or, until `VOICE_GATE_REQUIRE_DEVICE` is on, the gRPC peer address), never from headers; each enrolled person has a threshold fixed at enrollment, floored by the global one; and a stated name identifies no one. Every decision carries an assurance record of what was measured. It ships in monitor mode, logging `allow` or `would_deny` for every non-read tool call, because the liveness check and the spoken and phone approval flows are not built yet. Enforce mode before they land would block every write.
+The voice rules are the exception. `server/modules/orchestrator/core/voice_gate.py` applies the same tiers inside the live orchestrator, in Python. The orchestrator identifies the speaker for each turn itself, never the model. Origin comes from the verified device credential on the stream, never from headers. Until `VOICE_GATE_REQUIRE_DEVICE` is on, the gRPC peer address stands in for it. Each enrolled person has a threshold fixed at enrollment, floored by the global one. A stated name identifies no one. Every decision carries an assurance record of what was measured. The gate ships in monitor mode, logging `allow` or `would_deny` for every non-read tool call, because the liveness check and the spoken and phone approval flows are not built yet. Enforce mode before they land would block every write.
 
 ## Controls
 
