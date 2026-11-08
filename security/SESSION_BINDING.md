@@ -1,8 +1,8 @@
 # Device-bound sessions and admin-run voice enrollment
 
-Spec for the v2.0 change that binds a speaker's session to its hardware key and
-makes voice enrollment an admin-run, device-bound, measured process. This page
-is the reasoning; `DEVICE_IDENTITY.md` stays the reference for the key and the
+Device-bound sessions and admin-run voice enrollment in ai-orchestrator: the
+problem, the current state as of v2.0, the target state, and the reasoning
+behind the choices. This page is the reasoning; `DEVICE_IDENTITY.md` stays the reference for the key and the
 challenge, `VOICE_ENROLLMENT.md` for the enrollment procedure, and
 `THREAT_MODEL.md` for the threats each control answers.
 
@@ -31,26 +31,107 @@ behind it. "I'm Alice" recorded a pending sample for an admin to approve, one
 at a time, with no quality bar, no separation check against the other voices in
 the house, and no record of who approved what on which device.
 
-## 2. What changes
+## 2. Current state (v2.0, merged 2026-11-07)
 
-| # | Change | Where | Status after this PR |
-|---|---|---|---|
-| 1 | The speaker sends its device credential as `x-device-credential` metadata on the Converse stream, re-attesting with the YubiKey when the credential is missing or near expiry | `speaker/modules/speaker/grpc_client.py`, `capture_streamer.py`, `orchestrator.py` | built |
-| 2 | The orchestrator can refuse a stream that presents no valid credential (`DEVICE_IDENTITY_REQUIRE`), and passes the verified device into the turn pipeline | `server/modules/aiserver/server.py`, `core/utterance.py` | built, off by default |
-| 3 | The voice gate takes device identity as its origin signal in place of the peer-address check (`VOICE_GATE_REQUIRE_DEVICE`), and carries the device in every decision and audit record | `core/voice_gate.py` | built, off by default |
-| 4 | The gate applies a per-user match threshold recorded at enrollment, with the global `VOICE_GATE_MIN_SCORE` as a floor | `core/voice_gate.py`, `tools_server/tools/get_person_id` (`identify_speaker` returns the profile's threshold) | built |
-| 5 | Every gate decision carries an assurance record: method, score, threshold, device, confirmation state | `core/voice_gate.py` | built |
-| 6 | Admin-run voice enrollment: an admin opens a device-bound, time-boxed session; the person speaks prompted sentences; each clip must pass quality and match its prompt; the session completes only when the profile reaches the acceptance criteria, which also fix the per-user threshold; the record says who enrolled whom, on which device, with which scores | `core/voice_enrollment.py`, `scripts/enroll_voice.py`, `tools_server/tools/get_person_id` (`enrollment_sample`) | built |
-| 7 | Revoking a voice profile removes it from identification without deleting its history | `core/voice_enrollment.py`, `get_person_id` | built |
-| 8 | STS: a user token can be bound to a registered device key instead of the consented client's software key; the consented client exchanges it by presenting the device thumbprint it verified on the live stream; `device` and `assurance` claims travel down the chain; revoking the device key kills its subtree | `delegation/sts.py`, `verify.py`, `admin.py` | built (prototype, in `security/` only) |
+What runs today, what it binds, and which switches are off. Status per the
+key above.
 
-Not in this PR: liveness, spoken confirmation, phone approval, SPIFFE for
-agents, the secure element on the carrier board, pushing `assurance` into the
-OPA policy input. Each is named below where it would land.
+| Piece | Where | Status |
+|---|---|---|
+| Speaker holds a P-256 key in YubiKey PIV 9a; signs a 30 s nonce at boot; gets a 10 min credential with `cnf.jkt` | `speaker/.../device_identity.py`, `server/.../device_identity.py` | built, off by default (`device_identity_enable`) |
+| Credential rides on every Converse call as `x-device-credential`, re-attested when stale | `grpc_client.py` metadata provider, `capture_streamer.py` | built |
+| Orchestrator verifies the credential at connect; refuses the stream without one when `DEVICE_IDENTITY_REQUIRE` | `aiserver/server.py` | built, switch off |
+| Voice gate takes the device as origin when `VOICE_GATE_REQUIRE_DEVICE`; `device_verified` bounded by credential expiry per turn | `core/voice_gate.py`, `core/utterance.py` | built, switch off (address check until then) |
+| Per-user threshold from enrollment, floored by `VOICE_GATE_MIN_SCORE` | `voice_gate.effective_threshold`, `identify_speaker` | built; floor still uncalibrated |
+| Assurance record on every gate decision and audit line | `voice_gate.assurance` | built; not yet an OPA input |
+| Admin-run enrollment session: device-bound, time-boxed, prompted; quality, prompt match, consistency, separation; profile with threshold and record; revocation | `core/voice_enrollment.py`, `scripts/enroll_voice.py`, `enrollment_sample` | built |
+| STS: root user token bound to the device key; consented client asserts the thumbprint it verified on the stream; `device` and `assurance` down the chain; `revoke_device` kills the subtree | `delegation/sts.py`, `verify.py`, `admin.py` | built (prototype, `security/` only) |
+| Actor leg (gateway, sub-agents, tool tokens): bound to software P-256 keys in process (DPoP) | `delegation/dpop.py`, `sts.py` | built; stops copying, not process compromise |
+| Liveness, spoken confirmation, phone approval | | not built; gate in monitor mode because of it |
 
-## 3. Reasoning
+```mermaid
+flowchart LR
+    subgraph speaker [Speaker, CM5]
+        YK[YubiKey PIV 9a<br/>P-256, non-exportable]
+        VA[Voice agent<br/>audio out, credential on stream]
+    end
+    subgraph orch [Orchestrator, server]
+        DI[Device identity<br/>challenge, 10 min credential<br/>verify at connect]
+        VG[Voice gate<br/>origin: device or address<br/>threshold: profile over floor<br/>assurance record]
+        EN[Enrollment sessions<br/>admin-run, device-bound]
+        GW[Gateway, actor<br/>software key, DPoP]
+    end
+    subgraph sts [STS, prototype]
+        UT[User token<br/>cnf.jkt = device key<br/>device, assurance]
+        TT[Tool token<br/>act chain, bound to gateway key<br/>device, assurance carried]
+        RV[revoke_device, revoke_key<br/>walks the issuance registry]
+    end
+    TS[Tool servers<br/>verify: sig, aud, exp, proof,<br/>revocation, act chain, policy]
+    YK -- sign nonce --> VA
+    VA -- x-device-credential --> DI
+    DI -- device id, jkt, exp --> VG
+    DI -- open session for device --> EN
+    VG -- decision + assurance --> GW
+    GW -- login: device_jkt, assurance --> UT
+    GW -- exchange: actor proof + device_jkt asserted --> TT
+    TT -- token + DPoP proof --> TS
+    classDef off stroke-dasharray: 4 3
+    class DI,VG off
+```
 
-### 3.1 Bind per connection, not per request
+Dashed: built, enforcement switch off until every speaker attests. Everything
+else in the picture runs when the switches are on. The trust the picture
+adds is one fact, not one party: the orchestrator already asserts who is
+speaking; it now also asserts which device the stream came from.
+
+## 3. Future state (target)
+
+The same shape with the keys moved and the orchestrator's assertions
+replaced by proofs where a proof is possible.
+
+| Step | What moves | Why |
+|---|---|---|
+| Speaker as STS client (option (a) in 4.3) | The speaker performs the exchange itself over its own channel; the STS checks possession of the device key directly | Removes the orchestrator's assertion of the device; the one place today where a compromised orchestrator could lie |
+| Secure element or SPI TPM on the carrier board (`DEVICE_IDENTITY.md`) | Key in silicon, no pluggable part; with a TPM, a quote over the boot chain before the credential is issued | Device identity becomes attestation: which software, not only which key |
+| Prototype B: SPIFFE/SPIRE for the actor leg | Gateway and sub-agents get X.509-SVIDs from SPIRE with attestation plugins gating issuance; tokens bound with `cnf.x5t#S256` (RFC 8705) over mTLS, per connection; the DPoP software key retires | Closes the "key next to the token" gap on the actor leg; no per-request signing |
+| Liveness, spoken confirmation, phone approval | The step-ups the gate already asks for exist; gate moves from monitor to enforce | A recording or a clone stops at the step-up instead of being logged |
+| Assurance as an OPA input | Policy reads method, score, threshold source, device and confirmation state per call | Risk tier decided on what was measured, not on a flag |
+| Enrollment from the phone | Open, approve and close sessions from the person's own device | The admin step leaves the host shell; the record is unchanged |
+
+```mermaid
+flowchart LR
+    subgraph speaker [Speaker, CM5]
+        SE[Secure element or TPM<br/>attested key]
+        VA[Voice agent<br/>STS client]
+    end
+    subgraph orch [Orchestrator, server]
+        VG[Voice gate<br/>origin: device only<br/>liveness, confirmation,<br/>phone approval; enforce]
+        GW[Gateway, actor<br/>X.509-SVID, mTLS]
+    end
+    SP[SPIRE<br/>attestation plugins<br/>gate issuance]
+    subgraph sts [STS]
+        UT[User token<br/>cnf = device key,<br/>possession proved by the speaker]
+        TT[Tool token<br/>cnf.x5t#S256 = gateway SVID<br/>device, assurance]
+    end
+    OPA[OPA policy<br/>reads assurance per call]
+    TS[Tool servers<br/>mTLS, cert-bound tokens]
+    SE -- quote + key --> VA
+    VA -- exchange over its own channel,<br/>proves the device key --> UT
+    SP -- SVID --> GW
+    VG -- decision + assurance --> GW
+    GW -- actor proof: client cert --> TT
+    TT -- cert-bound token over mTLS --> TS
+    TS -- assurance, device, act --> OPA
+```
+
+What does not change between the two pictures: the user token is the leg
+that reaches hardware; `device` and `assurance` travel unchanged down the
+chain; revocation walks the issuance registry; the gate never authorizes a
+write or a high-risk call on a voice match alone.
+
+## 4. Reasoning
+
+### 4.1 Bind per connection, not per request
 
 The obvious version of "bind the agent to the YubiKey" is to have the agent
 sign DPoP proofs with the PIV key. Two things are wrong with it. The agent
@@ -68,7 +149,7 @@ and is the shape the target diagram in `DIAGRAMS.md` names; it is not taken here
 because the YubiKey's private key is not reachable from Python's gRPC TLS stack
 without a PKCS#11 shim, and the credential gives the same guarantee today.
 
-### 3.2 Which leg of the chain gets the hardware key
+### 4.2 Which leg of the chain gets the hardware key
 
 The user token: "user X, present at device Y, confirmed by the voice gate." It
 is the token an attacker on the server would most like to replay, and it is the
@@ -77,7 +158,7 @@ tokens) stays bound to the software keys of the processes that present them,
 with `act` lineage back to the device-bound user token. Moving those keys into
 hardware is prototype B (SPIFFE), not this change.
 
-### 3.3 Who proves possession at the exchange
+### 4.3 Who proves possession at the exchange
 
 RFC 8693 expects the party presenting a subject token to prove possession of
 the key it is bound to. The gateway cannot sign with the speaker's key. Three
@@ -94,7 +175,7 @@ ways out were considered:
   device is registered and not revoked, and that the exchanging client is the
   one the user consented to.
 
-This PR takes (c). The orchestrator is already the trusted asserting party for
+v2.0 takes (c). The orchestrator is already the trusted asserting party for
 who is speaking; making it the asserting party for which device is on the
 stream adds no new trust, only a new fact. The cost is explicit: a compromised
 orchestrator can lie about the device, which is the same trust the system
@@ -102,7 +183,7 @@ places in it today for the voice identity, and every record carries the
 thumbprint so the lie is at least attributable to one stream. (a) stays the
 target once the speaker is an STS client.
 
-### 3.4 Stateless where possible
+### 4.4 Stateless where possible
 
 The device credential is stateless on the orchestrator side (HMAC key per
 process, nothing persisted). The STS device registry is a map of thumbprint to
@@ -110,7 +191,7 @@ device id, loaded from the same JSON the orchestrator's enrollment registry
 writes, so revocation is one file write. No grant store was added: a device
 revocation walks the issuance registry that PR #16 already keeps.
 
-### 3.5 Two facts of different strength, and the token says which
+### 4.5 Two facts of different strength, and the token says which
 
 The device binding is hardware-rooted and binary. Voice identification is a
 cosine similarity against an enrolled mean, probabilistic by nature. The
@@ -119,10 +200,10 @@ that applied and whether it was the user's own or the global floor, the device
 id and thumbprint, and whether a confirmation happened. Policy reads it by risk
 tier: a read runs on voice alone, a write needs the confirmation, a high-risk
 call needs the phone approval. The token never claims more than the gate
-measured. In this PR the record lives in the gate decision and the audit line,
+measured. Today the record lives in the gate decision and the audit line,
 and the STS carries it as a claim; the OPA input does not read it yet.
 
-### 3.6 Enrollment is identity proofing, so it is measured
+### 4.6 Enrollment is identity proofing, so it is measured
 
 The existing path accepted one sample at a time with no criteria. The new path
 has four, and a session completes only when all hold:
@@ -148,9 +229,9 @@ What enrollment does not do: beat a cloned voice. Prompted sentences defeat a
 recording; they do not defeat synthesis. Voice remains an identification signal
 and never the sole authorizer of a write or a high-risk call.
 
-## 4. Flows
+## 5. Flows
 
-### 4.1 Device-bound session
+### 5.1 Device-bound session
 
 ```mermaid
 sequenceDiagram
@@ -190,7 +271,7 @@ orchestrator refuses the next credential check and the STS refuses the next
 exchange; `revoke_key(<device jkt>)` at the STS kills every live token bound to
 the device and their descendants.
 
-### 4.2 Enrollment session, states
+### 5.2 Enrollment session, states
 
 ```mermaid
 stateDiagram-v2
@@ -209,7 +290,7 @@ stateDiagram-v2
     aborted --> [*]
 ```
 
-### 4.3 Enrollment sample, one turn
+### 5.3 Enrollment sample, one turn
 
 ```mermaid
 flowchart TD
@@ -232,7 +313,7 @@ flowchart TD
     Q -- no --> R[Mark failed. Speak: could not reach a reliable match]
 ```
 
-### 4.4 Voice gate decision with the new signals
+### 5.4 Voice gate decision with the new signals
 
 ```mermaid
 flowchart TD
@@ -255,7 +336,7 @@ flowchart TD
     DENY[not verified: write needs phone approval, high denied]
 ```
 
-## 5. Failure modes
+## 6. Failure modes
 
 Everything new fails closed.
 
@@ -269,7 +350,7 @@ Everything new fails closed.
 | STS exchange of a device-bound subject with a missing, different or revoked device thumbprint | `invalid_grant`, logged with the thumbprint |
 | Device key revoked at the STS | Every token bound to it and every descendant denylisted; future assertions of that thumbprint refused |
 
-## 6. Honest limits
+## 7. Honest limits
 
 - The device binding anchors the subject leg. The actor leg still trusts the
   orchestrator and gateway processes, which hold software keys. SPIFFE and
@@ -284,7 +365,7 @@ Everything new fails closed.
 - Enrollment is only as good as the prompts and the room. The coach checks
   catch a bad microphone position; they do not make a noisy kitchen quiet.
 
-## 7. Threats answered
+## 8. Threats answered
 
 - 18 (origin spoofing): the gate decides on the device credential, not the
   address, when `VOICE_GATE_REQUIRE_DEVICE` is on.

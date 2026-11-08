@@ -498,7 +498,7 @@ class STS:
 
         device_jkt: for a subject token bound to a speaker's hardware key, the
         thumbprint the exchanging client verified on the live stream it is
-        acting for (SESSION_BINDING.md 3.3). Required for such a subject, must
+        acting for (SESSION_BINDING.md 4.3). Required for such a subject, must
         equal its cnf.jkt and name a live device; ignored otherwise.
         """
         ctx: dict = {"client_id": client_id, "audience": audience, "delegate_to": delegate_to, "requested_scope": scope}
