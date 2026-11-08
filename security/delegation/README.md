@@ -318,6 +318,25 @@ and register the new one.
 The reasoning is in `../SESSION_BINDING.md`. This section describes what the
 STS does.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Orchestrator / gateway (consented client)
+    participant S as STS
+    participant T as Tool server
+
+    O->>S: /dev/login user, client_id, scope, device_jkt, assurance
+    Note over S: device registered and live
+    S-->>O: user token: cnf.jkt = device key, device, assurance, may_act = gateway
+    O->>S: /token exchange: actor token + DPoP proof, subject = user token, device_jkt
+    Note over S: actor proof covers the actor token<br/>device_jkt == subject cnf.jkt, device live<br/>may_act names this client
+    S-->>O: tool token: act chain, device, assurance, cnf.jkt = gateway key
+    O->>T: call with tool token + DPoP proof
+    Note over T: Principal.device, Principal.assurance available to policy
+    O->>S: admin: revoke-device jkt
+    Note over S: device marked revoked, revoke_key kills bound tokens and descendants
+```
+
 - `register_device(device_id, jkt)` or `load_device_registry(path)` (the
   orchestrator's `device_registry.json`) names the speakers whose hardware key a
   user token may be bound to.

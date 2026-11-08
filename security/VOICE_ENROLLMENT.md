@@ -25,6 +25,35 @@ approval at a time.
 
 ### Procedure
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Admin (host shell)
+    participant E as Enrollment service
+    participant P as Person
+    participant S as Speaker
+    participant O as Orchestrator
+    participant T as Tool server (enrollment_sample)
+    participant F as speaker_identity.json
+
+    A->>E: enroll_voice.py open alice --device kitchen --device-jkt ... --consent ...
+    E-->>A: session id, first prompt (time-boxed, bound to the device)
+    loop each prompted sentence
+        P->>S: says the prompt
+        S->>O: audio on the device-bound stream
+        O->>E: open session for this device?
+        E-->>O: yes, current prompt
+        O->>T: enrollment_sample(session, audio)
+        T-->>O: embedding + clip quality
+        O->>E: add_sample(transcript, embedding, quality, device)
+        E-->>O: tip and same prompt / next prompt / result
+        O-->>S: speaks it
+    end
+    E->>E: at min_samples: consistency and separation
+    E->>F: on success: profile with samples, mean, threshold, record
+    A->>E: status / abort / revoke-profile as needed
+```
+
 1. On the server host, open the session. The device is the speaker the person
    will talk to; `--device-jkt` pins it to that speaker's current key.
 
@@ -63,6 +92,25 @@ approval at a time.
 
 ### Criteria
 
+```mermaid
+flowchart TD
+    C[Clip] --> Q{quality: duration, clipping,<br/>level, SNR, silence}
+    Q -- fail --> R1[Speak the tip, repeat the prompt]
+    Q -- pass --> M{transcript matches<br/>the prompt, >= 60% of words}
+    M -- fail --> R2[Ask for the sentence as prompted]
+    M -- pass --> S[Sample accepted]
+    S --> N{samples >= min_samples}
+    N -- no --> NP[Next prompt]
+    N -- yes --> G[genuine: each sample vs mean of the others]
+    G --> I[impostor: each sample vs every other live profile's mean]
+    I --> TH[threshold = max impostor + margin, never below the floor]
+    TH --> OK{every genuine score >= threshold<br/>and threshold < 1.0}
+    OK -- yes --> W[Write profile with threshold and record]
+    OK -- no --> MX{samples < max_samples}
+    MX -- yes --> NP
+    MX -- no --> FL[Session failed, no profile written]
+```
+
 A clip is accepted when all of these hold (`EnrollmentPolicy`):
 
 | Check | Default | Why |
@@ -88,6 +136,47 @@ The threshold that results is the person's own. The gate applies the higher of
 it and the global floor (`voice_gate.effective_threshold`).
 
 ### The record
+
+```mermaid
+classDiagram
+    class Profile {
+        display_name
+        samples (embeddings)
+        mean_embedding
+        threshold
+        enrolled_at, enrolled_by
+        enrollment_session
+        device_id, device_jkt
+        consent
+        sample_count
+        evaluation
+        revoked_at, revoked_by
+    }
+    class Session {
+        session_id, status
+        profile_id, display_name
+        opened_by, opened_at, expires_at
+        device_id, device_jkt
+        prompts, next_prompt
+        samples
+        evaluation
+        closed_at, closed_reason
+    }
+    class Sample {
+        index, prompt, transcript
+        match, quality
+        embedding, taken_at
+    }
+    class AuditLine {
+        event, ts
+        session_id, profile_id
+        device_id, device_jkt
+        opened_by, reason
+    }
+    Session "1" --> "*" Sample
+    Session "1" --> "0..1" Profile : completes into
+    Session "1" --> "*" AuditLine
+```
 
 Each profile written by a session carries:
 
@@ -135,6 +224,19 @@ removed by the normal five minute cleanup of the client audio directory.
 - The admin step is a script run on the host.
 
 ## Future state
+
+```mermaid
+flowchart LR
+    PH[Person's phone<br/>opens, approves, closes sessions] --> E[Enrollment service]
+    L[Liveness check on the turn] --> G[Voice gate]
+    E --> F[Profiles with thresholds]
+    F --> RE[Re-evaluate every profile<br/>when a new voice is enrolled]
+    RE --> F
+    F --> G
+    G --> AS[Assurance record:<br/>method, score, threshold, margin, device]
+    AS --> OPA[Policy reads it per call<br/>narrow margin: higher tier]
+    D[Device identity from the stream] --> G
+```
 
 - A liveness check on each turn, so that a recording is rejected before the
   voice match is considered.
