@@ -1,39 +1,37 @@
 # Device-bound sessions and admin-run voice enrollment
 
-Device-bound sessions and admin-run voice enrollment in ai-orchestrator: the
-problem, the current state as of v2.0, the target state, and the reasoning
-behind the choices. This page is the reasoning; `DEVICE_IDENTITY.md` stays the reference for the key and the
-challenge, `VOICE_ENROLLMENT.md` for the enrollment procedure, and
-`THREAT_MODEL.md` for the threats each control answers.
+This page covers how a speaker's session is bound to its hardware key and how
+voices are enrolled, as of v2.0 and as planned, with the reasoning behind the
+choices. `DEVICE_IDENTITY.md` describes the key and the challenge,
+`VOICE_ENROLLMENT.md` the enrollment procedure, and `THREAT_MODEL.md` the
+threats each control answers.
 
 Status key, same as elsewhere in `security/`: built = runs with tests; partial =
 runs but with a documented gap; not built = design only.
 
 ## 1. Why
 
-Three things this design has to hold, each a documented failure if it does
-not:
+The design has to hold three properties.
 
-1. The speaker must be trusted for what it is, not where it is or who is
-   talking. A device credential that is verified and logged but never carried
-   on the stream, never read by the voice gate and never bound into a token
-   leaves the gate deciding on a gRPC peer address, which any host on a trusted
-   address passes. Threat 18.
-2. A token bound to a software key held in the process that presents it
-   (`delegation/dpop.py`) stops a copied token and nothing else: an attacker
-   inside the process holds the key and signs proofs as the process does. The
-   one leg that can reach hardware is the user token, and the hardware key on
-   the speaker has to be connected to it.
-3. A voice match is only as good as the enrollment behind it. One global
-   threshold, uncalibrated, with a stated name recording samples for approval
-   one at a time, with no quality bar, no separation check against the other
-   voices in the house and no record of who approved what on which device, is
-   a signal that looks stronger than it is.
+1. The speaker is trusted because of a key it holds, rather than because of
+   its network address or the voice on the stream. If the device credential is
+   verified at connect but never carried on the stream, read by the voice gate
+   or bound into a token, the gate ends up deciding on a gRPC peer address, and
+   any host on a trusted address passes. Threat 18.
+2. The user token is bound to a key that cannot leave the device. A token
+   bound to a software key in the process that presents it
+   (`delegation/dpop.py`) protects against a copied token; it does not protect
+   against an attacker inside that process, who holds the key and can sign
+   proofs. The user token is the only leg of the chain that can be tied to the
+   speaker's hardware key, so that is where the hardware key goes.
+3. A voice match is backed by a measured enrollment. A single uncalibrated
+   threshold, with samples added one at a time from a stated name and
+   approved without any quality check, separation check against other voices,
+   or record of who approved them, gives a weaker signal than it appears to.
 
 ## 2. Current state
 
-What runs as of v2.0, what it binds, and which switches are off. Status per
-the key above.
+What runs as of v2.0, what each piece binds, and which switches are off.
 
 | Piece | Where | Status |
 |---|---|---|
@@ -78,15 +76,15 @@ flowchart LR
     class DI,VG off
 ```
 
-Dashed: built, enforcement switch off until every speaker attests. Everything
-else in the picture runs when the switches are on. The trust the picture
-adds is one fact, not one party: the orchestrator already asserts who is
-speaking; it now also asserts which device the stream came from.
+Dashed boxes are built but their enforcement switch is off until every speaker
+attests. The orchestrator was already the component that asserts who is
+speaking; in this picture it also asserts which device the stream came from.
+No new component is trusted.
 
 ## 3. Future state
 
-The same shape with the keys moved and the orchestrator's assertions
-replaced by proofs where a proof is possible.
+The same structure, with the keys moved into hardware and the orchestrator's
+assertions replaced by proofs wherever a proof is possible.
 
 | Step | What moves | Why |
 |---|---|---|
@@ -123,110 +121,115 @@ flowchart LR
     TS -- assurance, device, act --> OPA
 ```
 
-What does not change between the two pictures: the user token is the leg
-that reaches hardware; `device` and `assurance` travel unchanged down the
-chain; revocation walks the issuance registry; the gate never authorizes a
+Four things stay the same in both pictures. The user token is the leg bound
+to hardware. The `device` and `assurance` claims are copied unchanged down the
+chain. Revocation walks the issuance registry. The gate never authorizes a
 write or a high-risk call on a voice match alone.
 
 ## 4. Reasoning
 
 ### 4.1 Bind per connection, not per request
 
-The obvious version of "bind the agent to the YubiKey" is to have the agent
-sign DPoP proofs with the PIV key. Two things are wrong with it. The agent
-process runs on the server; the key is on the CM5. And a PIV or TPM key signs on
-the order of ten operations a second, so a proof per tool call is a ceiling the
-system would hit in normal use.
+The simplest way to bind the agent to the YubiKey would be to have the agent
+sign DPoP proofs with the PIV key. That does not work for two reasons. The
+agent process runs on the server and the key is on the CM5. A PIV or TPM key
+also signs roughly ten times a second, so signing a proof for every tool call
+would cap throughput well below normal use.
 
-The challenge flow in `DEVICE_IDENTITY.md` is already a proof of possession,
-once, when the credential is minted: nonce, ECDSA over the nonce with the key
-that cannot leave the YubiKey, ten minute credential with `cnf.jkt` equal to the
-key's RFC 7638 thumbprint. Sending that credential on the stream binds the
-stream to the key for the credential's lifetime at the cost of one signature
-per ten minutes. mTLS with the device certificate would give the same binding
-and is the shape the target diagram in `DIAGRAMS.md` names; it is not taken here
-because the YubiKey's private key is not reachable from Python's gRPC TLS stack
-without a PKCS#11 shim, and the credential gives the same guarantee today.
+The challenge flow in `DEVICE_IDENTITY.md` already proves possession once,
+when the credential is minted. The speaker signs a nonce with the key that
+cannot leave the YubiKey and receives a ten minute credential whose `cnf.jkt`
+is the key's RFC 7638 thumbprint. Sending that credential on the stream binds
+the stream to the key for the credential's lifetime, at the cost of one
+signature every ten minutes. mTLS with a device certificate would bind the
+same way, and the target diagram in `DIAGRAMS.md` draws it that way. It is not
+used here because the YubiKey's private key cannot be reached from Python's
+gRPC TLS stack without a PKCS#11 shim, and the credential provides the same
+guarantee.
 
 ### 4.2 Which leg of the chain gets the hardware key
 
-The user token: "user X, present at device Y, confirmed by the voice gate." It
-is the token an attacker on the server would most like to replay, and it is the
-one fact the hardware can speak to. The actor leg (gateway, sub-agents, tool
-tokens) stays bound to the software keys of the processes that present them,
-with `act` lineage back to the device-bound user token. Moving those keys into
-hardware is prototype B (SPIFFE), in the future state.
+The user token, which states that user X is present at device Y as confirmed
+by the voice gate. It is the token an attacker on the server would most want
+to replay, and the device's presence is the one claim the hardware key can
+vouch for. The actor leg (gateway, sub-agents, tool tokens) stays bound to the
+software keys of the processes that present those tokens, with `act` lineage
+back to the device-bound user token. Moving those keys into hardware is
+prototype B (SPIFFE), described under future state.
 
 ### 4.3 Who proves possession at the exchange
 
 RFC 8693 expects the party presenting a subject token to prove possession of
 the key it is bound to. The gateway cannot sign with the speaker's key. Three
-ways out were considered:
+options were considered.
 
-- (a) The speaker performs the exchange itself, as the delegating client. Clean,
-  and it gives the CM5 an STS client role, a secret and a network path to the
-  STS it does not have today.
-- (b) The gateway exchanges, presenting a fresh device-signed session assertion.
-  Another signature from the YubiKey per session, and a new artifact to define.
+- (a) The speaker performs the exchange itself as the delegating client. This
+  is the cleanest option, but it requires the CM5 to have an STS client role,
+  a client secret and a network path to the STS, none of which it has today.
+- (b) The gateway performs the exchange and presents a fresh session assertion
+  signed by the device. This costs another YubiKey signature per session and
+  requires defining a new artifact.
 - (c) The orchestrator, which terminates the stream and already asserts the
-  voice identity, asserts the device thumbprint it verified on that stream. The
-  STS checks that the thumbprint equals the subject token's `cnf.jkt`, that the
-  device is registered and not revoked, and that the exchanging client is the
-  one the user consented to.
+  voice identity, asserts the device thumbprint it verified on that stream.
+  The STS checks that the thumbprint equals the subject token's `cnf.jkt`,
+  that the device is registered and not revoked, and that the exchanging
+  client is the one the user consented to.
 
-v2.0 takes (c). The orchestrator is already the trusted asserting party for
-who is speaking; making it the asserting party for which device is on the
-stream adds no new trust, only a new fact. The cost is explicit: a compromised
-orchestrator can lie about the device, which is the same trust the system
-places in it today for the voice identity, and every record carries the
-thumbprint so the lie is at least attributable to one stream. (a) stays the
-target once the speaker is an STS client.
+v2.0 uses (c). The orchestrator is already trusted to assert who is speaking,
+so trusting it to also assert which device is on the stream does not add a new
+trusted component. The cost is that a compromised orchestrator could assert a
+device it did not see, in the same way it could already misreport the voice
+identity. Every record carries the thumbprint, so such a misreport can be
+traced to a specific stream. Option (a) is the target once the speaker is an
+STS client.
 
 ### 4.4 Stateless where possible
 
-The device credential is stateless on the orchestrator side (HMAC key per
-process, nothing persisted). The STS device registry is a map of thumbprint to
-device id, loaded from the same JSON the orchestrator's enrollment registry
-writes, so revocation is one file write. No grant store was added: a device
-revocation walks the issuance registry that PR #16 already keeps.
+The device credential is stateless on the orchestrator side. The orchestrator
+holds one HMAC key per process and persists nothing. The STS device registry is a map from thumbprint
+to device id, loaded from the same JSON file the orchestrator's enrollment
+registry writes, so a revocation is a single file write. No grant store was
+added; a device revocation walks the issuance registry that the DPoP work
+already maintains.
 
-### 4.5 Two facts of different strength, and the token says which
+### 4.5 The assurance record
 
-The device binding is hardware-rooted and binary. Voice identification is a
-cosine similarity against an enrolled mean, probabilistic by nature. The
-`assurance` record keeps them apart: `method: voice`, the score, the threshold
-that applied and whether it was the user's own or the global floor, the device
-id and thumbprint, and whether a confirmation happened. Policy reads it by risk
-tier: a read runs on voice alone, a write needs the confirmation, a high-risk
-call needs the phone approval. The token never claims more than the gate
-measured. Today the record lives in the gate decision and the audit line,
-and the STS carries it as a claim; the OPA input does not read it yet.
+The device binding is rooted in hardware and either holds or does not. Voice
+identification is a cosine similarity against an enrolled mean and is
+probabilistic. The `assurance` record keeps the two apart. It carries the
+method (`voice`), the score, the threshold that applied and whether it came
+from the user's profile or the global floor, the device id and thumbprint, and
+whether a confirmation happened. Policy reads it by risk tier: a read can run
+on a voice match alone, a write needs the confirmation, and a high-risk call
+needs the phone approval. The record never claims more than the gate measured.
+Today it lives in the gate decision and the audit line and the STS carries it
+as a claim; the OPA input does not read it yet.
 
-### 4.6 Enrollment is identity proofing, so it is measured
+### 4.6 Enrollment criteria
 
-The existing path accepted one sample at a time with no criteria. The new path
-has four, and a session completes only when all hold:
+Enrollment is identity proofing, so it is measured. A session completes only
+when four criteria hold.
 
-1. Quality per clip: duration, clipping, level, signal to noise and silence, the
-   same checks the enrollment coach already made.
-2. Prompt match per clip: the transcript must overlap the prompted sentence.
-   This is what makes a replayed recording fail: the prompts are chosen per
-   session and the clip has to say them.
-3. Consistency: the mean similarity of each sample to the mean of the others
-   (the genuine score) must clear the threshold with the whole sample set.
-4. Separation: the new profile's samples against every other enrolled
-   profile's mean (the impostor score) must sit below the threshold by a
-   margin. The per-user threshold is set from this: the highest impostor
-   score plus the margin, never below the global floor.
+1. Clip quality. Duration, clipping, level, signal to noise ratio and silence
+   ratio, using the same checks as the enrollment coach.
+2. Prompt match. The transcript of each clip must overlap the sentence that
+   was prompted. Prompts are chosen per session, so a replayed recording of
+   something else fails this check.
+3. Consistency. Each sample's similarity to the mean of the other samples
+   (the genuine score) must be at or above the threshold.
+4. Separation. Each sample's similarity to every other enrolled profile's mean
+   (the impostor score) must be below the threshold by a margin. The user's
+   threshold is set from this measurement as the highest impostor score plus
+   the margin, and never below the global floor.
 
-The session is opened by an admin on the host, bound to one device and to a
-time window, and the record says who opened it, for whom, where, how many
-samples were taken and the scores that resulted. Embeddings are stored, never
-audio; the clip files follow the existing five minute cleanup.
+An admin opens the session on the host. It is bound to one device and to a
+time window, and the record names who opened it, for whom, on which device,
+how many samples were taken and what scores resulted. Only embeddings are
+stored; the audio clips follow the existing five minute cleanup.
 
-What enrollment does not do: beat a cloned voice. Prompted sentences defeat a
-recording; they do not defeat synthesis. Voice remains an identification signal
-and never the sole authorizer of a write or a high-risk call.
+Enrollment does not defend against a cloned voice. Prompted sentences defeat a
+recording but not synthesis, so voice remains an identification signal and is
+never the sole authorizer of a write or a high-risk call.
 
 ## 5. Flows
 
@@ -337,7 +340,7 @@ flowchart TD
 
 ## 6. Failure modes
 
-Everything new fails closed.
+Every new path fails closed.
 
 | Condition | Behaviour |
 |---|---|
@@ -349,28 +352,33 @@ Everything new fails closed.
 | STS exchange of a device-bound subject with a missing, different or revoked device thumbprint | `invalid_grant`, logged with the thumbprint |
 | Device key revoked at the STS | Every token bound to it and every descendant denylisted; future assertions of that thumbprint refused |
 
-## 7. Honest limits
+## 7. Limits
 
-- The device binding anchors the subject leg. The actor leg still trusts the
-  orchestrator and gateway processes, which hold software keys. SPIFFE and
-  attested SVIDs are the next step for that (prototype B).
+- The device binding covers the subject leg. The actor leg still depends on
+  the orchestrator and gateway processes, which hold software keys. SPIFFE
+  with attested SVIDs (prototype B) is the next step for that.
 - The orchestrator asserts the device thumbprint at the STS. A compromised
-  orchestrator can assert a device it did not see. Same trust as the voice
-  identity today; attributable, not prevented.
-- Device identity, not attestation: the YubiKey proves which key, not what
-  software is running. `DEVICE_IDENTITY.md` says why and what the target is.
+  orchestrator could assert a device it did not see. This is the same degree
+  of trust the system already places in it for the voice identity; the
+  thumbprint on every record makes such a misreport traceable, not
+  impossible.
+- The YubiKey provides device identity, not attestation. It proves which key
+  is present, not what software is running. `DEVICE_IDENTITY.md` covers the
+  gap and the planned secure element or TPM.
 - Voice identification is probabilistic and does not resist a cloned voice.
-  The assurance record exists so that nothing downstream can forget that.
-- Enrollment is only as good as the prompts and the room. The coach checks
-  catch a bad microphone position; they do not make a noisy kitchen quiet.
+  The assurance record exists so that downstream policy always sees that.
+- Enrollment quality depends on the prompts and the room. The coach checks
+  catch a poorly placed microphone; they cannot compensate for a noisy
+  kitchen.
 
 ## 8. Threats answered
 
-- 18 (origin spoofing): the gate decides on the device credential, not the
-  address, when `VOICE_GATE_REQUIRE_DEVICE` is on.
-- 17 (identity takeover by stated name): the pending-sample path is unchanged;
-  the admin-run session is the path for new voices, with criteria and a record.
-- 1 (token replay) for the user token: bound to a key that cannot leave the
-  device, not to the software DPoP key.
-- 15 (voice spoofing): prompted sentences defeat a recording at enrollment;
-  cloned voices remain the residual risk, carried as a stated limit.
+- 18 (origin spoofing): with `VOICE_GATE_REQUIRE_DEVICE` on, the gate decides
+  on the device credential rather than the address.
+- 17 (identity takeover by stated name): the pending-sample path is unchanged,
+  and new voices go through the admin-run session with its criteria and
+  record.
+- 1 (token replay), for the user token: it is bound to a key that cannot leave
+  the device rather than to a software DPoP key.
+- 15 (voice spoofing): prompted sentences defeat a recording at enrollment.
+  Cloned voices remain a residual risk and are listed as a limit.

@@ -1,8 +1,8 @@
-# Voice enrollment: admin-run, device-bound, measured
+# Voice enrollment
 
 How a voice becomes a profile the voice gate trusts. The reasoning is in
-`SESSION_BINDING.md` section 4.6; this page is the procedure, the criteria and
-the record. Code: `server/modules/orchestrator/core/voice_enrollment.py`
+`SESSION_BINDING.md` section 4.6. This page covers the procedure, the
+acceptance criteria and the record each profile carries. Code: `server/modules/orchestrator/core/voice_enrollment.py`
 (sessions, criteria, profile writes), `server/scripts/enroll_voice.py` (admin),
 `server/tools_server/tools/get_person_id` (`enrollment_sample`, hidden from the
 model), `server/modules/orchestrator/core/utterance.py` (`_enrollment_turn`).
@@ -19,8 +19,9 @@ not built = design only.
 | Stated name ("I'm Alice") | the person, mid-conversation | one pending sample; joins nothing until `scripts/approve_enrollment.py approve` | built (unchanged) |
 | Admin session | an admin on the host, for one person on one speaker | a profile with its own threshold and a record, after the criteria hold | built (v2.0) |
 
-The admin session is the path for new voices. The stated-name path stays for
-adding a sample to a voice that already has a profile, one approval at a time.
+New voices are enrolled through the admin session. The stated-name path
+remains for adding a sample to a voice that already has a profile, one
+approval at a time.
 
 ### Procedure
 
@@ -104,8 +105,8 @@ records opened, each sample accepted or rejected with the reason, needs-more,
 complete, failed, expired, aborted and profile revoked, each with the session,
 profile, device and admin.
 
-Stored: embeddings. Not stored: audio. The WAV the turn produced follows the
-normal five minute cleanup of the client audio directory.
+Embeddings are stored and audio is not. The WAV file each turn produces is
+removed by the normal five minute cleanup of the client audio directory.
 
 ### Fail closed
 
@@ -122,26 +123,29 @@ normal five minute cleanup of the client audio directory.
 
 ### Limits
 
-- Prompted sentences defeat a replayed recording. They do not defeat a cloned
-  voice. Voice remains an identification signal; writes keep the confirmation
-  and high-risk calls keep the phone approval regardless of the score.
-- The transcript check is lenient (word overlap, order-free) so STT errors do
-  not block enrollment; it is not a liveness check.
+- Prompted sentences defeat a replayed recording but not a cloned voice.
+  Voice remains an identification signal; writes still require the
+  confirmation and high-risk calls still require the phone approval, whatever
+  the score.
+- The transcript check is lenient (word overlap, order ignored) so that STT
+  errors do not block enrollment. It is not a liveness check.
 - Separation is measured against the voices enrolled at the time. Enrolling a
-  new, similar voice later does not re-evaluate the old thresholds;
-  `scripts/calibrate_voice_threshold.py` still reports the global picture.
-- The admin step is a host-side script.
+  similar voice later does not re-evaluate the earlier thresholds;
+  `scripts/calibrate_voice_threshold.py` reports the overall picture.
+- The admin step is a script run on the host.
 
 ## Future state
 
-- Liveness on the turn: a check the gate can trust before the voice match
-  counts, so a recording fails before enrollment or policy ever sees it.
-- Sessions opened, approved and closed from the person's own phone, through
-  the phone approval flow; the record stays as it is.
-- Re-evaluation when a new voice is enrolled: every existing profile's
-  separation is re-measured against the newcomer and thresholds that no longer
-  hold are flagged for re-enrollment.
-- The assurance record as a policy input, so a profile enrolled with a thin
-  margin is held to a higher tier than one with a wide one.
-- Voice as one factor among several: device identity from the stream (built),
-  liveness, and the step-ups; the score alone never authorizes a write.
+- A liveness check on each turn, so that a recording is rejected before the
+  voice match is considered.
+- Sessions opened, approved and closed from the person's own phone through the
+  phone approval flow. The record is unchanged.
+- Re-evaluation when a new voice is enrolled: each existing profile's
+  separation is measured again against the new voice, and any threshold that
+  no longer holds is flagged for re-enrollment.
+- The assurance record as a policy input, so that a profile enrolled with a
+  narrow separation margin is held to a higher tier than one with a wide
+  margin.
+- Voice treated as one factor among several, alongside device identity from
+  the stream (built), liveness and the step-ups. The score alone never
+  authorizes a write.
