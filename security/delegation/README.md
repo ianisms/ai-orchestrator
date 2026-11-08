@@ -54,7 +54,7 @@ constraint (DPoP)" below.
 python -m venv .venv && .venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 python demo.py          # chain, attack table and a revocation, no servers needed
-python -m pytest -q     # 71 tests
+python -m pytest -q     # 87 tests
 python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. (secrets) and STS_JKT_MCP_GATEWAY etc. (key thumbprints) first; nothing is printed
 python dpop.py keygen gateway.pem   # a client's DPoP key as a PEM only its owner can read; prints the thumbprint to register as STS_JKT_*
 ```
@@ -116,10 +116,10 @@ flowchart LR
     class HOOK,ADM,KREV partial;
 ```
 
-Every token carries three lineage claims: `jti` (unique per token), `grant_id`
-(minted on the user token at consent and copied unchanged through every exchange)
-and, on exchanged tokens, `parent_jti` (the jti of the subject token consumed).
-That is enough to follow a chain downward from any token.
+Every token carries three lineage claims. `jti` is unique per token. `grant_id`
+is minted on the user token at consent and copied unchanged through every
+exchange. On exchanged tokens, `parent_jti` is the jti of the subject token
+consumed. That is enough to follow a chain downward from any token.
 
 `POST /revoke` (also `STS.revoke`) follows RFC 7009:
 
@@ -137,14 +137,14 @@ That is enough to follow a chain downward from any token.
   the session above it. A genuine token outside that set is 400 `unauthorized_client`,
   as section 2.1 of the RFC says to inform the client.
 
-Extension beyond RFC 7009 (which is silent on exchanged tokens): revoking a token
-revokes every token exchanged from it, by lineage, and revoking a user token
-revokes its `grant_id`, so every token in that family is dead whether or not the
-STS still remembers it. Revoking one handoff leaves its siblings alone.
+RFC 7009 is silent on exchanged tokens, so this STS extends it. Revoking a token
+revokes every token exchanged from it, by lineage. Revoking a user token revokes
+its `grant_id`, so every token in that family is dead whether or not the STS
+still remembers it. Revoking one handoff leaves its siblings alone.
 
-Admin paths, outside RFC 7009 and taking handles rather than token strings:
-`STS.revoke_grant(grant_id)` kills a consent, `STS.revoke_client(client_id)`
-kills every live token where that client is the actor or appears in `act` and
+The admin paths sit outside RFC 7009 and take handles, not token strings.
+`STS.revoke_grant(grant_id)` kills a consent. `STS.revoke_client(client_id)`
+kills every live token where that client is the actor or appears in `act`, and
 refuses it new actor tokens and exchanges until `enable_client`. They are
 reachable over HTTP through the `ops-console` client; see "Admin revocation".
 
@@ -188,31 +188,30 @@ In the STS process. `sts.py` writes it; `verify.py` never imports the STS and
 reaches the state only through the `RevocationCheck` it was handed. In `demo.py`
 and the tests that object is the STS's own `Denylist`, so the "callback" is a
 method call in the same process. Across real PEPs the same seam becomes a push
-from the STS to each verifier, or a shared store both read; that transport is the
-part that is not built. RFC 7009 section 3 calls the interaction between the
-authorization server and the resource servers for this purpose out of scope and
-not standardized, which is why the spec leaves it open and why `verify.py` takes
-a protocol rather than an address.
+from the STS to each verifier, or a shared store both read. That transport is
+the part that is not built. RFC 7009 section 3 calls the interaction between
+the authorization server and the resource servers out of scope. That is why the
+spec leaves it open and why `verify.py` takes a protocol instead of an address.
 
-Size is bounded by lifetime, not by traffic: every entry expires at the latest
+Size is bounded by lifetime, not by traffic. Every entry expires at the latest
 `exp` in its family, and no exchanged token outlives the user token it came
-from, so the set holds at most one user-token lifetime (600 s) of revocations.
+from. The set holds at most one user-token lifetime (600 s) of revocations.
 
 ### Tool reports and escalation
 
 A tool server is a registered client with no audiences and no scopes
 (`tool-github`, `tool-jira`, `tool-fs`), so it can authenticate at `/revoke` but
-can exchange nothing. By the ownership rule above it is the holder of exactly the
-tool tokens addressed to it, so it may revoke the token it was presented and
-nothing above it: the handoff, the user token and other tools' tokens are all
+can exchange nothing. By the ownership rule above it holds exactly the tool
+tokens addressed to it. It may revoke the token it was presented and nothing
+above it. The handoff, the user token and other tools' tokens are all
 `unauthorized_client`, whatever reason it gives.
 
 `/revoke` takes an optional `reason`: `cleanup`, `anomaly` or
 `injection_suspected`; anything else is 400 `invalid_request`. The reason is
-audited on every revocation. It never widens what the caller may revoke. What it
-does is feed a strike counter the STS owns, keyed by (`grant_id`, actor chain of
-the reported token), inside `EscalationPolicy.window_s` (default 10 minutes;
-the clock is the STS clock, so tests can move it). `cleanup` never counts.
+audited on every revocation. It never widens what the caller may revoke. It
+feeds a strike counter the STS owns, keyed by `grant_id` and the actor chain of
+the reported token. Strikes count inside `EscalationPolicy.window_s`, default
+10 minutes, on the STS clock so tests can move it. `cleanup` never counts.
 
 | Strikes in window | What the STS revokes, on top of the caller's own revocation |
 |---|---|
@@ -224,11 +223,12 @@ Every step is logged as `revocation_escalation` with the reason, the strike coun
 the step and how many jtis were denied. Thresholds and window are the
 `EscalationPolicy` dataclass passed to `STS(escalation=...)`.
 
-The trade-off is deliberate. A hostile or buggy tool server can cost the actor its handoff after two reports and the user their grant
-after three, inside the window. Detection happens at the edge, where the tool
-sees the call; authority stays at the center, where the STS applies a policy the
-tool cannot change; and the blast radius is bounded by that policy, not by what
-the reporter asks for. A tool that wants more than this gets `unauthorized_client`.
+The trade-off is deliberate. A hostile or buggy tool server can cost the actor
+its handoff after two reports and the user their grant after three, inside the
+window. Detection happens at the edge, where the tool sees the call. Authority
+stays at the center, where the STS applies a policy the tool cannot change. The
+blast radius is bounded by that policy, whatever the reporter asks for. A
+tool that wants more than this gets `unauthorized_client`.
 Repeated reports of the same token count as separate strikes; de-duplicating by
 jti would be a reasonable tightening and is not done here.
 
@@ -241,22 +241,22 @@ jti would be a reasonable tightening and is not done here.
 200 with zero counts and is audited, so the routes cannot be used to probe.
 
 The credential is an actor token from the `ops-console` client, the only
-holder of scope `sts:admin`, presented under the `DPoP` scheme with a proof
-over it (the resource-server side of RFC 9449, section 7.1); the same bound
-token under `Bearer`, or without a fresh proof from its key, is 401
-`invalid_dpop_proof`. That scope is refused by the dev login and by every
-exchange, whether requested or merely held by the subject, so it can never land
-in a user, handoff or tool token. No bearer, a user or tool token, a revoked
-actor token or one from a disabled client is 401 `invalid_client`; a live actor
-token from a client without `sts:admin` is 403 `insufficient_scope`. Both carry
-RFC 6749 section 5.2 bodies. A user token presented here is treated as "not a
-client credential" (401) rather than "a client without the scope" (403), because
-the holder of a user token is not the entity this check is about.
+holder of scope `sts:admin`. It is presented under the `DPoP` scheme with a
+proof over it, the resource-server side of RFC 9449, section 7.1. The same
+bound token under `Bearer`, or without a fresh proof from its key, is 401
+`invalid_dpop_proof`. The dev login and every exchange refuse that scope,
+whether requested or held by the subject, so it can never land in a user,
+handoff or tool token. No bearer, a user or tool token, a revoked actor token
+or one from a disabled client is 401 `invalid_client`. A live actor token from
+a client without `sts:admin` is 403 `insufficient_scope`. Both carry RFC 6749
+section 5.2 bodies. A user token presented here is 401, "not a client
+credential". It is never 403, "a client without the scope", because the holder
+of a user token is not the entity this check is about.
 
-Why the same client machinery rather than a shim: admin is just another caller
-with a credential and a scope, so it gets the same authentication, the same
-audit line (`by: ops-console`) and the same revocation (`revoke_client` on
-`ops-console` locks the console out, recovery is `enable_client` on the host).
+Admin uses the same client machinery as every other caller. Admin is a caller with
+a credential and a scope, so it gets the same authentication, the same audit
+line (`by: ops-console`) and the same revocation. `revoke_client` on
+`ops-console` locks the console out; recovery is `enable_client` on the host.
 When agents move to SVIDs (prototype B) the console moves with them to an admin
 SVID, with nothing special-cased to rewrite. Binding the routes to loopback
 would be optional hardening on top; the scope check is the control.
@@ -265,19 +265,20 @@ would be optional hardening on top; the scope check is the control.
 `STS_KEY_OPS_CONSOLE` (path to the console's DPoP key) from the environment,
 one actor token, one call, the JSON answer on stdout.
 
-Keycloak caveat: Keycloak's `/revoke` only knows tokens Keycloak issued. For hop 1
-to participate, this STS would have to introspect the subject token on every
-exchange or consume Keycloak admin events (logout, consent withdrawn) and translate
-them into grant revocations. Neither is built; today a Keycloak-issued user token
-revoked at Keycloak still exchanges here until it expires.
+Keycloak's `/revoke` only knows tokens Keycloak issued. For hop 1 to take part,
+this STS would have to do one of two things. It could introspect the subject
+token on every exchange. Or it could consume Keycloak admin events (logout,
+consent withdrawn) and translate them into grant revocations. Neither is built.
+A Keycloak-issued user token revoked at Keycloak still exchanges here until it
+expires.
 
 ## Sender constraint (DPoP)
 
 A bearer token is good for whoever holds the bytes. Threat 1 in
-`THREAT_MODEL.md` is exactly that: a tool token copied out of an agent's
-process works at the tool until it expires, 120 to 300 s. RFC 9449 (DPoP)
-closes it by binding a token to a key the client holds and requiring, on every
-request, a short signed proof that the client still holds it.
+`THREAT_MODEL.md` is exactly that. A tool token copied out of an agent's
+process works at the tool until it expires, 120 to 300 s later. RFC 9449 (DPoP)
+closes it by binding a token to a key the client holds. Every request then
+carries a short signed proof that the client still holds that key.
 
 How it works here, end to end:
 
@@ -310,9 +311,9 @@ How it works here, end to end:
    revoke-key`) denylists every live token bound to a key, with its
    descendants, and refuses every future proof from it.
 
-Token responses say `token_type: DPoP` for actor and tool tokens; the handoff
-stays `N_A` as RFC 8693 section 2.2.1 prescribes for a token that is not for
-direct use at a resource (it goes back to the STS as a subject token).
+Token responses say `token_type: DPoP` for actor and tool tokens. The handoff
+stays `N_A`, as RFC 8693 section 2.2.1 prescribes for a token that is not for
+direct use at a resource. It goes back to the STS as a subject token.
 
 ### What RFC 9449 says, what this STS does
 
@@ -349,31 +350,29 @@ it (as `subject_token` at the next exchange). Two ways to bind it:
 
 RFC 8705 binds a token to the client certificate on the TLS connection. That
 needs certificates for every agent and tool, which is what prototype B's
-X.509-SVIDs are, and it is the stated end state: once SPIRE issues SVIDs, the
-mTLS connection the gateway and tools already use for the SVID becomes the
-binding, with `cnf.x5t#S256` in place of `cnf.jkt` and no proof JWT per
-request. DPoP needs no infrastructure beyond a key in each process and a
-header on each call, so it lands now and closes the same threat at the
-application layer. The verifier's `cnf` check is the seam: a token bound by
-either method is "bound to a key the caller must prove", and the revocation
-tie-in (`revoke_key`) is the same.
+X.509-SVIDs are. It is the stated end state. Once SPIRE issues SVIDs, the mTLS
+connection the gateway and tools already use becomes the binding, with
+`cnf.x5t#S256` in place of `cnf.jkt` and no proof JWT per request. DPoP needs
+no infrastructure beyond a key in each process and a header on each call. It
+lands now and closes the same threat at the application layer. The verifier's
+`cnf` check is the seam. A token bound by either method is "bound to a key the
+caller must prove", and the revocation tie-in (`revoke_key`) is the same.
 
 ### Limit
 
 DPoP binds a token to a software key in the agent's process. It stops token
-theft: a copied token, a captured proof, a proof for another URI or another
-tool, a stale proof, all refused. It does not stop process compromise: an
-attacker inside the sub-agent's process has the key and signs proofs like the
-sub-agent does. That is the layer the hardware key and SPIFFE address, not
-this one. The speaker's device credential in `DEVICE_IDENTITY.md` is the
-hardware-key case of the same `cnf.jkt` binding: the key is in a YubiKey
-rather than a Python object, so it cannot be copied out of the process,
-only used from it. Agents will get there when their keys move to an SVID
-backed by attestation (prototype B). Until then, "bound" means "bound to this
-process's memory".
+theft. A copied token, a captured proof, a proof for another URI or another
+tool and a stale proof are all refused. It does not stop process compromise.
+An attacker inside the sub-agent's process has the key and signs proofs like
+the sub-agent does. The hardware key and SPIFFE address that layer. The speaker's
+device credential in `DEVICE_IDENTITY.md` is the hardware-key case of the same
+`cnf.jkt` binding. The key is in a YubiKey instead of a Python object, so it
+cannot be copied out of the process, only used from it. Agents get there when
+their keys move to an SVID backed by attestation (prototype B). Until then,
+"bound" means "bound to this process's memory".
 
 Keys are generated at startup and die with the process, like the signing key.
-Rotation is not built: to replace a client's key, revoke the old thumbprint
+Rotation is not built. To replace a client's key, revoke the old thumbprint
 and register the new one.
 
 ## Device-bound user tokens
@@ -469,7 +468,7 @@ is an STS client.
 ## Future state
 
 Revoke the narrowest thing that stops the harm, and make the cut immediate.
-Order of operations, narrowest first: scope, then grant, then credential. A
+Revoke the scope first, then the grant, then the credential. A
 gateway deny-list entry is the immediate cut at any tier while the slower
 revocation lands. Every hop is audited.
 

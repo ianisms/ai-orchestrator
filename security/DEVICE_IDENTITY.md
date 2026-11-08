@@ -72,7 +72,7 @@ This proves that the device holds the enrolled key. It does not prove what
 software is running on it. There is no measured boot, no PCR quote, no
 attestation key chained to a manufacturer. A CM5 whose root filesystem has been
 replaced still attests fine if the YubiKey is plugged in. This is device
-identity, not attestation.
+identity. Attestation is the future state below.
 
 ### Theft of a pluggable key
 
@@ -114,7 +114,7 @@ order they apply:
 
 The next carrier-board revision (`speaker/hardware/pcb/theboard/`, rev 3.7
 today) puts a TPM 2.0 on the PCB over SPI. The key is generated in the TPM and
-never leaves it, nothing is pluggable, and the TPM's PCRs let the orchestrator
+never leaves it, and nothing is pluggable. The TPM's PCRs let the orchestrator
 require a quote over the boot chain before issuing the credential. The device
 then proves what software it runs as well as which key it holds.
 
@@ -135,9 +135,9 @@ sequenceDiagram
     O-->>S: credential only if the key and the measured state both pass
 ```
 
-The orchestrator side keeps its shape: a signer behind the `Signer`
-interface, an enrollment registry keyed by thumbprint, a short nonce, a
-short-lived key-bound credential. The TPM adds a quote to the attest request
+The orchestrator side keeps its shape. There is still a signer behind the
+`Signer` interface, an enrollment registry keyed by thumbprint, a short nonce
+and a short-lived key-bound credential. The TPM adds a quote to the attest request
 and a PCR policy to the verifier. The session pieces in `SESSION_BINDING.md`
 do not change; moving the key from the YubiKey into the TPM changes the signer
 and nothing else.
