@@ -1,7 +1,7 @@
 # XVF3800 New Board Setup Gameplan
 
 **Date:** January 15, 2026
-**Status:** Pi software ready ✅ — Waiting for new XVF3800 board
+**Status:** Pi software ready. Waiting for the new XVF3800 board.
 
 ---
 
@@ -16,22 +16,22 @@ Make the Raspberry Pi CM5 (Geekworm X1500) capture audio from the Seeed ReSpeake
 
 ---
 
-## ✅ Pi Software Status (COMPLETE)
+## Pi software status (complete)
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| Device Tree Overlay | ✅ Installed | `/boot/firmware/overlays/xvf3800-i2s-capture.dtbo` |
-| config.txt | ✅ Updated | `dtoverlay=xvf3800-i2s-capture` |
-| ALSA Card | ✅ Visible | `card 0: XVF3800I2SCaptu [XVF3800-I2S-Capture]` |
-| GPIO Mux | ✅ Configured | GPIO 18-21 → `alt4 (i2s1)` |
-| rp1_i2s0 | ✅ Disabled | Prevents pin conflict |
-| rp1_i2s1 | ✅ Enabled | Using GPIO 18-21 |
+| Device Tree Overlay | Installed | `/boot/firmware/overlays/xvf3800-i2s-capture.dtbo` |
+| config.txt | Updated | `dtoverlay=xvf3800-i2s-capture` |
+| ALSA Card | Visible | `card 0: XVF3800I2SCaptu [XVF3800-I2S-Capture]` |
+| GPIO Mux | Configured | GPIO 18-21 → `alt4 (i2s1)` |
+| rp1_i2s0 | Disabled | Prevents pin conflict |
+| rp1_i2s1 | Enabled | Using GPIO 18-21 |
 
 **No additional Pi software setup needed.**
 
 ---
 
-## 📌 Complete XVF3800 I2S Pinout (from Seeed Wiki)
+## Complete XVF3800 I2S pinout (from Seeed Wiki)
 
 ### I2S Header Pins (for audio)
 
@@ -42,7 +42,7 @@ Make the Raspberry Pi CM5 (Geekworm X1500) capture audio from the Seeed ReSpeake
 | **X0D37** | BCLK (Bit Clock) | XVF → Pi | Pi GPIO18 (Pin 12) |
 | **X0D38** | LRCLK/FS (Frame Sync) | XVF → Pi | Pi GPIO19 (Pin 35) |
 | **X1D00** | DOUT (Audio Out) | XVF → Pi | Pi GPIO20 (Pin 38) |
-| **X1D01** | DIN (Audio In) | Pi → XVF | Pi GPIO21 (Pin 40) — *optional* |
+| **X1D01** | DIN (Audio In) | Pi → XVF | Pi GPIO21 (Pin 40) - *optional* |
 
 ### GPIO Pins (optional control)
 
@@ -130,11 +130,11 @@ XVF3800                           Raspberry Pi CM5
 
 ---
 
-## 🔧 Step-by-Step Setup for New Board
+## Step-by-step setup for the new board
 
 ### Step 1: Flash Firmware (on PC first)
 
-⚠️ **Flash BEFORE connecting to Pi** — USB DFU doesn't work after I2S firmware is loaded.
+**Flash before connecting to the Pi.** USB DFU does not work after the I2S firmware is loaded.
 
 1. Download firmware from [ReSpeaker XVF3800 GitHub](https://github.com/respeaker/reSpeaker_XVF3800_USB_4MIC_ARRAY)
 2. Connect XVF3800 to PC via USB-C (use the XMOS port near 3.5mm jack)
@@ -161,8 +161,8 @@ dfu-util -R -e -a 1 -D respeaker_xvf3800_i2s_master_dfu_firmware_v1.0.x_48k.bin
 1. Power on Pi (USB-C or barrel jack to X1500)
 2. XVF3800 should power from Pi's 5V header
 3. Check XVF3800 LEDs:
-   - ✅ **LEDs stay on/breathing** = Board is running
-   - ❌ **LEDs flash once then off** = Power issue (see troubleshooting)
+   - **LEDs stay on/breathing** = Board is running
+   - **LEDs flash once then off** = Power issue (see troubleshooting)
 
 ### Step 4: Validate Audio Capture
 
@@ -188,7 +188,7 @@ hexdump -C /tmp/test.wav | head -n 30
 
 **Solutions:**
 1. Try powering via USB instead of 5V header (connect USB while I2S wires attached)
-2. Check Pi's 5V rail: `vcgencmd measure_volts` — should be close to 5.0V
+2. Check Pi's 5V rail: `vcgencmd measure_volts` - should be close to 5.0V
 3. Use shorter/thicker wires for 5V/GND
 4. Try a different 5V source (USB charger via XVF's USB-C port)
 
@@ -207,7 +207,7 @@ cat /sys/kernel/debug/clk/clk_summary | grep -A2 clk_i2s
 
 **Solutions:**
 1. Verify BCLK (X0D37 → GPIO18) and LRCLK (X0D38 → GPIO19) wires
-2. Verify XVF3800 is actually running (LEDs on)
+2. Verify the XVF3800 is running (LEDs on)
 3. Check GPIO states: `raspi-gpio get 18-20`
 
 ### No ALSA card visible
@@ -251,7 +251,7 @@ If XVF3800 firmware is corrupted or unresponsive:
 
 ---
 
-## 📋 Firmware Options
+## Firmware options
 
 | Firmware | Channels | Output |
 |----------|----------|--------|
@@ -293,7 +293,7 @@ dmesg | grep -iE 'i2s|asoc|simple.*card'
 
 ---
 
-## ✅ Checklist for New Board
+## Checklist for the new board
 
 - [ ] Flash I2S master firmware from PC (before connecting to Pi)
 - [ ] Verify LEDs stay on after USB disconnect
