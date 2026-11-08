@@ -11,8 +11,8 @@ runs but with a documented gap; not built = design only.
 
 ## 1. The problem
 
-Two facts about the system before this change, both documented and both wrong
-to leave as they were:
+Two facts about the system before v2.0, both documented and both wrong to
+leave as they were:
 
 1. The speaker was trusted by where it was and who was talking, not by what it
    was. The YubiKey challenge existed (`DEVICE_IDENTITY.md`), the orchestrator
@@ -156,7 +156,7 @@ is the token an attacker on the server would most like to replay, and it is the
 one fact the hardware can speak to. The actor leg (gateway, sub-agents, tool
 tokens) stays bound to the software keys of the processes that present them,
 with `act` lineage back to the device-bound user token. Moving those keys into
-hardware is prototype B (SPIFFE), not this change.
+hardware is prototype B (SPIFFE), in the future state.
 
 ### 4.3 Who proves possession at the exchange
 

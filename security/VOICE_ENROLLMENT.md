@@ -15,7 +15,7 @@ not built = design only.
 | Path | Who starts it | What it produces | Status |
 |---|---|---|---|
 | Stated name ("I'm Alice") | the person, mid-conversation | one pending sample; joins nothing until `scripts/approve_enrollment.py approve` | built (unchanged) |
-| Admin session | an admin on the host, for one person on one speaker | a profile with its own threshold and a record, after the criteria hold | built (this change) |
+| Admin session | an admin on the host, for one person on one speaker | a profile with its own threshold and a record, after the criteria hold | built (v2.0) |
 
 The admin session is the path for new voices. The stated-name path stays for
 adding a sample to a voice that already has a profile, one approval at a time.
