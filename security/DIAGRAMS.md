@@ -7,7 +7,7 @@ every gap names the threat in `THREAT_MODEL.md` it leaves open.
 Status key: built = runs with tests; partial = runs but with a documented gap;
 not built = design only.
 
-## 1. Attestation, current state
+## Attestation, current state
 
 Three kinds of principal reach the tool plane: the speaker device, the person
 speaking, and the agents that act for them. Each is trusted on a different
@@ -76,7 +76,7 @@ What this means, in one line each:
   without it (threat 1). What that does not cover is a compromised process,
   which holds the key.
 
-## 2. Attestation, future state
+## Attestation, future state
 
 The device proves what it is with a key it cannot export; the agent proves what it
 is with a workload identity issued from attestation; the person still authenticates
@@ -122,7 +122,7 @@ What changes:
 
 - "Where" becomes "what": the gRPC peer check becomes an mTLS peer identity from a
   key held in hardware. Closes threat 18 as a spoofing problem; a compromised device
-  is then a revocation problem (section 4).
+  is then a revocation problem (see "Revocation, current and future state").
 - The voice gate gets its missing signal. Liveness lands, then enforce mode (threats
   15, 21, rollout steps 1 to 4 in `THREAT_MODEL.md`).
 - Agents get SVIDs instead of secrets. The actor credential at the STS becomes the
@@ -136,7 +136,7 @@ In one line: the speaker proves which device it is with a hardware-held key
 (`DEVICE_IDENTITY.md`, `SESSION_BINDING.md`); the future state adds a secure
 element or TPM so that it can also prove what software it runs.
 
-## 3. Token exchange, as built (prototype A)
+## Token exchange, as built (prototype A)
 
 Runs in `security/delegation/`, 71 tests. The chain is user > mcp-gateway >
 code-review-subagent, access narrows at every hop, and every token is bound to
@@ -194,7 +194,7 @@ tool token without a proof, with another key, with its captured proof replayed,
 with a proof for another URI, with a stale proof, exchange without a proof or
 under another client's key, revoked key.
 
-## 4. Revocation, current and future state
+## Revocation, current and future state
 
 ### Current state
 
@@ -281,7 +281,7 @@ box is true for agents today: `revoke_key` in `sts.py` denylists everything boun
 to a thumbprint and refuses its proofs. With v2.0 it is true for the speaker too:
 the session's user token is bound to the device key and `revoke_device` kills it
 with its subtree (`SESSION_BINDING.md`). Diagram 1 shows the actor leg; the
-device-bound session flows are drawn in `SESSION_BINDING.md` section 5.
+device-bound session flows are drawn in `SESSION_BINDING.md` under "Flows".
 
 ## Where each piece lives
 
@@ -291,10 +291,10 @@ device-bound session flows are drawn in `SESSION_BINDING.md` section 5.
 | Speaker identification on the turn's audio | built | `server/modules/orchestrator/core/audio_tap.py`, identity tool | 16 |
 | Liveness check | not built | rollout step 3 | 15, 21 |
 | Spoken confirmation and phone approval | not built | rollout step 2 | 17, 19 |
-| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; TPM on the carrier board not built; mTLS from device not taken, see `SESSION_BINDING.md` 4.1) | `DEVICE_IDENTITY.md`, `SESSION_BINDING.md` | 18, 1 |
+| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; TPM on the carrier board not built; mTLS from device not taken, see `SESSION_BINDING.md`, "Bind per connection, not per request") | `DEVICE_IDENTITY.md`, `SESSION_BINDING.md` | 18, 1 |
 | Admin-run voice enrollment with per-user thresholds | built | `VOICE_ENROLLMENT.md` | 17, 15 |
 | Client-secret actor credentials | built (prototype) | `security/delegation/sts.py` | 6 |
-| SPIFFE/SPIRE workload identity | not built (prototype B) | section 2 | 6, 13 |
+| SPIFFE/SPIRE workload identity | not built (prototype B) | "Attestation, future state" | 6, 13 |
 | RFC 8693 exchange with nested `act` chain | built | `security/delegation/sts.py` | 2, 3, 4, 5 |
 | Tool-side verifier | built | `security/delegation/verify.py` | 5, 10 |
 | AuthZEN-shaped PEP and OPA PDP, fail closed | built | `security/policy/` | 7, 8, 9 |
@@ -302,5 +302,5 @@ device-bound session flows are drawn in `SESSION_BINDING.md` section 5.
 | Lineage claims, RFC 7009 `/revoke` with subtree extension, in-memory denylist, verify-side check | built (prototype) | `security/delegation/sts.py`, `revocation.py`, `verify.py` | 11 |
 | Tool reports with STS-owned escalation (token, delegation, grant) | built (prototype) | `security/delegation/sts.py: _escalate`, `revocation.EscalationPolicy` | 11, 7 |
 | Admin revocation routes behind an `sts:admin` actor token | built (prototype) | `security/delegation/sts.py: authorize_admin`, `admin.py` | 11 |
-| Revocation beyond lifetimes | partial | section 4; key revocation built (`sts.py: revoke_key`); pushed deny list across PEPs, SVID revocation and an admin SVID not built | 11 |
+| Revocation beyond lifetimes | partial | "Revocation, current and future state"; key revocation built (`sts.py: revoke_key`); pushed deny list across PEPs, SVID revocation and an admin SVID not built | 11 |
 | Append-only audit sink | not built | next controls item 5 | 12 |

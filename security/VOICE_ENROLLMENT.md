@@ -1,7 +1,7 @@
 # Voice enrollment
 
 How a voice becomes a profile the voice gate trusts. The reasoning is in
-`SESSION_BINDING.md` section 4.6. This page covers the procedure, the
+`SESSION_BINDING.md` under "Enrollment criteria". This page covers the procedure, the
 acceptance criteria and the record each profile carries. Code: `server/modules/orchestrator/core/voice_enrollment.py`
 (sessions, criteria, profile writes), `server/scripts/enroll_voice.py` (admin),
 `server/tools_server/tools/get_person_id` (`enrollment_sample`, hidden from the
