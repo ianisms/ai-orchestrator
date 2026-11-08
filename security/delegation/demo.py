@@ -30,7 +30,7 @@ sts = STS(issuer=ISS)
 http = TestClient(create_app(sts))
 TOKEN_URL = str(http.base_url).rstrip("/") + "/token"
 # The tool verifier shares the STS denylist in process (the pushed deny list in
-# DIAGRAMS.md, revocation future state, is the target; this is the demo stand-in).
+# README.md, revocation future state, is the target; this is the demo stand-in).
 github = UpstreamVerifier(ISS, "tool-github", key=sts.public_key, revocation=sts.denylist)
 
 

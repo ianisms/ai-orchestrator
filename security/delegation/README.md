@@ -6,11 +6,42 @@ checks both who the user is (`sub`) and which agents are acting (`act`), and
 rejects any token without `act`. The chain can go one level deeper:
 user > mcp-gateway > code-review-subagent, with access narrowing at each hop.
 
-```
-alice --consent--> user token (aud=mcp-gateway, may_act=mcp-gateway, cnf.jkt=gateway key)
-mcp-gateway --exchange + actor token + DPoP proof--> handoff token (aud=sub-agent, may_act=sub-agent, act=[gateway], cnf.jkt=sub-agent key)
-code-review-subagent --exchange + actor token + DPoP proof--> tool token (aud=tool-github, act=[gateway, sub-agent], 120 s, cnf.jkt=sub-agent key)
-tool-github --verify token + DPoP proof--> alice > mcp-gateway > code-review-subagent, scope repo:read, key sub-agent
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User (alice)
+    participant STS as STS<br/>sts.py
+    participant GW as mcp-gateway
+    participant SA as code-review-subagent
+    participant T as tool-github<br/>verify.py
+    participant PEP as PEP<br/>policy/ (prototype C)
+    participant PDP as PDP (OPA)
+
+    U->>STS: login + consent to mcp-gateway
+    STS-->>U: user token<br/>aud=mcp-gateway, may_act=mcp-gateway, scope, 600 s,<br/>cnf.jkt = gateway key
+    U->>GW: user token
+
+    GW->>STS: client_credentials + DPoP proof (gateway key)
+    STS-->>GW: actor token (token_use=actor, 60 s, cnf.jkt = gateway key)
+    GW->>STS: token exchange + DPoP proof<br/>subject=user token, actor=actor token,<br/>delegate_to=code-review-subagent
+    Note over STS: proof checked first: typ, alg, jwk, htm, htu, iat, jti unseen<br/>proof key must equal cnf.jkt of actor and subject<br/>aud and may_act must name the actor<br/>scope = held AND actor AND next actor<br/>depth counted at handoff, cap 2
+    STS-->>GW: handoff token<br/>aud=sub-agent, act=[gateway], may_act=sub-agent,<br/>cnf.jkt = sub-agent key (bound to the delegate)
+    GW->>SA: handoff token
+
+    SA->>STS: client_credentials + DPoP proof (sub-agent key)
+    STS-->>SA: actor token (cnf.jkt = sub-agent key)
+    SA->>STS: token exchange + DPoP proof<br/>subject=handoff, actor=actor token,<br/>audience=tool-github
+    Note over STS: plain exchange of a token with act or may_act is refused<br/>exp = min(now + 120 s, subject exp), no refresh
+    STS-->>SA: tool token<br/>sub=alice, act=[gateway, sub-agent], scope repo:read,<br/>jti, parent_jti, grant_id, cnf.jkt = sub-agent key
+
+    SA->>T: tools/call + tool token + DPoP proof (ath over the token)
+    T->>T: verify signature, iss, aud, exp<br/>then the proof: key = cnf.jkt, htm, htu, iat, jti, ath<br/>then denylist by jti, parent_jti, grant_id<br/>reject any token without act
+    T->>PEP: subject (alice + act chain), action, resource, context
+    PEP->>PDP: AuthZEN-shaped request
+    Note over PDP: whole chain evaluated once<br/>every actor must hold the tool<br/>writes need the user's single-use approval
+    PDP-->>PEP: decision + reasons (fail closed on timeout or error)
+    PEP-->>T: allow / deny, logged
+    T-->>SA: result or refusal
 ```
 
 Every token is bound to a key (`cnf.jkt`) and every call carries a DPoP proof
@@ -52,6 +83,38 @@ python dpop.py keygen gateway.pem   # a client's DPoP key (PEM, mode 600); print
 - Every `/token` call carries a DPoP proof; the proof key must be the one the actor token and the subject token are bound to (`cnf.jkt`), and a token without `cnf` is refused. The issued token is bound to the key of whoever will present it next.
 
 ## Revocation
+
+```mermaid
+flowchart LR
+    subgraph Now["Revocation, current state (prototypes A and C)"]
+        TTL["Short lifetimes stay<br/>user 600 s, actor 60 s, tool 120 to 300 s<br/>no refresh tokens"]
+        LIN["Lineage claims on every token<br/>jti, parent_jti, grant_id<br/>sts.py"]
+        REV["RFC 7009 /revoke + subtree extension<br/>revoke a token = its descendants too<br/>revoke a user token = its grant<br/>sts.py: revoke"]
+        RPT["Tool reports: /revoke with reason<br/>tool may revoke only the token it was presented<br/>STS-owned strikes per (grant, chain), 10 min window:<br/>1 token, 2 actor's delegation, 3 grant<br/>sts.py: _escalate, revocation.EscalationPolicy"]
+        ADM["Admin routes: /admin/revoke/grant, /admin/revoke/client,<br/>/admin/enable/client, /admin/revoke/key<br/>key-bound actor token from ops-console under the DPoP scheme<br/>(scope sts:admin, never issued by exchange); handles in, counts out<br/>sts.py: authorize_admin, admin.py CLI"]
+        KREV["Key revocation: /admin/revoke/key, revoke_key(jkt)<br/>every token bound to the key and its descendants denied,<br/>every future proof from the key refused<br/>sts.py: revoke_key"]
+        DENY["In-memory denylist by jti and grant_id<br/>entries expire with the family, bounded by 600 s<br/>revocation.py"]
+        HOOK["Verify-side check after local JWT verification<br/>shared denylist in process, or a callback<br/>verify.py: RevocationCheck"]
+        PUSH["Pushed deny list across PEPs<br/>NOT BUILT: a tool that does not share<br/>the object does not see revocations (threat 11)"]
+        PDPX["PDP fail-closed is a second, independent cut:<br/>OPA down or policy change = all calls denied<br/>(threat 9, by design)"]
+        LOG["In-process audit log, revocations included<br/>no tamper evidence, no central sink (threat 12)"]
+    end
+    LIN --> REV --> DENY --> HOOK
+    RPT --> DENY
+    ADM --> DENY
+    KREV --> DENY
+    HOOK -.-> PUSH
+    TTL --> DENY
+    PDPX --> LOG
+    REV --> LOG
+    RPT --> LOG
+    ADM --> LOG
+    KREV --> LOG
+    classDef gap fill:#fde2e2,stroke:#b00020,color:#000;
+    classDef partial fill:#fff4d6,stroke:#b58100,color:#000;
+    class PUSH,LOG gap;
+    class HOOK,ADM,KREV partial;
+```
 
 Every token carries three lineage claims: `jti` (unique per token), `grant_id`
 (minted on the user token at consent and copied unchanged through every exchange)
@@ -99,7 +162,7 @@ Enforcement, two places:
   so a forged token never reaches the revocation state), then consults an optional
   `RevocationCheck`. Two implementations: the STS denylist shared in process (what
   `demo.py` does) and `CallbackRevocationCheck`, which wraps any callable and stands
-  in for a deny list pushed to each PEP, the target in `DIAGRAMS.md` section 4.
+  in for a deny list pushed to each PEP, the target under "Future state" below.
   With no checker the verifier stays offline and unaware of revocations. A checker
   that raises is a refusal. Per-call introspection (RFC 7662) was not chosen: it adds
   a network hop to every tool call and makes the STS a central dependency for all
@@ -403,7 +466,40 @@ is an STS client.
 | ops-console's bound token sent as a plain Bearer | HTTP 401 invalid_dpop_proof |
 | ops-console revokes the sub-agent's key | every token bound to it refused at tool; its handoff exchange and new actor tokens refused at STS; the gateway's tokens untouched |
 
-## Future state: not built here
+## Future state
+
+Revoke the narrowest thing that stops the harm, and make the cut immediate.
+Order of operations, narrowest first: scope, then grant, then credential. A
+gateway deny-list entry is the immediate cut at any tier while the slower
+revocation lands. Every hop is audited.
+
+```mermaid
+flowchart TD
+    DETECT["Signal: injection seen, device compromised,<br/>user withdraws consent, agent retired"]
+
+    DETECT --> SCOPE["1. Narrow the scope<br/>policy change at the PDP:<br/>remove the tool or action for this chain"]
+    DETECT --> GRANT["2. Revoke the grant<br/>user's consent to this agent withdrawn<br/>at the STS; no new exchanges"]
+    DETECT --> CRED["3. Revoke the credential<br/>agent SVID evicted in SPIRE;<br/>device key removed from the enrollment registry"]
+    DETECT --> KILL["Immediate cut, any tier:<br/>gateway deny list by sub, act chain or jti,<br/>pushed to every PEP"]
+
+    SCOPE --> AUDIT
+    GRANT --> AUDIT
+    CRED --> AUDIT
+    KILL --> AUDIT
+    AUDIT["Append-only audit sink:<br/>every revocation and every refused call,<br/>with the reason"]
+
+    subgraph Binding["What makes it stick"]
+        KB["Key-bound tokens: a revoked key<br/>kills every token it holds<br/>built for agents (DPoP, revoke_key)<br/>and for the speaker (revoke_device, SESSION_BINDING.md)"]
+        TTL2["Short lifetimes stay: revocation is for<br/>the minutes a token is still live"]
+        CACHE["Speaker token cache: short TTL,<br/>cleared at session end,<br/>validated server-side on every call"]
+    end
+    KILL -.-> KB
+    KILL -.-> TTL2
+    KILL -.-> CACHE
+```
+
+The key-bound box holds for agents (`revoke_key`) and for the speaker
+(`revoke_device`, `../SESSION_BINDING.md`). Not built here:
 
 - `delegate_to` is a non-standard parameter; RFC 8693 leaves how `may_act` is set to the issuer.
 - A token can still be presented more than once within its lifetime by its holder; the replay cache is for proofs, not tokens, and a holder minting fresh proofs is the normal case.
