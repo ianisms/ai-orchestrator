@@ -1,7 +1,7 @@
 # Voice enrollment: admin-run, device-bound, measured
 
 How a voice becomes a profile the voice gate trusts. The reasoning is in
-`SESSION_BINDING.md` section 3.6; this page is the procedure, the criteria and
+`SESSION_BINDING.md` section 4.6; this page is the procedure, the criteria and
 the record. Code: `server/modules/orchestrator/core/voice_enrollment.py`
 (sessions, criteria, profile writes), `server/scripts/enroll_voice.py` (admin),
 `server/tools_server/tools/get_person_id` (`enrollment_sample`, hidden from the
