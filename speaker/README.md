@@ -86,7 +86,7 @@ All grounds are common. No clock cross-wiring between the two slaves.
 
 ### Enclosure
 
-`enclosure/guide/guide.md` is the print and assembly guide for revision 16. The enclosure is a 150 mm by 282 mm PETG-CF cylinder, about 1.7 L sealed, with the passive radiator tuned near 65 Hz, hex vent clusters top and bottom, and an optional veneer wrap. `enclosure/steps/` has the STEP solids for the body, grille, lens, and full assembly. `guide/gen_images.py` renders the cut diagrams.
+`enclosure/guide/guide.md` is the print and assembly guide for revision 16. The enclosure is a 150 mm by 282 mm PETG-CF cylinder, about 1.7 L sealed. The passive radiator is tuned near 65 Hz. It has hex vent clusters top and bottom and an optional veneer wrap. `enclosure/steps/` has the STEP solids for the body, grille, lens, and full assembly. `guide/gen_images.py` renders the cut diagrams.
 
 ## Deployment
 
