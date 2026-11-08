@@ -10,10 +10,12 @@ runs but with a documented gap; not built = design only.
 
 ## Current state
 
-Origin used to be location plus voice: the gRPC peer address checked against
-`VOICE_GATE_TRUSTED_SPEAKER_NETS`, and the speaker identified from the turn's
-own audio. Any host on a trusted address passed (threat 18). That address check
-remains only as the fallback while `VOICE_GATE_REQUIRE_DEVICE` is off.
+The speaker is identified by what it is: a key it holds and cannot export,
+proven at boot and carried on the stream. With `VOICE_GATE_REQUIRE_DEVICE` on,
+that is the voice gate's origin signal; with it off, the gate falls back to the
+gRPC peer address against `VOICE_GATE_TRUSTED_SPEAKER_NETS`, which any host on
+a trusted address passes (threat 18). Who is talking comes separately from the
+turn's own audio.
 
 A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
 generated on the YubiKey and cannot be exported. At boot the speaker proves it
