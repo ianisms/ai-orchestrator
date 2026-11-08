@@ -1,13 +1,13 @@
 # CM5 Carrier Board Design Guide
 
-Design brief and ground truth for a custom Raspberry Pi Compute Module 5 (CM5) carrier board in KiCad. Current revision: v3.7.
+Design brief and ground truth for a custom Raspberry Pi Compute Module 5 (CM5) carrier board in KiCad. The current revision is v3.7.
 
 - Key design:
     - Internal AC-DC PSU (Mean Well LRS-150-28) provides 28V DC to carrier board
     - HomePod-style captive AC cord (no user-facing connectors)
     - I want I2S to:
         - XVF3800 via 2x10 header connected via ribbon cable to 2x20 header pins on XVF3800, also provides power
-        - JAB5 via JST PH 6-pos (2 mm pitch) header — matches JAB5 J6 I2S input connector
+        - JAB5 via JST PH 6-pos (2 mm pitch) header - matches JAB5 J6 I2S input connector
 - I want to use quality parts
 - Lean towards quality but also simple / fewer components
 
@@ -20,8 +20,8 @@ The board should have:
 which will drive a **mono 2-way speaker**: **1× RS125-4 woofer + 1× RS100-4 tweeter**, 4 Ω each, one JAB5 channel each (2 of 4 channels used).
 - a 6 pin header to connect i2s to the same jab5
 
-The board powers a **WONDOM/Sure JAB5 amplifier module** (off-board, dual TDA7498E + ADAU1701 DSP, 4-channel Class D)
-which will drive a **mono 2-way speaker**: **1× RS125-4 woofer + 1× RS100-4 tweeter**, 4 Ω each, one JAB5 channel each (2 of 4 channels used).
+The board powers a **WONDOM/Sure JAB5 amplifier module** (off-board, dual TDA7498E + ADAU1701 DSP, 4-channel Class D).
+The JAB5 drives a **mono 2-way speaker**: **1× RS125-4 woofer + 1× RS100-4 tweeter**, 4 Ω each, one JAB5 channel each (2 of 4 channels used).
 The board must be **JLCPCB turnkey**.
 I want to power via a 140W usbc 3.1 laptop style power brick
 I have DigiKey symbols and footprints for Kicad
@@ -126,7 +126,7 @@ CM5 Connectors (100-pin slot)
 ### 5 V Rail (CM5 + peripherals)
 - LM73606 buck, 28 V input → 5.02 V output (adjustable via FB divider). 28 V within operating range (3.5-36 V rec, 40 V abs max).
 - FB divider: R_top 100 kΩ + R_bottom 24.9 kΩ, V_REF = 1.0 V → V_OUT = 5.016 V.
-- Margin to CM5 minimum (4.75 V): **266 mV** for IR drop — requires short, wide copper.
+- Margin to CM5 minimum (4.75 V): **266 mV** for IR drop - requires short, wide copper.
 - Rating: 6 A continuous; loads are CM5 (~3 A peak), GPIO header 5 V, AP63357 input.
 - Enable: LM73606 EN tied to 28V input (or via divider for enable threshold).
 - Do not back-power any CM5 pin before 5 V is present.
@@ -138,7 +138,7 @@ CM5 Connectors (100-pin slot)
 - Enable: AP63357 EN tied to 5 V rail (powers up after 5 V stabilizes).
 
 ### JAB5 Supply (direct 28 V)
-- JAB5 input range: 10-39 V. Running at 28 V — well within spec, more headroom per channel.
+- JAB5 input range: 10-39 V. Running at 28 V - well within spec, more headroom per channel.
 - Fed directly from 28V via Molex Micro-Fit 3.0 4-pin header (2×2, 3 mm pitch). Matches JAB5 J15 connector.
 - JAB5 J15 pinout: **Pin 1,2 = GND / Pin 3,4 = VCC (+28 V)**. Do not reverse.
 - JAB5 amp IC: dual TDA7498E (4-channel Class D). Rated 4×100 W at 6 Ω; at 4 Ω, clean power ~25-30 W/ch before THD exceeds 1%.
@@ -175,7 +175,7 @@ CM5 Connectors (100-pin slot)
 
 ### Enclosure Integration
 - PSU mounted inside enclosure, separate from carrier board
-- Captive AC cord (IEC C18 inlet or hardwired) — HomePod-style aesthetic
+- Captive AC cord (IEC C18 inlet or hardwired) - HomePod-style aesthetic
 - 28V DC output wired to carrier board screw terminal (J1)
 - Ensure adequate ventilation for PSU cooling
 
@@ -206,16 +206,16 @@ CM5 Connectors (100-pin slot)
 - Planned drivers: Dayton Audio 1× RS125-4 (woofer) + 1× RS100-4 (tweeter).
 - Mono 2-way: each driver on its own JAB5 channel (2 of 4 channels used), 4 Ω nominal per driver.
 - JAB5 in 4.0 mode (4 independent channels). Channels 3 and 4 unused.
-- 30 W/ch at 4 Ω — at the edge of clean operation for TDA7498E. DSP limiter enforces ceiling.
+- 30 W/ch at 4 Ω - at the edge of clean operation for TDA7498E. DSP limiter enforces ceiling.
 
 ## 10) Headers & IO
-### 28V DC Input — Screw Terminal, 2-pin
+### 28V DC Input - Screw Terminal, 2-pin
 - Receives 28V DC from internal Mean Well LRS-150-28 PSU.
 - Simple, reliable connection. No polarity protection on carrier (rely on correct wiring).
 
-### JAB5 Power Header — Molex Micro-Fit 3.0, 4-pin vertical (2×2, 3 mm pitch)
+### JAB5 Power Header - Molex Micro-Fit 3.0, 4-pin vertical (2×2, 3 mm pitch)
 - Matches JAB5 J15 connector (Molex 4Pos-3mm). **NOT Mini-Fit Jr (4.2 mm pitch).**
-- **Pin 1, 2: GND. Pin 3, 4: VCC (+28 V).** *(Matches JAB5 J15 pinout — do not reverse.)*
+- **Pin 1, 2: GND. Pin 3, 4: VCC (+28 V).** *(Matches JAB5 J15 pinout - do not reverse.)*
 - Each Micro-Fit 3.0 pin rated 5 A; two pins per rail provides margin for ~3.5 A at 28 V (97 W / 28 V ≈ 3.5 A total system draw).
 - Place close to input screw terminal to minimize trace resistance.
 
@@ -230,7 +230,7 @@ CM5 Connectors (100-pin slot)
 - Remaining pins: GND fill / reserved.
 
 ### JAB5 I2S Header (6-pin, carrier board side)
-- JAB5 I2S input is **J6, JST PH 6-pos, 2 mm pitch** — not a standard 2.54 mm shrouded header.
+- JAB5 I2S input is **J6, JST PH 6-pos, 2 mm pitch** - not a standard 2.54 mm shrouded header.
 - **JAB5 J6 I2S input pinout:**
 
 | Pin | Signal |
@@ -246,7 +246,7 @@ CM5 Connectors (100-pin slot)
 - Note: J6 pin 5 expects **+5 V** (not 3.3 V). Feed from 5 V rail.
 - Add series damping (22-47 Ω) near CM5 on MCLK/BCLK/LRCLK if signal integrity requires it.
 
-### Dedicated I2S Debug Header (1×7, 2.54 mm) — optional
+### Dedicated I2S Debug Header (1×7, 2.54 mm) - optional
 - Pinout: MCLK, BCLK, LRCLK, SDOUT, SDIN, 3.3 V, GND.
 - Directly parallels the I2S signals. For development/debug use.
 
@@ -298,7 +298,7 @@ Parts listed with LCSC numbers where available; non-LCSC parts sourced from Mous
 | 3.3 V FB divider (R8, R9) | 31.6 kΩ / 10 kΩ → ~3.3 V | C185339 + C98220 |
 | VSYS bulk cap (C11) | 100 µF, 50 V electrolytic | C445060 |
 | JAB5 power header (J10) | Molex Micro-Fit 3.0, 4-pin vertical (2×2, 3 mm pitch). Pin 1,2=GND / Pin 3,4=VCC | **TBD** (verify LCSC) |
-| JAB5 I2S header (J8) | JST PH 6-pos, 2 mm pitch — matches JAB5 J6 I2S input connector | **TBD** (verify LCSC) |
+| JAB5 I2S header (J8) | JST PH 6-pos, 2 mm pitch - matches JAB5 J6 I2S input connector | **TBD** (verify LCSC) |
 
 Notes:
 - LM73606 FB divider: 100 kΩ / 24.9 kΩ → 5.016 V (266 mV margin to CM5 4.75 V min).
@@ -322,13 +322,13 @@ Notes:
 - **Simplified carrier board**: No USB-C PD controller, TVS, N-FET, or associated circuitry. Just buck converters and headers. Fewer components, simpler layout, lower cost.
 
 ## Next Steps
-- ✅ Power simplified — Internal AC-DC PSU (Mean Well LRS-150-28), no USB-C PD
-- ✅ Schematic updated — PD components removed, screw terminal DC input added
-- ⏳ Complete schematic wiring in KiCad GUI (connect IC pins, add GND symbols, run ERC)
-- ⏳ Look up part numbers for TBD items: screw terminal, Molex Micro-Fit 3.0 4-pin, JST PH 6-pos.
-- ⏳ Pin-by-pin signal checklist for CM5 ↔ M.2 ↔ headers (once CM5 pinout source is confirmed).
-- ⏳ Layout guide for high-current 28V path + PCIe on a 4/6-layer stackup.
-- ⏳ Enclosure design for internal PSU + carrier board + JAB5
+- Power simplified - Internal AC-DC PSU (Mean Well LRS-150-28), no USB-C PD
+- Schematic updated - PD components removed, screw terminal DC input added
+- Complete schematic wiring in KiCad GUI (connect IC pins, add GND symbols, run ERC)
+- Look up part numbers for TBD items: screw terminal, Molex Micro-Fit 3.0 4-pin, JST PH 6-pos.
+- Pin-by-pin signal checklist for CM5 ↔ M.2 ↔ headers (once CM5 pinout source is confirmed).
+- Layout guide for high-current 28V path + PCIe on a 4/6-layer stackup.
+- Enclosure design for internal PSU + carrier board + JAB5
 
 ## KiCad Schematic Progress
 **File**: `theboard.kicad_sch`
