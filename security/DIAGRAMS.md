@@ -272,8 +272,8 @@ Every hop is audited (threats 11, 12; "next controls" items 1, 2, 5). The key-bo
 box is true for agents today: `revoke_key` in `sts.py` denylists everything bound
 to a thumbprint and refuses its proofs. With v2.0 it is true for the speaker too:
 the session's user token is bound to the device key and `revoke_device` kills it
-with its subtree (`SESSION_BINDING.md`). Diagram 1 (attestation today) predates
-that change; the flows are drawn in `SESSION_BINDING.md` section 5.
+with its subtree (`SESSION_BINDING.md`). Diagram 1 shows the actor leg; the
+device-bound session flows are drawn in `SESSION_BINDING.md` section 5.
 
 ## Where each piece lives
 

@@ -9,27 +9,26 @@ challenge, `VOICE_ENROLLMENT.md` for the enrollment procedure, and
 Status key, same as elsewhere in `security/`: built = runs with tests; partial =
 runs but with a documented gap; not built = design only.
 
-## 1. The problem
+## 1. Why
 
-Two facts about the system before v2.0, both documented and both wrong to
-leave as they were:
+Three things this design has to hold, each a documented failure if it does
+not:
 
-1. The speaker was trusted by where it was and who was talking, not by what it
-   was. The YubiKey challenge existed (`DEVICE_IDENTITY.md`), the orchestrator
-   verified the credential at connect and logged it, and then nothing used it:
-   the speaker did not send it on the stream, the voice gate still decided on
-   the gRPC peer address, and no token was bound to the device key. Threat 18.
-2. Every token in the delegation prototype was bound to a software key held in
-   the process that presents it (`delegation/dpop.py`, PR #16). That stops a
-   copied token. It does not stop an attacker inside the process, who holds the
-   key and signs proofs as the process does. The PR said so. The hardware key
-   existed on the speaker and was not connected to any token.
-
-A third fact made the voice signal weaker than it looked: the gate's match
-threshold was one global number, uncalibrated, with no enrollment procedure
-behind it. "I'm Alice" recorded a pending sample for an admin to approve, one
-at a time, with no quality bar, no separation check against the other voices in
-the house, and no record of who approved what on which device.
+1. The speaker must be trusted for what it is, not where it is or who is
+   talking. A device credential that is verified and logged but never carried
+   on the stream, never read by the voice gate and never bound into a token
+   leaves the gate deciding on a gRPC peer address, which any host on a trusted
+   address passes. Threat 18.
+2. A token bound to a software key held in the process that presents it
+   (`delegation/dpop.py`) stops a copied token and nothing else: an attacker
+   inside the process holds the key and signs proofs as the process does. The
+   one leg that can reach hardware is the user token, and the hardware key on
+   the speaker has to be connected to it.
+3. A voice match is only as good as the enrollment behind it. One global
+   threshold, uncalibrated, with a stated name recording samples for approval
+   one at a time, with no quality bar, no separation check against the other
+   voices in the house and no record of who approved what on which device, is
+   a signal that looks stronger than it is.
 
 ## 2. Current state
 
@@ -372,6 +371,6 @@ Everything new fails closed.
 - 17 (identity takeover by stated name): the pending-sample path is unchanged;
   the admin-run session is the path for new voices, with criteria and a record.
 - 1 (token replay) for the user token: bound to a key that cannot leave the
-  device; the software DPoP key no longer stands in for it.
+  device, not to the software DPoP key.
 - 15 (voice spoofing): prompted sentences defeat a recording at enrollment;
   cloned voices remain the residual risk, carried as a stated limit.
