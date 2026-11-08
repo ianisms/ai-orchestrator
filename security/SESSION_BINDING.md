@@ -11,8 +11,8 @@ runs but with a documented gap; not built = design only.
 
 ## 1. The problem
 
-Two facts about the system before this change, both documented and both wrong
-to leave as they were:
+Two facts about the system before v2.0, both documented and both wrong to
+leave as they were:
 
 1. The speaker was trusted by where it was and who was talking, not by what it
    was. The YubiKey challenge existed (`DEVICE_IDENTITY.md`), the orchestrator
@@ -31,10 +31,10 @@ behind it. "I'm Alice" recorded a pending sample for an admin to approve, one
 at a time, with no quality bar, no separation check against the other voices in
 the house, and no record of who approved what on which device.
 
-## 2. Current state (v2.0, merged 2026-11-07)
+## 2. Current state
 
-What runs today, what it binds, and which switches are off. Status per the
-key above.
+What runs as of v2.0, what it binds, and which switches are off. Status per
+the key above.
 
 | Piece | Where | Status |
 |---|---|---|
@@ -84,7 +84,7 @@ else in the picture runs when the switches are on. The trust the picture
 adds is one fact, not one party: the orchestrator already asserts who is
 speaking; it now also asserts which device the stream came from.
 
-## 3. Future state (target)
+## 3. Future state
 
 The same shape with the keys moved and the orchestrator's assertions
 replaced by proofs where a proof is possible.
@@ -156,7 +156,7 @@ is the token an attacker on the server would most like to replay, and it is the
 one fact the hardware can speak to. The actor leg (gateway, sub-agents, tool
 tokens) stays bound to the software keys of the processes that present them,
 with `act` lineage back to the device-bound user token. Moving those keys into
-hardware is prototype B (SPIFFE), not this change.
+hardware is prototype B (SPIFFE), in the future state.
 
 ### 4.3 Who proves possession at the exchange
 

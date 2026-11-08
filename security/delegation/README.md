@@ -314,7 +314,7 @@ Keys are generated at startup and die with the process, like the signing key.
 Rotation is not built: to replace a client's key, revoke the old thumbprint
 and register the new one.
 
-## Device-bound user tokens (v2.0)
+## Device-bound user tokens
 
 `../SESSION_BINDING.md` has the reasoning; this is what the STS does.
 
@@ -382,7 +382,7 @@ exchange itself is the target once it is an STS client.
 | ops-console's bound token sent as a plain Bearer | HTTP 401 invalid_dpop_proof |
 | ops-console revokes the sub-agent's key | every token bound to it refused at tool; its handoff exchange and new actor tokens refused at STS; the gateway's tokens untouched |
 
-## Not covered here
+## Future state: not built here
 
 - `delegate_to` is a non-standard parameter; RFC 8693 leaves how `may_act` is set to the issuer.
 - A token can still be presented more than once within its lifetime by its holder; the replay cache is for proofs, not tokens, and a holder minting fresh proofs is the normal case.

@@ -1,30 +1,19 @@
-# Device identity for the speaker: today, this change, target
+# Device identity for the speaker
 
 How the orchestrator decides that the thing on the other end of the gRPC stream
-is the kitchen speaker and not some other host on the same network. This page
-is the written version of the "attestation today vs target" picture; the
-diagrams in `DIAGRAMS.md` predate this change and will be reconciled after the
-open diagrams PR merges.
+is the kitchen speaker and not some other host on the same network. The
+session that builds on this identity (credential on the stream, gate origin,
+device-bound user token) is in `SESSION_BINDING.md`; the flows are drawn there.
 
 Status key, same as elsewhere in `security/`: built = runs with tests; partial =
 runs but with a documented gap; not built = design only.
 
-## Today (before this change)
+## Current state
 
-The speaker is trusted by where it is and who is talking, not by what it is.
-
-- Network origin: the orchestrator reads the gRPC peer address (never a header)
-  and checks it against `VOICE_GATE_TRUSTED_SPEAKER_NETS`
-  (`server/modules/orchestrator/core/voice_gate.py`, `_host_trusted`). Built.
-- Voice: the speaker is identified from the turn's own audio by a tool hidden
-  from the model (`audio_tap.py`, `identify_speaker`). Built, threshold not yet
-  calibrated, gate in monitor mode.
-- No attestation of any kind. Any host that reaches a trusted address, or a
-  compromised speaker, passes the origin check (threat 18).
-
-One line: location plus voice, not device identity.
-
-## This change: a hardware-held device key (partial)
+Origin used to be location plus voice: the gRPC peer address checked against
+`VOICE_GATE_TRUSTED_SPEAKER_NETS`, and the speaker identified from the turn's
+own audio. Any host on a trusted address passed (threat 18). That address check
+remains only as the fallback while `VOICE_GATE_REQUIRE_DEVICE` is off.
 
 A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
 generated on the YubiKey and cannot be exported. At boot the speaker proves it
@@ -79,7 +68,7 @@ attestation key chained to a manufacturer. A CM5 whose root filesystem has been
 replaced still attests fine if the YubiKey is plugged in. This is device
 identity, not attestation.
 
-## Theft of a pluggable key
+### Theft of a pluggable key
 
 A YubiKey can be pulled from the speaker and plugged into a laptop. With the
 PIN policy on, the attacker also needs the PIN file from the Pi; without it,
@@ -102,13 +91,13 @@ order they apply:
    never enumerated by the challenge route, so a stolen key cannot be probed
    for which device it belongs to without already knowing.
 
-## Target: measured boot and a real attestation chain
+## Future state
 
 A header-mounted TPM 2.0 module on the CM5 (GPIO/SPI) would also work as a
 stopgap: it gives an attestation key and PCR measurements without a board
 change. I am not taking that path.
 
-Next step: revise the carrier board (`speaker/hardware/pcb/theboard/`, rev 3.7
+The step: revise the carrier board (`speaker/hardware/pcb/theboard/`, rev 3.7
 today) to add a secure element (ATECC608 over I2C) or an SPI TPM footprint.
 
 - ATECC608 over I2C: a non-extractable P-256 key with a manufacturer

@@ -22,7 +22,7 @@ opa test rego && python demo.py && python -m pytest -q   # 22 policy tests, 16 P
 
 CI (`.github/workflows/tests.yml`) runs these suites, the voice gate, enrollment and script tests in `server/`, and the device identity and stream metadata tests in `server/` and `speaker/` (with an in-memory signer, no YubiKey) on every pull request. OPA is installed in CI so the policy tests run instead of skipping. `tests` is a required check on `main`.
 
-## Status
+## Current state
 
 Prototypes, not production: keys and secrets live in memory, and the consent and approval channels are simulated. `delegation/` and `policy/` run on their own with tests and are not wired into the orchestrator.
 
@@ -31,7 +31,7 @@ The voice rules are the exception. `server/modules/orchestrator/core/voice_gate.
 ## Attestation, in short
 
 - Today the speaker is trusted by network origin (gRPC peer on a trusted subnet) plus voice match. That is location plus voice, not device identity.
-- With the device identity change (`DEVICE_IDENTITY.md`), a non-extractable P-256 key in PIV slot 9a of a YubiKey 5 plugged into the CM5 answers a boot-time challenge and gets a 10 minute credential carrying the key thumbprint in `cnf`. Enrollment is a host-side admin step and is revocable. With v2.0 (`SESSION_BINDING.md`) the speaker sends the credential on every connect, the orchestrator can refuse a stream without one, the gate takes it as the origin signal, and the user token for the session is bound to the device key. Built with tests on both sides; the enforcement switches are off by default until every speaker attests.
+- Speaker (`DEVICE_IDENTITY.md`): a non-extractable P-256 key in PIV slot 9a of a YubiKey 5 plugged into the CM5 answers a boot-time challenge and gets a 10 minute credential carrying the key thumbprint in `cnf`. Enrollment is a host-side admin step and is revocable. With v2.0 (`SESSION_BINDING.md`) the speaker sends the credential on every connect, the orchestrator can refuse a stream without one, the gate takes it as the origin signal, and the user token for the session is bound to the device key. Built with tests on both sides; the enforcement switches are off by default until every speaker attests.
 - What it does not do: measure the software. No PCRs, no measured boot. A stolen key plugged into another host passes, which is why key-bound tokens stay at low-risk scopes and high-risk actions keep voice plus challenge.
 - Target: a secure element (ATECC608 over I2C) or an SPI TPM footprint on the next carrier-board revision. The TPM variant gives measured boot and the full attestation chain. A header-mounted TPM 2.0 module on the CM5 would also work as a stopgap; I am not taking that path.
 - Agents: still client secrets at the STS, paired with a per-client P-256 key that every token is bound to (DPoP, RFC 9449), so a copied token is useless without the key. The key lives in the agent's process memory, which stops theft of the token but not compromise of the process; workload identity (SPIFFE, prototype B) is not built. The user token is the one leg that reaches hardware: bound to the speaker's key, with the orchestrator asserting the thumbprint at the exchange.
