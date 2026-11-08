@@ -1,7 +1,7 @@
 # Device identity for the speaker
 
 The orchestrator has to know which speaker is on the other end of a gRPC
-stream. Any host on the home network can open one. This doc covers how a
+stream. Any host on the network can open one. This doc covers how a
 speaker proves which device it is. `SESSION_BINDING.md` covers what the session
 does with that identity.
 
