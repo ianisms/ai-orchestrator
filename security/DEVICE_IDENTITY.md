@@ -7,13 +7,13 @@ does with that identity.
 
 ## Current state
 
-The speaker proves which device it is with a key it holds and cannot export,
-once at boot, and carries the resulting credential on the stream. With
-`VOICE_GATE_REQUIRE_DEVICE` on, that credential is the gate's origin signal.
-With it off, the gate falls back to the gRPC peer address against
-`VOICE_GATE_TRUSTED_SPEAKER_NETS`, which any host on a trusted address passes
-(threat 18). Who is speaking is a separate question, answered from each turn's
-audio.
+At boot the speaker signs a challenge with a key that never leaves the YubiKey.
+The orchestrator answers with a short-lived credential, and the speaker sends
+that credential on every stream it opens. With `VOICE_GATE_REQUIRE_DEVICE` on,
+the credential is the gate's origin signal. With it off, the gate checks the
+gRPC peer address against `VOICE_GATE_TRUSTED_SPEAKER_NETS`, and any host on a
+trusted address passes (threat 18). Who is speaking is a separate question,
+answered from each turn's audio.
 
 A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
 generated on the YubiKey and cannot be exported. At boot the speaker proves it
