@@ -39,7 +39,7 @@ sequenceDiagram
 
 Files:
 
-| Piece | Where | Status |
+| Control | Where | Status |
 |---|---|---|
 | Signer interface, `YubiKeyPivSigner`, `FakeSigner` | `speaker/modules/speaker/device_identity.py` | built; YubiKey path reviewed against the yubikit API, not exercised in CI |
 | Boot-time attest client, credential cache | same file, `DeviceAttestClient`; called from `orchestrator.py` `_attest_device` | built, off by default (`device_identity_enable`) |

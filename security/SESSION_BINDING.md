@@ -15,7 +15,7 @@ one global threshold.
 
 What runs, what it binds, which switches are off.
 
-| Piece | Where | Status |
+| Control | Where | Status |
 |---|---|---|
 | Speaker holds a P-256 key in YubiKey PIV 9a; signs a 30 s nonce at boot; gets a 10 min credential with `cnf.jkt` | `speaker/.../device_identity.py`, `server/.../device_identity.py` | built, off by default (`device_identity_enable`) |
 | Credential rides on every Converse call as `x-device-credential`, re-attested when stale | `grpc_client.py` metadata provider, `capture_streamer.py` | built |
