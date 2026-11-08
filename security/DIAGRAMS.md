@@ -7,7 +7,7 @@ every gap names the threat in `THREAT_MODEL.md` it leaves open.
 Status key: built = runs with tests; partial = runs but with a documented gap;
 not built = design only.
 
-## 1. Attestation today
+## 1. Attestation, current state
 
 Three kinds of principal reach the tool plane: the speaker device, the person
 speaking, and the agents that act for them. Today each is trusted on a different
@@ -68,7 +68,7 @@ What this means, in one line each:
   without it (threat 1). What that does not cover is a compromised process,
   which holds the key.
 
-## 2. Attestation target
+## 2. Attestation, future state
 
 The device proves what it is with a key it cannot export; the agent proves what it
 is with a workload identity issued from attestation; the person still authenticates
@@ -186,9 +186,9 @@ tool token without a proof, with another key, with its captured proof replayed,
 with a proof for another URI, with a stale proof, exchange without a proof or
 under another client's key, revoked key.
 
-## 4. Revocation today and target
+## 4. Revocation, current and future state
 
-### Today
+### Current state
 
 ```mermaid
 flowchart LR
@@ -237,7 +237,7 @@ and the central audit sink. The first hop at Keycloak does not
 participate: Keycloak's `/revoke` knows only its own tokens, and the STS neither
 introspects the subject on exchange nor consumes Keycloak admin events.
 
-### Target
+### Future state
 
 Revoke the narrowest thing that stops the harm, and make the cut immediate.
 

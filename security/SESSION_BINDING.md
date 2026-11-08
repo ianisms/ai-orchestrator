@@ -31,10 +31,10 @@ behind it. "I'm Alice" recorded a pending sample for an admin to approve, one
 at a time, with no quality bar, no separation check against the other voices in
 the house, and no record of who approved what on which device.
 
-## 2. Current state (v2.0, merged 2026-11-07)
+## 2. Current state
 
-What runs today, what it binds, and which switches are off. Status per the
-key above.
+What runs as of v2.0, what it binds, and which switches are off. Status per
+the key above.
 
 | Piece | Where | Status |
 |---|---|---|
@@ -84,7 +84,7 @@ else in the picture runs when the switches are on. The trust the picture
 adds is one fact, not one party: the orchestrator already asserts who is
 speaking; it now also asserts which device the stream came from.
 
-## 3. Future state (target)
+## 3. Future state
 
 The same shape with the keys moved and the orchestrator's assertions
 replaced by proofs where a proof is possible.

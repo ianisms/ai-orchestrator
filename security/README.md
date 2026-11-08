@@ -22,7 +22,7 @@ opa test rego && python demo.py && python -m pytest -q   # 22 policy tests, 16 P
 
 CI (`.github/workflows/tests.yml`) runs these suites, the voice gate, enrollment and script tests in `server/`, and the device identity and stream metadata tests in `server/` and `speaker/` (with an in-memory signer, no YubiKey) on every pull request. OPA is installed in CI so the policy tests run instead of skipping. `tests` is a required check on `main`.
 
-## Status
+## Current state
 
 Prototypes, not production: keys and secrets live in memory, and the consent and approval channels are simulated. `delegation/` and `policy/` run on their own with tests and are not wired into the orchestrator.
 

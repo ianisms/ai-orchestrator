@@ -26,7 +26,7 @@ Goal: a steered or compromised agent can do no more than the user approved, for 
 | 14 | Device posture spoofing; device-code phishing on headless agents | Posture as a policy input: not built (prototype D). Device identity for the speaker is built (`server/modules/orchestrator/core/device_identity.py`, `DEVICE_IDENTITY.md`): a non-extractable P-256 key in PIV slot 9a of a plugged-in YubiKey 5 answers a boot-time nonce challenge, and the orchestrator issues a 10 minute credential with the key thumbprint in `cnf`; enrollment is host-side and revocable | Yes: right key accepted; wrong key, expired nonce, replayed nonce, nonce for another device, unknown device, revoked device and missing key all denied and logged; credential carries `cnf` and expires | The key proves possession, not software state: no measured boot, no PCRs, so a reflashed CM5 with the YubiKey still attests. The credential is sent on every connect, enforced when `DEVICE_IDENTITY_REQUIRE` is on, and is the gate's origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (both off until every speaker attests). Target is a secure element or SPI TPM on the next carrier-board revision |
 | 15 | Voice spoofing: replayed recording, cloned voice, request from outside the home | Voice requests need a match of 0.98 or better, home-network origin and a passed liveness check; missing signals fail closed; writes confirm by default and high-risk tools always confirm | Yes: low match, failed liveness, off-network and missing signals all denied; high-risk merge denied with confirmations off | The policy trusts the front end's liveness result; a real-time voice clone that passes liveness still gets read access, so writes keep the confirmation. The orchestrator's voice gate (16-22) gathers these signals itself; liveness is not built yet. Enrollment (`VOICE_ENROLLMENT.md`) requires prompted sentences, which a replayed recording fails and a cloned voice passes |
 
-## Voice gate in the live orchestrator (server/)
+## Current state: voice gate in the live orchestrator (server/)
 
 Path: speaker audio > orchestrator commits the turn > model requests a tool > gate decides > tool runs.
 
@@ -48,7 +48,7 @@ Not gated yet: explicit location-preference commands are handled before the mode
 
 Expired-token replay; exchange without `may_act`; another agent presenting the user's token; sub-agent asking for write scope; sub-agent asking for an unregistered tool; plain exchange to strip `act`; borrowed actor token; handoff token sent to a tool; injected merge via sub-agent; injected merge via gateway; out-of-session read; approval replay and reuse on a different PR; token without `act`; forged signature; live tool token after the user token is revoked; re-exchange of a revoked lineage; revocation by an agent outside the chain; revoked agent's actor token; tool server revoking the handoff above it; escalation to the actor's delegation and to the grant from repeated tool reports; `sts:admin` requested through exchange; admin route with a non-admin actor token; stolen tool token without a proof, with another client's key, with a replayed proof, with a proof for another URI, with a stale proof; exchange without a proof and under another client's key; bound admin token sent as Bearer; revoked key; device-bound user token exchanged without the device assertion, with another device, without the actor's own proof, by a client the user did not consent to, with a device claim but another key's binding; assurance widened at exchange (ignored); revoked device (live tool token, re-exchange and new login all refused); OPA down; PDP timeout; voice match below threshold; replayed voice (liveness fail); off-network voice; voice with no signals; high-risk voice write with confirmations off. All refused, each with a logged reason. 103 Python tests and 22 policy tests pass.
 
-## Next controls, in order
+## Future state: next controls, in order
 
 1. Sender-constrained tokens to close #1: DPoP is built (partial: binds to a software key in the agent's process, no nonces, no rotation); mTLS-bound tokens (RFC 8705) come with B's SVIDs and finish it.
 2. Workload identity for agents instead of client secrets (B) to close #6 and #13, and to move the DPoP key out of process memory.
@@ -57,7 +57,7 @@ Expired-token replay; exchange without `may_act`; another agent presenting the u
 5. Central, append-only audit sink (#12).
 6. Pushed deny list to every PEP, and a Keycloak admin-event feed into grant revocation, so #11 holds across processes and for hop 1.
 
-## Voice gate rollout, in order
+## Future state: voice gate rollout, in order
 
 1. Calibrate the match threshold from enrolled voices (`scripts/calibrate_voice_threshold.py`), then check the logged scores from real turns in monitor mode.
 2. Spoken confirmation for writes and phone approval through the Home Assistant app for high-risk calls and enrollment (#17, #19).

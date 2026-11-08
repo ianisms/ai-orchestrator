@@ -10,7 +10,9 @@ model), `server/modules/orchestrator/core/utterance.py` (`_enrollment_turn`).
 Status key: built = runs with tests; partial = runs but with a documented gap;
 not built = design only.
 
-## Two paths, one record
+## Current state
+
+### Two paths, one record
 
 | Path | Who starts it | What it produces | Status |
 |---|---|---|---|
@@ -20,7 +22,7 @@ not built = design only.
 The admin session is the path for new voices. The stated-name path stays for
 adding a sample to a voice that already has a profile, one approval at a time.
 
-## Procedure
+### Procedure
 
 1. On the server host, open the session. The device is the speaker the person
    will talk to; `--device-jkt` pins it to that speaker's current key.
@@ -58,7 +60,7 @@ adding a sample to a voice that already has a profile, one approval at a time.
    python scripts/enroll_voice.py revoke-profile alice
    ```
 
-## Criteria
+### Criteria
 
 A clip is accepted when all of these hold (`EnrollmentPolicy`):
 
@@ -84,7 +86,7 @@ A session completes when all of these hold over the accepted samples:
 The threshold that results is the person's own. The gate applies the higher of
 it and the global floor (`voice_gate.effective_threshold`).
 
-## The record
+### The record
 
 Each profile written by a session carries:
 
@@ -105,7 +107,7 @@ profile, device and admin.
 Stored: embeddings. Not stored: audio. The WAV the turn produced follows the
 normal five minute cleanup of the client audio directory.
 
-## Fail closed
+### Fail closed
 
 - A sample from a stream whose device id or key thumbprint is not the
   session's is refused and the session is untouched.
@@ -118,7 +120,7 @@ normal five minute cleanup of the client audio directory.
   no profile. A revoked profile never matches and is never used as an
   impostor reference.
 
-## Limits
+### Limits
 
 - Prompted sentences defeat a replayed recording. They do not defeat a cloned
   voice. Voice remains an identification signal; writes keep the confirmation
@@ -128,5 +130,18 @@ normal five minute cleanup of the client audio directory.
 - Separation is measured against the voices enrolled at the time. Enrolling a
   new, similar voice later does not re-evaluate the old thresholds;
   `scripts/calibrate_voice_threshold.py` still reports the global picture.
-- The admin step is a host-side script. The phone approval flow, when built,
-  is the place to open and close sessions from the person's own device.
+- The admin step is a host-side script.
+
+## Future state
+
+- Liveness on the turn: a check the gate can trust before the voice match
+  counts, so a recording fails before enrollment or policy ever sees it.
+- Sessions opened, approved and closed from the person's own phone, through
+  the phone approval flow; the record stays as it is.
+- Re-evaluation when a new voice is enrolled: every existing profile's
+  separation is re-measured against the newcomer and thresholds that no longer
+  hold are flagged for re-enrollment.
+- The assurance record as a policy input, so a profile enrolled with a thin
+  margin is held to a higher tier than one with a wide one.
+- Voice as one factor among several: device identity from the stream (built),
+  liveness, and the step-ups; the score alone never authorizes a write.

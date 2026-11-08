@@ -57,7 +57,7 @@ python -m pytest -q     # 16 tests, skipped if opa is missing
 | Policy engine down | denied, fail closed |
 | PDP timeout | denied, fail closed |
 
-## Not covered here
+## Future state: not built here
 
 - The approval store is in memory and the approval channel is simulated. In the real gateway, approval has to come from a UI the model cannot drive.
 - Session resources are set by the caller of the PEP; in the real gateway they come from the user's task, not from the model.
