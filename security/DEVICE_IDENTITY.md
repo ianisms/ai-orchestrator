@@ -1,8 +1,9 @@
 # Device identity for the speaker
 
-How the orchestrator decides that the thing on the other end of the gRPC stream
-is the kitchen speaker and not some other host on the same network. What the
-session does with that identity is in `SESSION_BINDING.md`.
+The orchestrator has to know which speaker is on the other end of a gRPC
+stream. Any host on the home network can open one. This doc covers how a
+speaker proves which device it is. `SESSION_BINDING.md` covers what the session
+does with that identity.
 
 ## Current state
 
