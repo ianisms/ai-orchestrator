@@ -1,13 +1,11 @@
 # CM5 Smart Speaker Enclosure
-## Printing & Assembly Guide — Revision v16
+## Printing and assembly guide, revision v16
 
-**Enclosure:** Cylindrical PETG-CF · OD 150 mm · H 282 mm · ~1.7 L sealed  
-**Compute:** Raspberry Pi CM5 carrier board  
-**Drivers:** Dayton RS100-4 (active, top) · Dayton RS125-4 (passive radiator, bottom)
+A cylindrical PETG-CF enclosure, OD 150 mm, H 282 mm, about 1.7 L sealed. It holds the Raspberry Pi CM5 carrier board, a Dayton RS100-4 active driver at the top and a Dayton RS125-4 passive radiator at the bottom.
 
 ---
 
-## Quick Reference
+## Quick reference
 
 | Parameter | Value |
 |---|---|
@@ -25,31 +23,31 @@
 
 ---
 
-## 1. Filament Selection
+## Filament
 
-### Recommended: PETG-CF
+### PETG-CF
 
-PETG-CF (carbon-fibre filled PETG) is the specified material for both the body and grille cap. It offers 85–95°C heat deflection, high rigidity from the CF fill, low moisture absorption, and a premium matte dark finish that pairs well with wood veneer. **A hardened steel nozzle is required** — PETG-CF will destroy a brass nozzle within a single spool.
+PETG-CF (carbon-fibre filled PETG) is the material for both the body and the grille cap. It has 85 to 95°C heat deflection, high rigidity from the CF fill, low moisture absorption, and a matte dark finish that goes with wood veneer. **A hardened steel nozzle is required.** PETG-CF will destroy a brass nozzle within a single spool.
 
 | Property | PETG-CF | Plain PETG | PLA Wood | Notes |
 |---|---|---|---|---|
-| Heat deflection | 85–95°C | 70–80°C | 55–65°C | PLA Wood too close to interior operating temp |
+| Heat deflection | 85 to 95°C | 70 to 80°C | 55 to 65°C | PLA Wood too close to interior operating temp |
 | Stiffness | Very high | Medium | Medium | CF adds ~40% flexural modulus |
 | Acoustic damping | Good | Fair | Good | Both CF and wood fibre help |
 | Surface finish | Matte dark CF | Glossy | Wood grain | PETG-CF pairs well with veneer |
 | Nozzle required | **Hardened steel** | Brass OK | Brass OK | CF is abrasive |
 | Moisture risk | Very low | Low | High | PLA Wood hygroscopic |
-| Grille cap safe? | ✓ Yes | ✓ Yes | ✗ No | Grille is above RS100 voice coil — hottest zone |
-| Body safe? | ✓ Yes | ✓ Yes | Conditional | PLA Wood OK if interior < 50°C |
+| Grille cap safe? | Yes | Yes | No | Grille is above the RS100 voice coil, the hottest zone |
+| Body safe? | Yes | Yes | Conditional | PLA Wood OK if interior < 50°C |
 
-### Note on PLA Wood
+### PLA Wood
 
-No PETG-based wood-filled filament currently exists commercially — all wood-filled filaments use PLA. PLA Wood is acceptable for the body shell **only** if you verify the enclosure interior stays below 50°C under sustained playback (PLA Tg ~60°C). The grille cap must remain PETG-CF regardless. If using PLA Wood for the body, seal the inner surface with 2–3 coats of brush-applied polyurethane varnish to control moisture absorption into the acoustic chamber.
+There is no wood-filled PETG on the market; all wood-filled filaments use PLA. PLA Wood is acceptable for the body shell only if the enclosure interior stays below 50°C under sustained playback (PLA Tg is about 60°C). The grille cap stays PETG-CF regardless. With a PLA Wood body, seal the inner surface with 2 to 3 coats of brushed polyurethane varnish to limit moisture absorption into the acoustic chamber.
 
 
 ---
 
-## 2. Print Settings
+## Print settings
 
 Import STEP files into Bambu Studio. Set orientations as specified before slicing.
 
@@ -59,29 +57,29 @@ Import STEP files into Bambu Studio. Set orientations as specified before slicin
 | Grille cap | v16_grille.step | PETG-CF | Hardened 0.4 mm | 0.20 mm | 4 | 15% | None | ~2.5 h |
 | Lens plug ×3 | v16_lens.step | Clear PETG | Brass 0.4 mm | 0.10 mm | 2 | 0% | None | ~30 min ea |
 
-### Print Orientations
+### Print orientations
 
 | Part | Orientation | Reason |
 |---|---|---|
-| Body | Vertical — Z up as designed | Correct layer lines for hoop strength; vent hex holes print cleanly; no supports needed |
+| Body | Vertical, Z up as designed | Correct layer lines for hoop strength; vent hex holes print cleanly; no supports needed |
 | Grille cap | Top face **down** (hex holes toward bed) | Hex holes bridge cleanly; shaft dimensions printed last for best accuracy |
-| Lens plug | Dome **up** — flange on bed | Dome surface quality maximised; 0.10 mm layers for optical diffusion |
+| Lens plug | Dome **up**, flange on bed | Best dome surface quality; 0.10 mm layers for optical diffusion |
 
-### Critical Dimensions
+### Critical dimensions
 
 | Feature | Dimension | Note |
 |---|---|---|
-| Grille cap shaft OD | 69.8 mm | Press-fit into IR=70 mm bore — hand pressure, resists pull-out |
-| Grille cap flange OD | 143.6 mm (current) | Sits on 2 mm rabbet; extend ~4 mm if veneer wrap used (see §6) |
-| Lens plug shaft OD | 8.45 mm | 0.025 mm clearance in Ø8.5 mm counterbore — light press with snap groove |
-| RS125 bolt holes | r=68.5 mm | Clips IR=70 mm by 1.25 mm — unavoidable fixed BCD, no structural issue |
+| Grille cap shaft OD | 69.8 mm | Press-fit into IR=70 mm bore by hand; resists pull-out |
+| Grille cap flange OD | 143.6 mm (current) | Sits on 2 mm rabbet; extend ~4 mm if veneer wrapped (see "Wood veneer wrap") |
+| Lens plug shaft OD | 8.45 mm | 0.025 mm clearance in Ø8.5 mm counterbore; light press with snap groove |
+| RS125 bolt holes | r=68.5 mm | Clips IR=70 mm by 1.25 mm; fixed by the driver BCD, no structural issue |
 
 
 ---
 
-## 3. Assembly Sequence
+## Assembly
 
-### 3.1 RS125-4 Passive Radiator — Bottom
+### RS125-4 passive radiator, bottom
 
 The RS125-4 motor assembly is removed, leaving basket, surround, cone, and spider. Added mass tunes resonance to ~65 Hz in the 1.7 L chamber.
 
@@ -91,17 +89,17 @@ The RS125-4 motor assembly is removed, leaving basket, surround, cone, and spide
 |---|---|---|
 | 1 | Remove RS125-4 motor | Unbolt magnet/VC assembly from basket. Retain basket, surround, cone, spider only. |
 | 2 | Add 14 g mass to cone | Self-adhesive fishing weights on rear face, distributed symmetrically around centre. |
-| 3 | Verify fp with REW | Impedance sweep 10 Hz–1 kHz. Target fp ≈ 65 Hz. Adjust ±2 g as needed. |
+| 3 | Verify fp with REW | Impedance sweep 10 Hz to 1 kHz. Target fp about 65 Hz. Adjust ±2 g as needed. |
 | 4 | Foam gasket on flange | Thin foam tape on driver flange before mounting. Prevents air leak. |
 | 5 | Insert driver from below | Up through 117 mm bottom cutout. Flange seats on 3 mm baffle floor. |
 | 6 | 4× M5 SHCS from below | BCD=137 mm, 45° phase. M5 nuts inside chamber. |
 | 7 | Torque to 1.5 Nm | Hex key through 117 mm bore opening. Alternate cross-pattern. |
 
-### 3.2 RS100-4 Active Driver — Mid Baffle (Captured Nut System)
+### RS100-4 active driver, mid baffle (captured nuts)
 
 ![Mid baffle captured nut system](imgs/mid_baffle.svg)
 
-The Ø5.5 mm bolt clearance holes pass completely through the 20 mm baffle. Hex pockets (9.5 mm circumdiam, 4.5 mm deep) on the **top face** are blind — they capture M5 hex nuts that cannot spin. Bolts thread in from below. The grille cap seats on top and permanently locks the nut pockets.
+The Ø5.5 mm bolt clearance holes pass through the 20 mm baffle. Hex pockets (9.5 mm across corners, 4.5 mm deep) on the **top face** are blind. They capture M5 hex nuts that cannot spin. Bolts thread in from below. The grille cap seats on top and locks the nut pockets.
 
 | Step | Action | Detail |
 |---|---|---|
@@ -116,9 +114,9 @@ The Ø5.5 mm bolt clearance holes pass completely through the 20 mm baffle. Hex 
 
 ---
 
-## 4. PCB Mounting & Connector Panel
+## PCB mounting and connector panel
 
-### PCB Mounting Bosses
+### PCB mounting bosses
 
 The CM5 carrier board (80.5×113.5 mm) mounts vertically on the −Y inner wall. F.Cu faces the wall; the CM5 module faces inward toward the active cooler exhaust.
 
@@ -133,98 +131,98 @@ Inner wall Y at X=±37.75 mm: `inner_y = −√(70² − 37.75²) = −58.95 mm`
 
 Boss spec: D=7 mm, M2 bore=2.4 mm, direction=(0,1,0)
 
-### Connector Panel (+Y wall only)
+### Connector panel (+Y wall only)
 
 All cutouts penetrate the +Y wall only. Cuts start at y=68 mm (inner face minus 2 mm), length=9 mm.
 
 | Component | Z position | Cutout | Notes |
 |---|---|---|---|
 | 5.5×2.1 mm DC barrel jack | Z=90 mm | Ø12 mm round through | 12 V DC supply |
-| Rocker switch | Z=120 mm | 19.4×13 mm rectangular | ⚠ Replace RA1113112R — no DC rating |
+| Rocker switch | Z=120 mm | 19.4×13 mm rectangular | Replace RA1113112R; it has no DC rating |
 | LED blue (558-0803023F) | Z=55 mm | CB Ø8.5×3.8 mm + Ø4 mm through | Lens plug press-fits into counterbore |
 | LED red (558-0101001F) | Z=67 mm | CB Ø8.5×3.8 mm + Ø4 mm through | |
 | LED green (558-0201001F) | Z=79 mm | CB Ø8.5×3.8 mm + Ø4 mm through | |
 
-> **⚠ WARNING:** The RA1113112R rocker switch has no DC voltage rating and must be replaced with a ≥30V DC-rated rocker using the same 19.4×13 mm panel cutout before use.
+> **Warning.** The RA1113112R rocker switch has no DC voltage rating. Replace it with a rocker rated 30 V DC or more that uses the same 19.4×13 mm panel cutout.
 
-### Lens Plug Installation
+### Lens plug installation
 
 Insert each clear PETG lens plug shaft-first from outside into the Ø8.5 mm counterbore. The snap groove (0.35 mm deep × 0.6 mm tall at Z=0.5 mm from inner end) clicks past the bore lip. The Ø12 mm flange acts as depth stop. The convex dome (R=15.6 mm, 1.2 mm rise) provides diffusion for the Dialight 558 LEDs.
 
 
 ---
 
-## 5. Bottom Cap Details
+## Bottom cap
 
 ![Bottom cap geometry](imgs/bottom_cap.svg)
 
-The bottom cap is 10 mm total height. The central 3 mm floor (r=0..58.5 mm) supports the RS125-4 frame flange. The annular ring (r=58.5..70 mm) is the full 10 mm — the structural load-bearing zone.
+The bottom cap is 10 mm total height. The central 3 mm floor (r=0..58.5 mm) supports the RS125-4 frame flange. The annular ring (r=58.5..70 mm) is the full 10 mm and carries the load.
 
-**Bolt holes (×4):** Ø5.5 mm clearance, r=68.5 mm, 45° phase (at 45°/135°/225°/315°). Outer edge reaches r=71.25 mm, clipping IR=70 mm by 1.25 mm — unavoidable consequence of the fixed RS125-4 BCD=137 mm spec. The resulting notch on the inner wall face has no structural consequence.
+**Bolt holes (×4):** Ø5.5 mm clearance, r=68.5 mm, 45° phase (at 45°/135°/225°/315°). The outer edge reaches r=71.25 mm and clips IR=70 mm by 1.25 mm. That follows from the fixed RS125-4 BCD of 137 mm. The notch on the inner wall face has no structural consequence.
 
 **Foot recesses (×4):** Ø8 mm × 3 mm deep, r=64 mm, **0° phase** (at 0°/90°/180°/270°). This places feet midway between bolt holes, providing 45° angular separation. Inner clearance from RS125 step: 1.5 mm. Outer clearance from inner wall: 2 mm. Use self-adhesive rubber feet Ø8 mm × 3 mm.
 
-> ⚠ **Do not use 45° phase for the feet** — that places them directly over the bolt holes (3.3 mm overlap confirmed in v14 DRC failure).
+> **Do not use 45° phase for the feet.** That places them directly over the bolt holes (3.3 mm overlap, found in the v14 DRC failure).
 
 ---
 
-## 6. Optional Wood Veneer Wrap
+## Wood veneer wrap (optional)
 
 ![Veneer wrap diagram](imgs/veneer_wrap.svg)
 
-The PETG-CF body can be wrapped in paper-backed wood veneer for a premium aesthetic while retaining all thermal and acoustic benefits of PETG-CF. At OD=150 mm the cylinder has a 75 mm bend radius — well within cold-bend capability of paper-backed veneer without steaming or wetting.
+The PETG-CF body can be wrapped in paper-backed wood veneer. The thermal and acoustic properties of the PETG-CF are unchanged. At OD=150 mm the cylinder has a 75 mm bend radius, which paper-backed veneer takes cold, without steaming or wetting.
 
-### Veneer Specification
+### Veneer
 
 | Parameter | Specification | Notes |
 |---|---|---|
-| Type | Paper-backed veneer | NOT raw/unbacked — paper prevents cracking on the bend |
-| Thickness | 0.5–0.6 mm | Thinner is more flexible; 0.6 mm is widely available |
+| Type | Paper-backed veneer | Not raw or unbacked; the paper prevents cracking on the bend |
+| Thickness | 0.5 to 0.6 mm | Thinner is more flexible; 0.6 mm is widely available |
 | Width needed | ≥282 mm | Full body height + 5 mm top/bottom trim allowance |
 | Length needed | ≥480 mm | π × 150 mm = 471 mm circumference + 15 mm seam overlap |
-| Grain direction | **Vertical** (runs along height) | Horizontal grain requires steaming — not recommended |
+| Grain direction | **Vertical** (runs along height) | Horizontal grain needs steaming; avoid it |
 | Species | Walnut, cherry, maple, oak, bamboo | All cold-bend at r=75 mm; avoid tight quartersawn grain |
-| Finish | Wipe-on poly or danish oil | Matte or satin — match the matte PETG-CF surfaces |
+| Finish | Wipe-on poly or danish oil | Matte or satin, to match the matte PETG-CF surfaces |
 
 
-### Adhesive & Application Steps
+### Adhesive and application
 
 1. **Surface prep:** Scuff outer PETG-CF surface with 120-grit sandpaper. Wipe with isopropyl alcohol. Allow to fully dry.
 2. **Cut veneer:** Width = body height + 10 mm. Length = π × OD + 15 mm seam overlap. Grain running vertically.
 3. **Apply cement to body:** Even coat of contact cement (Weldwood or equivalent) over entire outer PETG surface.
 4. **Apply cement to veneer:** Coat the paper-backing side evenly. Avoid pooling at edges.
-5. **Allow to tack:** Both surfaces touch-dry but tacky — typically 5–10 min at room temp. Do not rush.
+5. **Allow to tack:** Both surfaces touch-dry but tacky, usually 5 to 10 min at room temperature. Do not rush.
 6. **Position start edge:** Begin at the **+Y wall** (back/connector side). This hides the seam behind the panel.
-7. **Roll onto cylinder:** Contact cement bonds on contact — no repositioning. Roll veneer with firm pressure using a rubber brayer. Eliminate bubbles as you progress around the cylinder.
+7. **Roll onto cylinder:** Contact cement bonds on contact; there is no repositioning. Roll the veneer on with firm pressure using a rubber brayer. Work the bubbles out as you go around the cylinder.
 8. **Press seam:** Overlap final 15 mm over start edge. Press firmly. Seam falls on +Y wall behind connector cutouts.
 9. **Trim top and bottom:** Sharp card scraper or utility knife flush against cap faces. Score first, then slice.
-10. **Punch connector holes:** Use sharp chisel or leather punch from inside. PETG holes are the template — feel each hole edge with the chisel tip, score the veneer, then cut. Barrel jack: Ø12 mm punch. Switch: score rectangle. LEDs: Ø4 mm punch.
+10. **Punch connector holes:** Use a sharp chisel or leather punch from inside. The PETG holes are the template. Feel each hole edge with the chisel tip, score the veneer, then cut. Barrel jack: Ø12 mm punch. Switch: score the rectangle. LEDs: Ø4 mm punch.
 11. **Apply finish:** 2 coats wipe-on poly or danish oil. Sand lightly with 400-grit between coats.
 
-### Seam Placement
+### Seam placement
 
-The seam must land on the **+Y wall** — the connector face with the barrel jack, rocker switch, and LEDs. The cutouts visually break up this face and draw attention away from the seam. In typical use, this face points toward a wall or furniture.
+The seam lands on the **+Y wall**, the connector face with the barrel jack, rocker switch, and LEDs. The cutouts break up this face and draw the eye away from the seam. In use, this face points toward a wall or furniture.
 
-**Recommended start point:** Place the veneer leading edge 5 mm to the left of the leftmost LED counterbore (viewed from outside on the connector face). The seam overlap will land 5 mm to the right of the barrel jack — no seam edge runs through any cutout.
+**Start point:** Place the veneer leading edge 5 mm to the left of the leftmost LED counterbore, viewed from outside on the connector face. The seam overlap lands 5 mm to the right of the barrel jack, so no seam edge runs through a cutout.
 
-### Grille Cap Coverage Options
+### Grille cap and the veneer edge
 
-The veneer adds ~0.6 mm to the OD. The top veneer edge needs to be either trimmed flush or covered by the grille flange.
+The veneer adds about 0.6 mm to the OD. The top veneer edge is either trimmed flush or covered by the grille flange.
 
 | Option | Description | CAD change | Result |
 |---|---|---|---|
-| A — Flush trim | Trim veneer exactly flush with body top face | None — current grille fits as-is | Clean minimal look; veneer edge visible as thin band |
-| **B — Extended flange (recommended)** | Extend grille flange OD from 143.6 mm to ~151.5 mm | Increase `GR_FLANGE` radius by ~4 mm in build script | Flange covers and hides veneer edge; most finished appearance |
-| C — Rebated flange | Add 0.6 mm deep × 0.6 mm chamfer on underside outer edge of flange | Add chamfer to grille flange underside in build script | Veneer tucks cleanly under flange; premium look |
+| A, flush trim | Trim veneer flush with the body top face | None; the current grille fits | Veneer edge visible as a thin band |
+| **B, extended flange (chosen)** | Extend grille flange OD from 143.6 mm to ~151.5 mm | Increase `GR_FLANGE` radius by ~4 mm in the build script | Flange covers the veneer edge |
+| C, rebated flange | Add a 0.6 mm deep × 0.6 mm chamfer on the underside outer edge of the flange | Add the chamfer to the grille flange underside in the build script | Veneer tucks under the flange |
 
-> **Aesthetic note:** PETG-CF matte dark carbon + walnut or cherry veneer is a strong pairing. The dark carbon grille cap contrasts the warm wood body — consistent with the metal-hardware/wood-body aesthetic common in high-end audio. Use matte poly (not gloss) on the veneer to match the PETG-CF surfaces.
+Use matte poly, not gloss, on the veneer so it matches the PETG-CF surfaces.
 
 
 ---
 
-## 7. Acoustic Tuning
+## Acoustic tuning
 
-### Passive Radiator Tuning
+### Passive radiator
 
 | Parameter | Value | Notes |
 |---|---|---|
@@ -237,17 +235,17 @@ The veneer adds ~0.6 mm to the OD. The top veneer edge needs to be either trimme
 
 ### Verification with REW
 
-Measure impedance sweep (10 Hz–1 kHz) using a USB audio interface and REW. The passive radiator resonance appears as an impedance **dip** between the two peaks of the loaded system. Adjust added mass to place this dip at 65 Hz ±5 Hz. Re-open the bottom cap (4× M5 SHCS from below) to access the passive radiator if adjustment is needed.
+Measure an impedance sweep from 10 Hz to 1 kHz with a USB audio interface and REW. The passive radiator resonance appears as an impedance **dip** between the two peaks of the loaded system. Adjust the added mass to put the dip at 65 Hz ±5 Hz. To reach the passive radiator, open the bottom cap (4× M5 SHCS from below).
 
-### Ventilation & Thermal
+### Ventilation
 
-84 hex-flower vent holes across 12 clusters provide passive CM5 cooling. The active cooler exhausts into the acoustic chamber — this is intentional. 6 intake clusters at Z=38 mm and 6 exhaust clusters at Z=226 mm (staggered 30°) create a chimney effect. No enclosure fan required. If CM5 throttles under sustained load, verify intake/exhaust clusters are not obstructed.
+84 hex-flower vent holes across 12 clusters cool the CM5 passively. The active cooler exhausts into the acoustic chamber by design. Six intake clusters at Z=38 mm and six exhaust clusters at Z=226 mm, staggered 30°, make a chimney. No enclosure fan is needed. If the CM5 throttles under sustained load, check that the intake and exhaust clusters are clear.
 
 ---
 
-## 8. Parts & Hardware List
+## Parts and hardware
 
-### Printed Parts
+### Printed parts
 
 | Part | Qty | Material | File | Notes |
 |---|---|---|---|---|
@@ -264,11 +262,11 @@ Measure impedance sweep (10 Hz–1 kHz) using a USB audio interface and REW. The
 | Hex nut | 4 | M5 | RS100-4 captured in mid baffle hex pockets |
 | Hex nut | 4 | M5 | RS125-4 inside acoustic chamber |
 | Self-tap screw | 4 | M2 × 6 mm | PCB to boss cylinders |
-| Foam gasket tape | 1 roll | 3 mm wide × 1 mm thick | Both driver flanges — air seal |
+| Foam gasket tape | 1 roll | 3 mm wide × 1 mm thick | Both driver flanges, air seal |
 | Rubber feet | 4 | Ø8 mm × 3 mm self-adhesive | Bottom cap foot recesses |
 
 
-### Electronics & Acoustic
+### Electronics and drivers
 
 | Item | Part number | Notes |
 |---|---|---|
@@ -277,35 +275,35 @@ Measure impedance sweep (10 Hz–1 kHz) using a USB audio interface and REW. The
 | CM5 carrier board | Custom (theboard.kicad) | 80.5×113.5 mm, 6-layer PCB |
 | Compute module | Raspberry Pi CM5 | With active cooler |
 | DC barrel jack | 5.5×2.1 mm panel mount | Z=90 mm on +Y wall |
-| Rocker switch | ⚠ Replace RA1113112R | Must be ≥30V DC rated, 19.4×13 mm cutout |
+| Rocker switch | Replace RA1113112R | Must be rated 30 V DC or more, 19.4×13 mm cutout |
 | LED blue | Dialight 558-0803023F | Ø3.96 mm snap-in; uses lens plug |
 | LED red | Dialight 558-0101001F | |
 | LED green | Dialight 558-0201001F | |
 | Buck converter U2 | AP63357DV-7 · C2158014 | Corrected from C2157973 in earlier BOM |
 
-### Veneer Wrap Materials (Optional)
+### Veneer wrap materials (optional)
 
 | Item | Specification | Source |
 |---|---|---|
-| Paper-backed veneer | 0.5–0.6 mm, ≥282 mm wide, ≥480 mm long | Certainly Wood, Oakwood Veneer, Woodcraft |
+| Paper-backed veneer | 0.5 to 0.6 mm, ≥282 mm wide, ≥480 mm long | Certainly Wood, Oakwood Veneer, Woodcraft |
 | Contact cement | Weldwood solvent-based or DAP Weldwood | Hardware store |
 | Rubber brayer/roller | J-roller, ~3" wide | Craft / printmaking supply |
 | Wipe-on poly | Minwax Wipe-On Poly, matte or satin | Hardware store |
 
 ---
 
-## 9. Pending Items & Known Issues
+## Pending items and known issues
 
 | Priority | Item | Detail |
 |---|---|---|
-| 🔴 HIGH | Replace rocker switch | RA1113112R has no DC voltage rating. Source ≥30V DC-rated rocker with 19.4×13 mm cutout before PCB assembly. |
-| 🟡 MED | Verify v16 in Fusion 360 | Import v16_body.step. Check: boss cylinder positions, vent cluster geometry, LED counterbores, M5 nut pockets. |
-| 🟡 MED | JLCPCB layer stackup | 6-layer PCB order paused — empty layer 4 flagged. Review stackup before approving. Consider 4-layer reduction (earlier test: DRC error on starved thermals on 5V plane). |
-| 🟡 MED | Passive radiator tuning | Add ~14 g to RS125-4 cone. Verify fp ~65 Hz with REW post-assembly. Adjust ±2 g. |
-| 🟢 LOW | Grille flange for veneer | If veneer wrap used, choose Option A/B/C from §6 and update grille STEP. Option B (extend flange ~4 mm) recommended. |
-| 🟢 LOW | Lens plug test print | Print one lens plug in clear PETG at 0.10 mm layers before all three. Verify snap retention and LED diffusion. |
-| 🟢 LOW | Buck converter BOM | Confirmed: U2 = AP63357DV-7, JLCPCB C2158014. Corrected from C2157973 in earlier BOM revision. |
+| High | Replace rocker switch | RA1113112R has no DC voltage rating. Source a rocker rated 30 V DC or more with a 19.4×13 mm cutout before PCB assembly. |
+| Medium | Verify v16 in Fusion 360 | Import v16_body.step. Check the boss cylinder positions, vent cluster geometry, LED counterbores and M5 nut pockets. |
+| Medium | JLCPCB layer stackup | 6-layer PCB order paused; empty layer 4 flagged. Review the stackup before approving. Consider a 4-layer reduction (an earlier test gave a DRC error on starved thermals on the 5 V plane). |
+| Medium | Passive radiator tuning | Add ~14 g to the RS125-4 cone. Verify fp ~65 Hz with REW after assembly. Adjust ±2 g. |
+| Low | Grille flange for veneer | If the veneer wrap is used, pick option A, B or C under "Wood veneer wrap" and update the grille STEP. Option B (extend the flange ~4 mm) is the choice. |
+| Low | Lens plug test print | Print one lens plug in clear PETG at 0.10 mm layers before all three. Check snap retention and LED diffusion. |
+| Low | Buck converter BOM | U2 = AP63357DV-7, JLCPCB C2158014. Corrected from C2157973 in an earlier BOM revision. |
 
 ---
 
-*Generated from build_v16.py · CadQuery model · March 2026*
+Model: `build_v16.py`, CadQuery, March 2026.
