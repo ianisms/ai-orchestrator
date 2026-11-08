@@ -86,7 +86,7 @@ bound to the key of the thing that holds it.
 ```mermaid
 flowchart LR
     subgraph Device["Speaker device"]
-        TPM["Hardware-held device key<br/>TPM or secure element on the carrier board"]
+        TPM["Hardware-held device key<br/>TPM 2.0 on the carrier board, SPI"]
         ENR["Enrollment: device key registered<br/>to a room and household"]
         DCRED["Short-lived device credential<br/>issued on attested start"]
     end
@@ -291,7 +291,7 @@ device-bound session flows are drawn in `SESSION_BINDING.md` section 5.
 | Speaker identification on the turn's audio | built | `server/modules/orchestrator/core/audio_tap.py`, identity tool | 16 |
 | Liveness check | not built | rollout step 3 | 15, 21 |
 | Spoken confirmation and phone approval | not built | rollout step 2 | 17, 19 |
-| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; secure element or TPM not built; mTLS from device not taken, see `SESSION_BINDING.md` 4.1) | `DEVICE_IDENTITY.md`, `SESSION_BINDING.md` | 18, 1 |
+| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; TPM on the carrier board not built; mTLS from device not taken, see `SESSION_BINDING.md` 4.1) | `DEVICE_IDENTITY.md`, `SESSION_BINDING.md` | 18, 1 |
 | Admin-run voice enrollment with per-user thresholds | built | `VOICE_ENROLLMENT.md` | 17, 15 |
 | Client-secret actor credentials | built (prototype) | `security/delegation/sts.py` | 6 |
 | SPIFFE/SPIRE workload identity | not built (prototype B) | section 2 | 6, 13 |

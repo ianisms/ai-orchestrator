@@ -89,7 +89,7 @@ assertions replaced by proofs wherever a proof is possible.
 | Step | What moves | Why |
 |---|---|---|
 | Speaker as STS client (option (a) in 4.3) | The speaker performs the exchange itself over its own channel; the STS checks possession of the device key directly | Removes the orchestrator's assertion of the device; the one place today where a compromised orchestrator could lie |
-| Secure element or SPI TPM on the carrier board (`DEVICE_IDENTITY.md`) | Key in silicon, no pluggable part; with a TPM, a quote over the boot chain before the credential is issued | Device identity becomes attestation: which software, not only which key |
+| TPM 2.0 on the carrier board (`DEVICE_IDENTITY.md`) | The key is generated in the TPM and stays there; no pluggable part; a quote over the boot chain before the credential is issued | Device identity becomes attestation, covering which software runs as well as which key is present |
 | Prototype B: SPIFFE/SPIRE for the actor leg | Gateway and sub-agents get X.509-SVIDs from SPIRE with attestation plugins gating issuance; tokens bound with `cnf.x5t#S256` (RFC 8705) over mTLS, per connection; the DPoP software key retires | Closes the "key next to the token" gap on the actor leg; no per-request signing |
 | Liveness, spoken confirmation, phone approval | The step-ups the gate already asks for exist; gate moves from monitor to enforce | A recording or a clone stops at the step-up instead of being logged |
 | Assurance as an OPA input | Policy reads method, score, threshold source, device and confirmation state per call | Risk tier decided on what was measured, not on a flag |
@@ -98,7 +98,7 @@ assertions replaced by proofs wherever a proof is possible.
 ```mermaid
 flowchart LR
     subgraph speaker [Speaker, CM5]
-        SE[Secure element or TPM<br/>attested key]
+        SE[TPM 2.0 on the PCB<br/>attested key]
         VA[Voice agent<br/>STS client]
     end
     subgraph orch [Orchestrator, server]
@@ -364,7 +364,7 @@ Every new path fails closed.
   impossible.
 - The YubiKey provides device identity, not attestation. It proves which key
   is present, not what software is running. `DEVICE_IDENTITY.md` covers the
-  gap and the planned secure element or TPM.
+  gap and the planned TPM on the carrier board.
 - Voice identification is probabilistic and does not resist a cloned voice.
   The assurance record exists so that downstream policy always sees that.
 - Enrollment quality depends on the prompts and the room. The coach checks
