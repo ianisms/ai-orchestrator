@@ -52,11 +52,11 @@ Files:
 | Voice gate reads the device credential | `core/voice_gate.py`, `origin_trusted`; `core/utterance.py`, `set_device` | built: origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` bounds on the credential's expiry per turn |
 | User token bound to the device key | `security/delegation/sts.py`, `issue_user_token(device_jkt=...)` | built (prototype): `SESSION_BINDING.md` |
 
-The YubiKey is set up so that signing does not require a touch, since nobody
-is there to touch it, and asks for its PIN once at boot, which the client
-reads from a file only its own user can read. The management key is used at
-enrollment and is not kept on the device. In a sealed enclosure the PIN can be
-turned off too, and possession of the key is then the whole secret.
+Signing does not require a touch; nobody is there to touch it. The YubiKey
+asks for its PIN once at boot. The client reads the PIN from a file only its
+own user can read. The management key is used at enrollment and is not kept
+on the device. In a sealed enclosure the PIN can be turned off too; possession
+of the key is then the whole secret.
 
 Fail closed. No key, unknown device, revoked device, unknown nonce, expired
 nonce, replayed nonce, nonce issued to another device, and bad signature all
