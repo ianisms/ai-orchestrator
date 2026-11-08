@@ -11,14 +11,11 @@ the agents' DPoP keys are software in process and stop a copied token, not a
 compromised process. A voice match stands on a measured enrollment, not on
 one global threshold.
 
-Status key, same as elsewhere in `security/`: built = runs with tests; partial =
-runs but with a documented gap; not built = design only.
-
 ## Current state
 
 What runs, what it binds, which switches are off.
 
-| Piece | Where | Status |
+| Control | Where | Status |
 |---|---|---|
 | Speaker holds a P-256 key in YubiKey PIV 9a; signs a 30 s nonce at boot; gets a 10 min credential with `cnf.jkt` | `speaker/.../device_identity.py`, `server/.../device_identity.py` | built, off by default (`device_identity_enable`) |
 | Credential rides on every Converse call as `x-device-credential`, re-attested when stale | `grpc_client.py` metadata provider, `capture_streamer.py` | built |

@@ -27,9 +27,9 @@ Prototypes, not production: keys and secrets live in memory, and the consent and
 
 The voice rules are the exception. `server/modules/orchestrator/core/voice_gate.py` applies the same tiers inside the live orchestrator, in Python rather than OPA. The orchestrator identifies the speaker for each turn itself, never the model; origin comes from the verified device credential on the stream (or, until `VOICE_GATE_REQUIRE_DEVICE` is on, the gRPC peer address), never from headers; each enrolled person has a threshold fixed at enrollment, floored by the global one; and a stated name identifies no one. Every decision carries an assurance record of what was measured. It ships in monitor mode, logging `allow` or `would_deny` for every non-read tool call, because the liveness check and the spoken and phone approval flows are not built yet. Enforce mode before they land would block every write.
 
-## Where each piece lives
+## Controls
 
-| Piece | Status | Where | Threats |
+| Control | Status | Where | Threats |
 |---|---|---|---|
 | Network-origin check for the speaker | built | `server/modules/orchestrator/core/voice_gate.py` | 18 |
 | Speaker identification on the turn's audio | built | `server/modules/orchestrator/core/audio_tap.py`, identity tool | 16 |

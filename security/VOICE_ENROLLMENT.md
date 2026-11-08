@@ -7,9 +7,6 @@ writes), `scripts/enroll_voice.py` (admin), `enrollment_sample` in
 `tools_server/tools/get_person_id` (hidden from the model),
 `core/utterance.py` (`_enrollment_turn`).
 
-Status key: built = runs with tests; partial = runs but with a documented gap;
-not built = design only.
-
 ## Current state
 
 ### Two paths, one record

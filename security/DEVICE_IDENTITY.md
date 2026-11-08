@@ -4,9 +4,6 @@ How the orchestrator decides that the thing on the other end of the gRPC stream
 is the kitchen speaker and not some other host on the same network. What the
 session does with that identity is in `SESSION_BINDING.md`.
 
-Status key, same as elsewhere in `security/`: built = runs with tests; partial =
-runs but with a documented gap; not built = design only.
-
 ## Current state
 
 The speaker proves which device it is with a key it holds and cannot export,
@@ -42,7 +39,7 @@ sequenceDiagram
 
 Files:
 
-| Piece | Where | Status |
+| Control | Where | Status |
 |---|---|---|
 | Signer interface, `YubiKeyPivSigner`, `FakeSigner` | `speaker/modules/speaker/device_identity.py` | built; YubiKey path reviewed against the yubikit API, not exercised in CI |
 | Boot-time attest client, credential cache | same file, `DeviceAttestClient`; called from `orchestrator.py` `_attest_device` | built, off by default (`device_identity_enable`) |
@@ -55,11 +52,11 @@ Files:
 | Voice gate reads the device credential | `core/voice_gate.py`, `origin_trusted`; `core/utterance.py`, `set_device` | built: origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` bounds on the credential's expiry per turn |
 | User token bound to the device key | `security/delegation/sts.py`, `issue_user_token(device_jkt=...)` | built (prototype): `SESSION_BINDING.md` |
 
-Key policy: ECCP256, touch policy never (nobody is there to touch it), PIN
-policy once with the PIN in a mode 600 file the client reads at boot. The
-management key is used only at enrollment and is not on the device at run
-time. `--pin-policy never` is allowed for a sealed enclosure; then possession
-of the key is the whole secret.
+Signing does not require a touch; nobody is there to touch it. The YubiKey
+asks for its PIN once at boot. The client reads the PIN from a file only its
+own user can read. The management key is used at enrollment and is not kept
+on the device. In a sealed enclosure the PIN can be turned off too; possession
+of the key is then the whole secret.
 
 Fail closed. No key, unknown device, revoked device, unknown nonce, expired
 nonce, replayed nonce, nonce issued to another device, and bad signature all
