@@ -23,16 +23,23 @@ A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
 generated on the YubiKey and cannot be exported. At boot the speaker proves it
 holds that key, and the orchestrator issues a short-lived device credential.
 
-```
-speaker (YubiKey PIV 9a)                 orchestrator (status server :9111)
-  POST /device/challenge {device_id} --> issue nonce, 30 s, bound to device_id
-  <-- {nonce, exp}
-  sign "ai-orchestrator device challenge v1\n" + nonce  (ECDSA P-256 / SHA-256)
-  POST /device/attest {device_id, nonce, signature} -->
-                                         nonce known, unexpired, unused, same device_id
-                                         device enrolled and not revoked
-                                         signature verifies against the enrolled key
-  <-- {credential, exp}                  HS256 token, 10 min, cnf.jkt = key thumbprint
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Y as YubiKey (PIV 9a)
+    participant S as Speaker (CM5)
+    participant O as Orchestrator (status server :9111)
+    participant G as gRPC Converse
+
+    S->>O: POST /device/challenge {device_id}
+    O-->>S: {nonce, exp} (30 s, bound to device_id)
+    S->>Y: sign "ai-orchestrator device challenge v1" + nonce
+    Y-->>S: ECDSA P-256 / SHA-256 signature
+    S->>O: POST /device/attest {device_id, nonce, signature}
+    Note over O: nonce known, unexpired, unused, same device_id<br/>device enrolled and not revoked<br/>signature verifies against the enrolled key
+    O-->>S: {credential, exp} HS256, 10 min, cnf.jkt = key thumbprint
+    S->>G: Converse stream with x-device-credential
+    Note over G: verified at connect, refused without it when DEVICE_IDENTITY_REQUIRE is on
 ```
 
 Files:
@@ -74,6 +81,19 @@ identity, not attestation.
 
 ### Theft of a pluggable key
 
+```mermaid
+flowchart LR
+    T[YubiKey pulled from the speaker<br/>and plugged into another host] --> P{PIN policy on?}
+    P -- yes --> N[Also needs the PIN file from the Pi]
+    P -- no --> K[Possession is enough]
+    N --> C[Credential issued: this key is present]
+    K --> C
+    C --> M1[Key-bound tokens stay at the read tier]
+    C --> M2[Writes and high-risk calls still need voice plus the step-up]
+    C --> M3[enroll_device.py revoke: next challenge and credential check refused;<br/>revoke_device at the STS kills bound tokens]
+    C --> M4[Nonce bound to device_id; registry never enumerated]
+```
+
 A YubiKey can be pulled from the speaker and plugged into a laptop. With the
 PIN policy on, the attacker also needs the PIN file from the Pi; without it,
 possession is enough. Either way, treat the credential as "this key is
@@ -104,6 +124,23 @@ provides PCR measurements, so the orchestrator can require a quote over the
 boot chain before it issues the credential. That completes the attestation
 path the future-state diagram describes: the device proves what software it
 runs as well as which key it holds.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant T as TPM 2.0 (on the PCB, SPI)
+    participant S as Speaker (CM5)
+    participant O as Orchestrator
+
+    Note over T,S: boot: firmware and OS measured into PCRs
+    S->>O: POST /device/challenge {device_id}
+    O-->>S: {nonce, exp}
+    S->>T: TPM2_Quote over the PCR set with the nonce, signed by the attestation key
+    T-->>S: quote + signature
+    S->>O: POST /device/attest {device_id, nonce, quote, signature}
+    Note over O: signature against the enrolled attestation key<br/>PCR values against the policy for this device<br/>nonce fresh and bound
+    O-->>S: credential only if the key and the measured state both pass
+```
 
 The orchestrator side keeps the same structure, with a signer behind the
 `Signer` interface, an enrollment registry keyed by thumbprint, a challenge

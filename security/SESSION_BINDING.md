@@ -175,6 +175,20 @@ options were considered.
   that the device is registered and not revoked, and that the exchanging
   client is the one the user consented to.
 
+```mermaid
+flowchart LR
+    subgraph a [a: speaker exchanges]
+        A1[Speaker proves the device key to the STS directly] --> A2[Needs STS client role, secret, network path on the CM5]
+    end
+    subgraph b [b: device-signed assertion]
+        B1[Speaker signs a session assertion per session] --> B2[Gateway presents it at exchange; new artifact, extra YubiKey signature]
+    end
+    subgraph c [c: orchestrator asserts, current]
+        C1[Orchestrator verified the credential on the stream] --> C2[Asserts device_jkt at exchange; STS checks cnf.jkt, registry, may_act]
+    end
+    c -. target .-> a
+```
+
 v2.0 uses (c). The orchestrator is already trusted to assert who is speaking,
 so trusting it to also assert which device is on the stream does not add a new
 trusted component. The cost is that a compromised orchestrator could assert a
