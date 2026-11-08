@@ -1,4 +1,4 @@
-# Device identity for the speaker: current state and future state
+# Device identity for the speaker
 
 How the orchestrator decides that the thing on the other end of the gRPC stream
 is the kitchen speaker and not some other host on the same network. The
@@ -8,7 +8,7 @@ device-bound user token) is in `SESSION_BINDING.md`; the flows are drawn there.
 Status key, same as elsewhere in `security/`: built = runs with tests; partial =
 runs but with a documented gap; not built = design only.
 
-## Current state: a hardware-held device key
+## Current state
 
 Origin used to be location plus voice: the gRPC peer address checked against
 `VOICE_GATE_TRUSTED_SPEAKER_NETS`, and the speaker identified from the turn's
@@ -68,7 +68,7 @@ attestation key chained to a manufacturer. A CM5 whose root filesystem has been
 replaced still attests fine if the YubiKey is plugged in. This is device
 identity, not attestation.
 
-## Theft of a pluggable key
+### Theft of a pluggable key
 
 A YubiKey can be pulled from the speaker and plugged into a laptop. With the
 PIN policy on, the attacker also needs the PIN file from the Pi; without it,
@@ -91,7 +91,7 @@ order they apply:
    never enumerated by the challenge route, so a stolen key cannot be probed
    for which device it belongs to without already knowing.
 
-## Future state: measured boot and a real attestation chain
+## Future state
 
 A header-mounted TPM 2.0 module on the CM5 (GPIO/SPI) would also work as a
 stopgap: it gives an attestation key and PCR measurements without a board
