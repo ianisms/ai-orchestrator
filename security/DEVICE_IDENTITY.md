@@ -4,9 +4,6 @@ How the orchestrator decides that the thing on the other end of the gRPC stream
 is the kitchen speaker and not some other host on the same network. What the
 session does with that identity is in `SESSION_BINDING.md`.
 
-Status key, same as elsewhere in `security/`: built = runs with tests; partial =
-runs but with a documented gap; not built = design only.
-
 ## Current state
 
 The speaker proves which device it is with a key it holds and cannot export,

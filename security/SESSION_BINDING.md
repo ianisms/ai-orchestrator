@@ -11,9 +11,6 @@ the agents' DPoP keys are software in process and stop a copied token, not a
 compromised process. A voice match stands on a measured enrollment, not on
 one global threshold.
 
-Status key, same as elsewhere in `security/`: built = runs with tests; partial =
-runs but with a documented gap; not built = design only.
-
 ## Current state
 
 What runs, what it binds, which switches are off.

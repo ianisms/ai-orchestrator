@@ -10,6 +10,9 @@ under which grant, for how long, and what stops them.
 - `SESSION_BINDING.md` - device-bound sessions and voice enrollment: the credential on the Converse stream, the device as the gate's origin signal, user tokens bound to the device key with the orchestrator asserting the thumbprint at the exchange, an assurance record on every decision, and enrollment as an admin-run, device-bound, measured session. Reasoning, flows, failure modes, limits.
 - `VOICE_ENROLLMENT.md` - the enrollment procedure, criteria (clip quality, prompt match, consistency, separation, per-user threshold) and the record each profile carries.
 
+Status words used in these docs: built means it runs with tests; partial
+means it runs with a documented gap; not built means design only.
+
 ## Run
 
 ```
