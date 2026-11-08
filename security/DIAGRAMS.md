@@ -10,17 +10,20 @@ not built = design only.
 ## 1. Attestation, current state
 
 Three kinds of principal reach the tool plane: the speaker device, the person
-speaking, and the agents that act for them. Today each is trusted on a different
-basis, and none of it is hardware-backed.
+speaking, and the agents that act for them. Each is trusted on a different
+basis. The device is the one with a hardware-held key; the enforcement switches
+that make it the only accepted origin are off until every speaker attests.
 
 ```mermaid
 flowchart LR
     subgraph Device["Speaker device (Pi CM5)"]
-        SPK[Speaker client<br/>speaker/modules/speaker/grpc_client.py]
+        YK["YubiKey PIV 9a, P-256<br/>signs the boot challenge<br/>speaker/.../device_identity.py"]
+        SPK[Speaker client<br/>sends x-device-credential on the stream<br/>speaker/modules/speaker/grpc_client.py]
     end
 
     subgraph Orch["Orchestrator (server/)"]
-        PEER["gRPC peer address<br/>checked against trusted speaker nets<br/>voice_gate.py: _host_trusted"]
+        DEV["Device credential verified at connect<br/>DEVICE_IDENTITY_REQUIRE, VOICE_GATE_REQUIRE_DEVICE off by default<br/>device_identity.py, voice_gate.py: origin_trusted"]
+        PEER["gRPC peer address<br/>fallback while the device switch is off<br/>voice_gate.py: _host_trusted"]
         SID["Speaker identification on this turn's audio<br/>identify_speaker, hidden from the model<br/>audio_tap.py"]
         LIVE["Liveness check<br/>NOT BUILT: liveness is None,<br/>so voice never verifies"]
         GATE["Voice gate<br/>voice_gate.py, monitor mode"]
@@ -36,8 +39,11 @@ flowchart LR
         VER["RS256 verify against STS key or JWKS<br/>then DPoP proof against cnf.jkt<br/>verify.py"]
     end
 
+    YK --> SPK
+    SPK -->|"device credential"| DEV
     SPK -->|"network origin"| PEER
     SPK -->|"audio"| SID
+    DEV --> GATE
     PEER --> GATE
     SID --> GATE
     LIVE -.->|"missing signal fails closed"| GATE
@@ -47,14 +53,16 @@ flowchart LR
     classDef gap fill:#fde2e2,stroke:#b00020,color:#000;
     classDef partial fill:#fff4d6,stroke:#b58100,color:#000;
     class LIVE gap;
-    class PEER,CS,KEY,GATE partial;
+    class DEV,PEER,CS,KEY,GATE partial;
 ```
 
 What this means, in one line each:
 
-- The device is trusted by where it is, not what it is. A trusted address is a
-  network-origin check (`trusted_speaker_nets`), so a compromised host on that
-  address passes (threat 18).
+- The device holds a key it cannot export and proves it at boot; the
+  credential rides on the stream and the gate can use it as the origin signal.
+  With `VOICE_GATE_REQUIRE_DEVICE` off, the gate still falls back to the peer
+  address, which a compromised host on a trusted address passes (threat 18).
+  The key proves which device, not what software it runs (`DEVICE_IDENTITY.md`).
 - The person is trusted by voice match plus origin. Liveness is not built, so in
   enforce mode no voice would verify; that is why the gate ships in monitor mode
   (threats 15, 21).
@@ -124,9 +132,9 @@ What changes:
   with SVIDs the same binding moves to the mTLS connection (RFC 8705) and the
   key out of process memory (threat 1; "next controls" item 1, partial).
 
-The one-line version: today the speaker is trusted by network origin plus voice;
-the target is a hardware-held device key, so the speaker proves what it is, not
-just where it is.
+In one line: the speaker proves which device it is with a hardware-held key
+(`DEVICE_IDENTITY.md`, `SESSION_BINDING.md`); the future state adds a secure
+element or TPM so that it can also prove what software it runs.
 
 ## 3. Token exchange, as built (prototype A)
 

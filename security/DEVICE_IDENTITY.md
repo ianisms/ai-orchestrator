@@ -10,12 +10,14 @@ runs but with a documented gap; not built = design only.
 
 ## Current state
 
-The speaker is identified by what it is: a key it holds and cannot export,
-proven at boot and carried on the stream. With `VOICE_GATE_REQUIRE_DEVICE` on,
-that is the voice gate's origin signal; with it off, the gate falls back to the
-gRPC peer address against `VOICE_GATE_TRUSTED_SPEAKER_NETS`, which any host on
-a trusted address passes (threat 18). Who is talking comes separately from the
-turn's own audio.
+The speaker proves which device it is with a key that it holds and cannot
+export. It proves possession of the key at boot and carries the resulting
+credential on the stream. When `VOICE_GATE_REQUIRE_DEVICE` is on, the voice
+gate uses that credential as its origin signal. When it is off, the gate falls
+back to checking the gRPC peer address against
+`VOICE_GATE_TRUSTED_SPEAKER_NETS`, a check that any host on a trusted address
+passes (threat 18). The identity of the person speaking is established
+separately, from the audio of each turn.
 
 A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
 generated on the YubiKey and cannot be exported. At boot the speaker proves it
@@ -64,8 +66,8 @@ Tests: `server/test/test_device_identity.py` (both sides through the HTTP glue
 in process, with `FakeSigner`) and `speaker/test/test_device_identity.py`. CI
 runs both without hardware.
 
-What this proves: the device holds the enrolled key. What it does not prove:
-what software is running on it. There is no measured boot, no PCR quote, no
+This proves that the device holds the enrolled key. It does not prove what
+software is running on it. There is no measured boot, no PCR quote, no
 attestation key chained to a manufacturer. A CM5 whose root filesystem has been
 replaced still attests fine if the YubiKey is plugged in. This is device
 identity, not attestation.
@@ -99,7 +101,7 @@ A header-mounted TPM 2.0 module on the CM5 (GPIO/SPI) would also work as a
 stopgap: it gives an attestation key and PCR measurements without a board
 change. I am not taking that path.
 
-The step: revise the carrier board (`speaker/hardware/pcb/theboard/`, rev 3.7
+The planned step is to revise the carrier board (`speaker/hardware/pcb/theboard/`, rev 3.7
 today) to add a secure element (ATECC608 over I2C) or an SPI TPM footprint.
 
 - ATECC608 over I2C: a non-extractable P-256 key with a manufacturer
@@ -109,8 +111,8 @@ today) to add a secure element (ATECC608 over I2C) or an SPI TPM footprint.
   orchestrator can require a quote over the boot chain before issuing the
   credential. That is the full attestation path the target diagram describes.
 
-Either way the orchestrator side here does not change shape: a signer behind
-the `Signer` interface, an enrollment registry keyed by thumbprint, a challenge
+In either case the orchestrator side keeps the same structure, with a signer
+behind the `Signer` interface, an enrollment registry keyed by thumbprint, a challenge
 with a short nonce, a short-lived key-bound credential. The TPM variant adds a
 quote to the attest request and a PCR policy to the verifier.
 
