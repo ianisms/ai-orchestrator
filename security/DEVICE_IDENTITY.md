@@ -97,28 +97,22 @@ order they apply:
 
 ## Future state
 
-A header-mounted TPM 2.0 module on the CM5 (GPIO/SPI) would also work as a
-stopgap: it gives an attestation key and PCR measurements without a board
-change. I am not taking that path.
+The next carrier-board revision (`speaker/hardware/pcb/theboard/`, rev 3.7
+today) places a TPM 2.0 on the PCB over SPI. The key is generated inside the
+TPM and never leaves it, there is no pluggable part to remove, and the TPM
+provides PCR measurements, so the orchestrator can require a quote over the
+boot chain before it issues the credential. That completes the attestation
+path the future-state diagram describes: the device proves what software it
+runs as well as which key it holds.
 
-The planned step is to revise the carrier board (`speaker/hardware/pcb/theboard/`, rev 3.7
-today) to add a secure element (ATECC608 over I2C) or an SPI TPM footprint.
-
-- ATECC608 over I2C: a non-extractable P-256 key with a manufacturer
-  certificate chain, the same challenge flow as above with the YubiKey removed,
-  and no pluggable part to steal. No measured boot.
-- SPI TPM: everything the ATECC608 gives, plus PCR measurements, so the
-  orchestrator can require a quote over the boot chain before issuing the
-  credential. That is the full attestation path the target diagram describes.
-
-In either case the orchestrator side keeps the same structure, with a signer
-behind the `Signer` interface, an enrollment registry keyed by thumbprint, a challenge
-with a short nonce, a short-lived key-bound credential. The TPM variant adds a
+The orchestrator side keeps the same structure, with a signer behind the
+`Signer` interface, an enrollment registry keyed by thumbprint, a challenge
+with a short nonce and a short-lived key-bound credential. The TPM adds a
 quote to the attest request and a PCR policy to the verifier.
 
-The remaining pieces landed ahead of the silicon (`SESSION_BINDING.md`): the
-speaker presents the credential on the stream, the voice gate takes the device
-identity as its origin signal in place of the address check, and user tokens
-minted for the session are bound to the device key, with the orchestrator
-asserting the thumbprint it verified at the exchange. Moving the key into a
-secure element or TPM changes the signer, not the shape.
+The session pieces are already in place (`SESSION_BINDING.md`): the speaker
+presents the credential on the stream, the voice gate takes the device
+identity as its origin signal, and user tokens minted for the session are
+bound to the device key, with the orchestrator asserting the thumbprint it
+verified at the exchange. Moving the key from the YubiKey into the TPM
+changes the signer and nothing else.
