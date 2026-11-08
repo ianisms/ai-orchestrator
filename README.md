@@ -116,7 +116,7 @@ This repo was built the way I build now. I set the design and the rules. Claude 
 - Revocation cuts the narrowest thing first: a token, then a grant, then a client. The user token's `grant_id` travels unchanged down the chain so revoking it kills the whole family, which closes a gap Keycloak leaves open. Tool servers can report a token with a reason and the STS, not the tool, decides whether a report escalates.
 - No stored secrets where federation can replace them. A tool that cannot speak OAuth sits behind a proxy that can; the proxy fetches the native credential per call and holds nothing at rest; every remaining static secret carries a migration date.
 - One broker surface for agents, with adapters underneath that use each platform's workload identity where it exists and our own where it does not. Agents never carry per-platform code.
-- Device identity for the speaker: a plugged-in YubiKey (PIV, headless) now, because it ships this month; then a TPM 2.0 on the PCB of the next carrier-board revision, because I design the board and a part on the board beats a dongle.
+- Device identity for the speaker: a plugged-in YubiKey now, because it ships this month; then a TPM 2.0 on the PCB of the next carrier-board revision, because I design the board and a part on the board beats a dongle.
 - Hardware: the enclosure design is entirely mine. The CM5 carrier board was a joint effort: I authored the KiCad files, schematic and layout; Claude advised on component selection.
 - Publication: a sanitized single-commit copy of the private repos, the MAUI client left out, PolyForm Strict in place of MIT so the code is usable only with my consent.
 

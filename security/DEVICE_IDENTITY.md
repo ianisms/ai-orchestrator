@@ -15,14 +15,14 @@ gRPC peer address against `VOICE_GATE_TRUSTED_SPEAKER_NETS`, and any host on a
 trusted address passes (threat 18). Who is speaking is a separate question,
 answered from each turn's audio.
 
-A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
-generated on the YubiKey and cannot be exported. At boot the speaker proves it
+A YubiKey 5 plugged into the CM5 holds the key. The key is generated on the
+YubiKey and cannot be exported. At boot the speaker proves it
 holds that key, and the orchestrator issues a short-lived device credential.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Y as YubiKey (PIV 9a)
+    participant Y as YubiKey
     participant S as Speaker (CM5)
     participant O as Orchestrator (status server :9111)
     participant G as gRPC Converse

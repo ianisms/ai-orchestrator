@@ -17,7 +17,7 @@ What runs, what it binds, which switches are off.
 
 | Control | Where | Status |
 |---|---|---|
-| Speaker holds a P-256 key in YubiKey PIV 9a; signs a 30 s nonce at boot; gets a 10 min credential with `cnf.jkt` | `speaker/.../device_identity.py`, `server/.../device_identity.py` | built, off by default (`device_identity_enable`) |
+| Speaker holds a key in a YubiKey; signs a 30 s nonce at boot; gets a 10 min credential with `cnf.jkt` | `speaker/.../device_identity.py`, `server/.../device_identity.py` | built, off by default (`device_identity_enable`) |
 | Credential rides on every Converse call as `x-device-credential`, re-attested when stale | `grpc_client.py` metadata provider, `capture_streamer.py` | built |
 | Orchestrator verifies the credential at connect; refuses the stream without one when `DEVICE_IDENTITY_REQUIRE` | `aiserver/server.py` | built, switch off |
 | Voice gate takes the device as origin when `VOICE_GATE_REQUIRE_DEVICE`; `device_verified` bounded by credential expiry per turn | `core/voice_gate.py`, `core/utterance.py` | built, switch off (address check until then) |
@@ -31,7 +31,7 @@ What runs, what it binds, which switches are off.
 ```mermaid
 flowchart LR
     subgraph speaker [Speaker, CM5]
-        YK[YubiKey PIV 9a<br/>P-256, non-exportable]
+        YK[YubiKey<br/>key cannot be exported]
         VA[Voice agent<br/>audio out, credential on stream]
     end
     subgraph orch [Orchestrator, server]
@@ -111,8 +111,8 @@ high-risk call on a voice match alone.
 
 ### Bind per connection, not per request
 
-Having the agent sign DPoP proofs with the PIV key does not work. The agent
-runs on the server and the key is on the CM5. A PIV or TPM key also signs about
+Having the agent sign DPoP proofs with the YubiKey does not work. The agent
+runs on the server and the key is on the CM5. A YubiKey or TPM also signs about
 ten times a second, far below one proof per tool call.
 
 The challenge in `DEVICE_IDENTITY.md` already proves possession once, when the
@@ -218,7 +218,7 @@ high-risk call alone.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Y as YubiKey (PIV 9a)
+    participant Y as YubiKey
     participant S as Speaker (CM5)
     participant O as Orchestrator
     participant G as Voice gate

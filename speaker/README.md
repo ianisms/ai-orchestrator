@@ -30,7 +30,7 @@ Configuration is `config/config.yaml`, with `config/benchmarks.yaml` supplying t
 
 ## Device identity (YubiKey)
 
-Off by default. With `device_identity_enable: true` the client proves at boot that it holds a key the orchestrator enrolled, and gets a short-lived device credential back. The key lives in PIV slot 9a of a YubiKey 5 plugged into the CM5's USB port. It is generated on the YubiKey, so it cannot be copied off the device. Signing does not need a touch, and the PIN is asked for once at boot. `modules/speaker/device_identity.py` holds the `Signer` interface, the `YubiKeyPivSigner`, a `FakeSigner` for tests, and the challenge client. The design, its limits and the TPM on the next board revision are in `security/DEVICE_IDENTITY.md`.
+Off by default. With `device_identity_enable: true` the client proves at boot that it holds a key the orchestrator enrolled, and gets a short-lived device credential back. The key lives in a YubiKey 5 plugged into the CM5's USB port. It is generated on the YubiKey, so it cannot be copied off the device. Signing does not need a touch, and the PIN is asked for once at boot. `modules/speaker/device_identity.py` holds the `Signer` interface, the `YubiKeyPivSigner`, a `FakeSigner` for tests, and the challenge client. The design, its limits and the TPM on the next board revision are in `security/DEVICE_IDENTITY.md`.
 
 One-time enrollment, on the Pi with the YubiKey in:
 
