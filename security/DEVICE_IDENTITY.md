@@ -52,11 +52,11 @@ Files:
 | Voice gate reads the device credential | `core/voice_gate.py`, `origin_trusted`; `core/utterance.py`, `set_device` | built: origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` bounds on the credential's expiry per turn |
 | User token bound to the device key | `security/delegation/sts.py`, `issue_user_token(device_jkt=...)` | built (prototype): `SESSION_BINDING.md` |
 
-Key policy: ECCP256, touch policy never (nobody is there to touch it), PIN
-policy once with the PIN in a mode 600 file the client reads at boot. The
-management key is used only at enrollment and is not on the device at run
-time. `--pin-policy never` is allowed for a sealed enclosure; then possession
-of the key is the whole secret.
+The key is ECC P-256. Touch policy is never, since nobody is there to touch
+it. PIN policy is once: the client reads the PIN at boot from a file only its
+own user can read. The management key is used at enrollment and is not on the
+device afterwards. For a sealed enclosure, `--pin-policy never` is acceptable,
+and possession of the key is then the whole secret.
 
 Fail closed. No key, unknown device, revoked device, unknown nonce, expired
 nonce, replayed nonce, nonce issued to another device, and bad signature all

@@ -56,7 +56,7 @@ pip install -r requirements.txt
 python demo.py          # chain, attack table and a revocation, no servers needed
 python -m pytest -q     # 71 tests
 python sts.py           # optional: STS on 127.0.0.1:8099; set STS_CLIENT_MCP_GATEWAY etc. (secrets) and STS_JKT_MCP_GATEWAY etc. (key thumbprints) first; nothing is printed
-python dpop.py keygen gateway.pem   # a client's DPoP key (PEM, mode 600); prints the thumbprint to register as STS_JKT_*
+python dpop.py keygen gateway.pem   # a client's DPoP key as a PEM only its owner can read; prints the thumbprint to register as STS_JKT_*
 ```
 
 ## Files
