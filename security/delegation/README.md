@@ -1,4 +1,4 @@
-# Prototype A: RFC 8693 delegation for agents
+# RFC 8693 delegation for agents
 
 The user consents to an agent. The agent exchanges the user's token for a
 short-lived, audience-scoped token that carries an `act` claim. A tool server
@@ -14,7 +14,7 @@ sequenceDiagram
     participant GW as mcp-gateway
     participant SA as code-review-subagent
     participant T as tool-github<br/>verify.py
-    participant PEP as PEP<br/>policy/ (prototype C)
+    participant PEP as PEP<br/>policy/
     participant PDP as PDP (OPA)
 
     U->>STS: login + consent to mcp-gateway
@@ -88,7 +88,7 @@ python dpop.py keygen gateway.pem   # a client's DPoP key as a PEM only its owne
 
 ```mermaid
 flowchart LR
-    subgraph Now["Revocation, current state (prototypes A and C)"]
+    subgraph Now["Revocation, current state"]
         TTL["Short lifetimes stay<br/>user 600 s, actor 60 s, tool 120 to 300 s<br/>no refresh tokens"]
         LIN["Lineage claims on every token<br/>jti, parent_jti, grant_id<br/>sts.py"]
         REV["RFC 7009 /revoke + subtree extension<br/>revoke a token = its descendants too<br/>revoke a user token = its grant<br/>sts.py: revoke"]
@@ -265,7 +265,7 @@ Admin uses the same client machinery as every other caller. Admin is a caller wi
 a credential and a scope, so it gets the same authentication, the same audit
 line (`by: ops-console`) and the same revocation. `revoke_client` on
 `ops-console` locks the console out; recovery is `enable_client` on the host.
-When agents move to SVIDs (prototype B) the console moves with them to an admin
+When agents move to SVIDs the console moves with them to an admin
 SVID, with nothing special-cased to rewrite. Binding the routes to loopback
 would be optional hardening on top; the scope check is the control.
 
@@ -358,7 +358,7 @@ it, as `subject_token` at the next exchange. There are two ways to bind it.
 ### Why DPoP comes before mTLS-bound tokens
 
 RFC 8705 binds a token to the client certificate on the TLS connection. That
-needs certificates for every agent and tool, which is what prototype B's
+needs certificates for every agent and tool, which is what the SPIFFE
 X.509-SVIDs are. It is the stated end state. Once SPIRE issues SVIDs, the mTLS
 connection the gateway and tools already use becomes the binding, with
 `cnf.x5t#S256` in place of `cnf.jkt` and no proof JWT per request. DPoP needs
@@ -377,7 +377,7 @@ the sub-agent does. The hardware key and SPIFFE address that layer. The speaker'
 device credential in `DEVICE_IDENTITY.md` is the hardware-key case of the same
 `cnf.jkt` binding. The key is in a YubiKey instead of a Python object, so it
 cannot be copied out of the process, only used from it. Agents get there when
-their keys move to an SVID backed by attestation (prototype B). Until then,
+their keys move to an SVID backed by attestation (SPIFFE). Until then,
 "bound" means "bound to this process's memory".
 
 Keys are generated at startup and die with the process, like the signing key.
@@ -453,7 +453,7 @@ once it is an STS client.
 | Plain exchange to strip the `act` chain | refused at STS |
 | Gateway uses another agent's actor token | refused at STS |
 | Handoff token sent straight to a tool | refused at tool: not addressed to it |
-| Prompt-injected write call | prototype C (policy check before `tools/call`) |
+| Prompt-injected write call | handled by the policy check in `../policy/` |
 | Agent outside the chain revokes the user's token | refused at STS: unauthorized_client |
 | Revoke a token this STS never issued | 200, nothing changes (no probing) |
 | User token revoked, live tool token replayed | refused at tool: token revoked |
@@ -515,6 +515,6 @@ The key-bound box holds for agents (`revoke_key`) and for the speaker
 - Revocation is in process only. A tool server that does not share the denylist, or has no checker configured, does not see revocations. The pushed deny list across PEPs and the central audit sink are not built. A Keycloak-issued user token revoked at Keycloak is not revoked here (see the caveat above).
 - Tool reports are trusted as far as the escalation policy allows and no further. Nothing checks that the reported anomaly was real. The policy is static and global, with no per-tool or per-grant variant.
 - The ops-console is a client secret like every other agent. An admin SVID is the target.
-- Sender constraint is DPoP to a software key in the agent's process (see the limit above). mTLS-bound tokens (RFC 8705) wait for SVIDs. Workload identity is prototype B.
+- Sender constraint is DPoP to a software key in the agent's process (see the limit above). mTLS-bound tokens (RFC 8705) wait for SVIDs. Workload identity (SPIFFE) is not built.
 - DPoP server nonces are not implemented. Key rotation for a client is not built; revoke the key and register a new thumbprint.
 - Keycloak hop 1 follows a preview feature. Nested delegation in Keycloak is untested.

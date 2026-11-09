@@ -72,7 +72,7 @@ assertions are replaced by proofs wherever a proof is possible.
 | Speaker as STS client (option (a) under "Who proves possession at the exchange") | The speaker performs the exchange itself over its own channel; the STS checks possession of the device key directly | Removes the orchestrator's assertion of the device; the one place today where a compromised orchestrator could lie |
 | Re-challenge on the open stream every 60 s (`DEVICE_IDENTITY.md`) | The orchestrator sends a nonce on the live stream; a speaker whose key was pulled cannot sign it | Bounds a pulled key to a minute instead of the credential lifetime |
 | TPM 2.0 on the carrier board (`DEVICE_IDENTITY.md`) | The key is generated in the TPM and stays there; no pluggable part; a quote over the boot chain before the credential is issued | Device identity becomes attestation, covering which software runs as well as which key is present |
-| Prototype B: SPIFFE/SPIRE for the actor leg | Gateway and sub-agents get X.509-SVIDs from SPIRE with attestation plugins gating issuance; tokens bound with `cnf.x5t#S256` (RFC 8705) over mTLS, per connection; the DPoP software key retires | Closes the "key next to the token" gap on the actor leg; no per-request signing |
+| SPIFFE/SPIRE for the actor leg | Gateway and sub-agents get X.509-SVIDs from SPIRE with attestation plugins gating issuance; tokens bound with `cnf.x5t#S256` (RFC 8705) over mTLS, per connection; the DPoP software key retires | Closes the "key next to the token" gap on the actor leg; no per-request signing |
 | Liveness, spoken confirmation, phone approval | The step-ups the gate already asks for exist; gate moves from monitor to enforce | A recording or a clone stops at the step-up instead of being logged |
 | Assurance as an OPA input | Policy reads method, score, threshold source, device and confirmation state per call | The risk tier is decided on what was measured |
 | Enrollment from the phone | Open, approve and close sessions from the person's own device | The admin step leaves the host shell; the record is unchanged |
@@ -131,7 +131,7 @@ voice gate. It is the token an attacker on the server would most want to
 replay, and the device is the one claim the hardware key can vouch for. The
 actor leg (gateway, sub-agents, tool tokens) stays on the software keys of the
 processes that present those tokens, with `act` lineage back to the user token.
-Moving those keys into hardware is prototype B (SPIFFE), under future state.
+Moving those keys into hardware is the SPIFFE step under future state.
 
 ### Who proves possession at the exchange
 
@@ -343,7 +343,7 @@ Everything fails closed.
 
 - The device binding covers the subject leg. The actor leg still runs on
   software keys in the orchestrator and gateway processes. SPIFFE with
-  attested SVIDs (prototype B) is next.
+  attested SVIDs is next.
 - The orchestrator asserts the device thumbprint. A compromised orchestrator
   could assert a device it did not see, as it could already misreport the
   voice. The thumbprint on every record makes that traceable. It does not make

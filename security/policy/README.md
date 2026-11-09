@@ -1,13 +1,13 @@
-# Prototype C: policy check before every tool call
+# Policy check before every tool call
 
-The MCP server verifies the delegated token (prototype A), then asks a policy
+The MCP server verifies the delegated token (`../delegation/`), then asks a policy
 decision point about the call before dispatching it. The request uses the
 OpenID AuthZEN evaluation shape of subject, action, resource and context. The PDP
 is a small facade over OPA. The whole delegation chain is evaluated once.
 
 ```mermaid
 flowchart LR
-    C[tools/call] --> V[Verify token<br/>prototype A]
+    C[tools/call] --> V[Verify token<br/>delegation/]
     V --> PEP[PEP builds the<br/>AuthZEN request]
     PEP --> PDP[PDP<br/>/access/v1/evaluation]
     PDP --> OPA[OPA]
