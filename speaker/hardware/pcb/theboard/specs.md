@@ -38,13 +38,20 @@ I have DigiKey symbols and footprints for Kicad
 - **CM5 3.3 V/1.8 V rails are limited (~600 mA)**, so NVMe must have a dedicated 3.3 V buck.
 
 ## Power Delivery Architecture
-```
-AC Mains → Captive cord → Internal AC-DC PSU (Mean Well LRS-150-28)
-  → 28V DC → Carrier Board (screw terminal J1)
-      ├── Direct 28V → Molex Micro-Fit 3.0 4-pin (J10) → JAB5
-      ├── LM73606 buck → 5.02V (CM5, XVF3800 header, GPIO header)
-      │     └── AP63357 buck → 3.3V (NVMe, GPIO header)
-      └── Bulk cap (C11) for stability
+
+```mermaid
+flowchart LR
+    AC[AC mains] --> CORD[Captive cord] --> PSU[Mean Well LRS-150-28<br/>internal AC-DC]
+    PSU -- 28 V DC --> J1[Carrier board<br/>screw terminal J1]
+    J1 --> J10[Molex Micro-Fit 3.0, J10] --> JAB5[JAB5, 28 V direct]
+    J1 --> B5[LM73606 buck<br/>5.02 V]
+    B5 --> CM5[CM5]
+    B5 --> XH[XVF3800 header]
+    B5 --> GP5[GPIO header 5 V]
+    B5 --> B3[AP63357 buck<br/>3.3 V]
+    B3 --> NVME[NVMe]
+    B3 --> GP3[GPIO header 3.3 V]
+    J1 --> C11[Bulk cap C11]
 ```
 
 ## DSP / Audio
@@ -89,27 +96,30 @@ If I ask a question, continue from this context and keep everything consistent w
 - **No external connectors**: Internal AC-DC PSU with captive AC cord. M.2, GPIO, I2S, XVF3800, and JAB5 headers are internal only.
 
 
-## 2) Top-Level Block Diagram (text)
-```
-AC Mains → Captive AC Cord → Internal PSU (Mean Well LRS-150-28)
-  └── 28V DC → Screw Terminal (J1, 2-pin)
-                    │
-                    ├──→ Molex Micro-Fit 3.0 4-pin (J10) → JAB5 (direct 28V)
-                    │
-                    ├──→ LM73606 buck → 5.02 V rail
-                    │     ├── CM5 5 V pins (solid plane)
-                    │     ├── 40-pin GPIO header 5 V
-                    │     ├── XVF3800 header 5 V (via 2×10 ribbon)
-                    │     └──→ AP63357 buck → 3.3 V rail
-                    │           ├── M.2 NVMe 3.3 V
-                    │           └── 40-pin GPIO header 3.3 V
-                    │
-                    └──→ Bulk cap (C11) for stability
+## 2) Top-Level Block Diagram
 
-CM5 Connectors (100-pin slot)
-  ├── PCIe Gen2 x1 → M.2 NVMe (M-key)
-  ├── I2S (master) → shared clocks → JAB5 + XVF3800 (slaves)
-  └── I2C / SPI / GPIO → 40-pin HAT header + XVF3800 header
+```mermaid
+flowchart TB
+    subgraph power [Power]
+        AC[AC mains] --> CORD[Captive AC cord] --> PSU[Mean Well LRS-150-28]
+        PSU -- 28 V DC --> J1[Screw terminal J1, 2-pin]
+        J1 --> J10[Molex Micro-Fit 3.0 4-pin, J10] --> JAB5P[JAB5, 28 V direct]
+        J1 --> B5[LM73606 buck, 5.02 V rail]
+        B5 --> P1[CM5 5 V pins, solid plane]
+        B5 --> P2[40-pin GPIO header 5 V]
+        B5 --> P3[XVF3800 header 5 V, via 2x10 ribbon]
+        B5 --> B3[AP63357 buck, 3.3 V rail]
+        B3 --> P4[M.2 NVMe 3.3 V]
+        B3 --> P5[40-pin GPIO header 3.3 V]
+        J1 --> C11[Bulk cap C11]
+    end
+    subgraph signals [CM5 connectors, 100-pin slot]
+        CM5[CM5] -- PCIe Gen2 x1 --> NVME[M.2 NVMe, M-key]
+        CM5 -- I2S master, shared clocks --> JAB5[JAB5, slave]
+        CM5 -- I2S master, shared clocks --> XVF[XVF3800, slave]
+        CM5 -- I2C, SPI, GPIO --> HAT[40-pin HAT header]
+        CM5 -- I2C, SPI, GPIO --> XH[XVF3800 header]
+    end
 ```
 
 ## 3) Power Tree & Budget
