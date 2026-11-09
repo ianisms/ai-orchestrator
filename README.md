@@ -15,7 +15,7 @@ Author: Ian Bennett ([github.com/ianisms](https://github.com/ianisms)). Source a
 |---|---|
 | [`server/`](server/README.md) | GPU server: gRPC orchestrator, MCP tools server and proxy, custom TTS service, Docker Compose stack with Prometheus, Grafana, and Loki |
 | [`speaker/`](speaker/README.md) | Pi CM5 voice client (wakeword, VAD, capture, playback, barge-in), device tree overlay, bring-up scripts, custom KiCad carrier board, 3D-printed enclosure |
-| [`docs/`](docs/design-notes.md) | Design notes with file references |
+| [`DESIGN_NOTES.md`](DESIGN_NOTES.md) | Design notes with file references |
 | [`security/`](security/README.md) | Agent identity and authorization prototypes: token exchange delegation, revocation, a policy check before every tool call with the policy grammar in Rego, voice step-up rules, threat model |
 
 Everything in `server/` is Python 3.11 with `asyncio`, gRPC, FastMCP, FastAPI, and NVIDIA NeMo. The speaker client is Python on Raspberry Pi OS in a Docker container with ALSA passthrough. Hardware sources are KiCad 9 and STEP.
@@ -53,7 +53,7 @@ One turn runs end to end like this. The speaker hears the wakeword, plays a chim
 
 ## Things worth reading
 
-These are the parts I would point a reviewer at first. [`docs/design-notes.md`](docs/design-notes.md) has the full list with file references.
+These are the parts I would point a reviewer at first. [`DESIGN_NOTES.md`](DESIGN_NOTES.md) has the full list with file references.
 
 **Audio never crosses the tool protocol.** Speaker identification needs the turn's audio, but base64-encoding seconds of PCM through JSON-RPC is the wrong shape. Instead the orchestrator wraps the STT input queue in a duck-typed `AudioTapQueue`. It records frames in passing, writes a WAV on commit, and injects an opaque `[AUDIO_REF session_id audio_id]` into the prompt. The identity tool reads the file from a shared mount. There is zero copy on the hot path, and the reference is bound to this turn so it cannot be replayed. ([`server/modules/orchestrator/core/audio_tap.py`](server/modules/orchestrator/core/audio_tap.py))
 
