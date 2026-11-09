@@ -165,7 +165,7 @@ flowchart LR
     c -. target .-> a
 ```
 
-v2.0 uses (c). The orchestrator is already trusted for who is speaking.
+The current state uses (c). The orchestrator is already trusted for who is speaking.
 Trusting it for which device adds one more fact from the same component. The
 cost is that a compromised orchestrator could assert a device it did not see,
 as it could already misreport the voice. The thumbprint is on every record, so

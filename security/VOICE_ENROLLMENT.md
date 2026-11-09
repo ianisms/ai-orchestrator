@@ -16,8 +16,8 @@ turn through `_enrollment_turn`.
 
 | Path | Who starts it | What it produces | Status |
 |---|---|---|---|
-| Stated name ("I'm Alice") | the person, mid-conversation | one pending sample; joins nothing until `scripts/approve_enrollment.py approve` | built (unchanged) |
-| Admin session | an admin on the host, for one person on one speaker | a profile with its own threshold and a record, after the criteria hold | built (v2.0) |
+| Stated name ("I'm Alice") | the person, mid-conversation | one pending sample; joins nothing until `scripts/approve_enrollment.py approve` | built |
+| Admin session | an admin on the host, for one person on one speaker | a profile with its own threshold and a record, after the criteria hold | built |
 
 New voices go through the admin session. The stated-name path stays for
 adding a sample to an existing profile, one approval at a time.
@@ -115,7 +115,7 @@ A clip is accepted when all of these hold (`EnrollmentPolicy`):
 |---|---|---|
 | duration | 2 to 8 s | shorter embeds badly, longer drifts |
 | clipping ratio | at most 1% | distorted audio embeds as a different voice |
-| level | at least -38 dBFS | a quiet clip is the room, not the person |
+| level | at least -38 dBFS | a quiet clip captures the room instead of the person |
 | estimated SNR | at least 10 dB | noise floor shows up in the embedding |
 | silence ratio | at most 65% | the clip has to contain the sentence |
 | prompt match | at least 60% of the prompt's words in the transcript | a replayed recording of something else fails; a sentence read from the prompt passes |
