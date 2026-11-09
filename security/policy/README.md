@@ -45,25 +45,25 @@ python -m pytest -q     # 16 tests, skipped if opa is missing
 
 ## Demo result
 
-| Call | Result |
-|---|---|
-| Sub-agent reads PR 42 (the real task) | allowed |
-| Injected: sub-agent merges PR 42 | denied: sub-agent not granted merge; token lacks repo:write; no approval |
-| Injected: gateway merges PR 42 (holds repo:write) | denied: needs the user's approval for this exact call |
-| Injected: gateway reads acme/secrets | denied: outside this session |
-| User approves that exact merge, gateway retries | allowed |
-| Same approved merge replayed | denied |
-| Approval for PR 42 used on PR 43 | denied |
-| Token with no act chain | rejected before policy |
-| Voice: all checks pass, read | allowed |
-| Voice: match at 0.91 | denied |
-| Voice: replayed recording (liveness fails) | denied |
-| Voice: request from off the home network | denied |
-| Voice: front end sent no signals | denied on all three checks |
-| Voice: merge with confirmations turned off | denied: high-risk always confirms |
-| Voice: comment with confirmations turned off | allowed |
-| Policy engine down | denied, fail closed |
-| PDP timeout | denied, fail closed |
+| Call | Result | Reason |
+|---|---|---|
+| Sub-agent reads PR 42, the real task | allowed |  |
+| Injected sub-agent merge of PR 42 | denied | sub-agent not granted merge; token lacks `repo:write`; no approval |
+| Injected gateway merge of PR 42 (the gateway holds `repo:write`) | denied | needs the user's approval for this exact call |
+| Injected gateway read of acme/secrets | denied | outside this session |
+| User approves that exact merge, gateway retries | allowed |  |
+| Same approved merge replayed | denied | write-class tool needs the user's approval for this exact call; the approval was consumed |
+| Approval for PR 42 used on PR 43 | denied | write-class tool needs the user's approval for this exact call |
+| Token with no `act` chain | rejected before policy |  |
+| Voice read, all checks pass | allowed |  |
+| Voice request, match at 0.91 | denied | voice match below 0.98 |
+| Voice request, replayed recording | denied | voice liveness check not passed |
+| Voice request from off the home network | denied | voice request did not come from the home network |
+| Voice request, front end sent no signals | denied | all three voice reasons |
+| Voice merge with confirmations turned off | denied | high-risk tools always confirm |
+| Voice comment with confirmations turned off | allowed |  |
+| Policy engine down | denied | fail closed |
+| PDP timeout | denied | fail closed |
 
 ## Future state
 

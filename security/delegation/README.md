@@ -447,37 +447,37 @@ once it is an STS client.
 
 `demo.py` runs each of these.
 
-| Attack | Result |
-|---|---|
-| Expired tool token replayed | refused at tool: token expired |
-| Exchange without `may_act` (no consent) | refused at STS: no may_act |
-| Different agent presents the user's token | refused at STS: audience does not name this client |
-| Sub-agent asks for `repo:write` (confused deputy) | refused at STS: scope exceeds what the subject holds |
-| Sub-agent asks for an unregistered tool | refused at STS: audience not registered |
-| Plain exchange to strip the `act` chain | refused at STS |
-| Gateway uses another agent's actor token | refused at STS |
-| Handoff token sent straight to a tool | refused at tool: not addressed to it |
-| Prompt-injected write call | handled by the policy check in `../policy/` |
-| Agent outside the chain revokes the user's token | refused at STS: unauthorized_client |
-| Revoke a token this STS never issued | 200, nothing changes (no probing) |
-| User token revoked, live tool token replayed | refused at tool: token revoked |
-| User token revoked, handoff exchanged again | refused at STS: subject_token revoked |
-| Another user's token after that revocation | still accepted (different grant) |
-| Tool server revokes the handoff above it, any reason | refused at STS: unauthorized_client |
-| Two reports from tool-github inside the window | never-reported sibling under the same handoff refused at tool; gateway's own token still accepted |
-| Third report, fresh handoff, same chain | grant revoked; gateway's own token refused; user token refused on exchange |
-| Gateway's actor token at an admin route | HTTP 403 insufficient_scope |
-| ops-console retires an agent | its live tokens refused at tool; no new actor tokens |
-| ops-console revokes an unknown grant | HTTP 200, zero counts (no probing) |
-| Stolen tool token presented with no proof | refused at tool: key-bound and no DPoP proof |
-| Stolen tool token, thief signs with its own key | refused at tool: proof key does not match cnf.jkt |
-| Stolen token and its captured proof replayed | refused at tool: proof jti already seen |
-| Proof minted for another tool's URI | refused at tool: htu does not match |
-| Proof older than 60 s | refused at tool: too old |
-| Exchange with no proof | refused at STS: invalid_dpop_proof |
-| Gateway's actor token exchanged under another client's key | refused at STS: actor_token is bound to another key |
-| ops-console's bound token sent as a plain Bearer | HTTP 401 invalid_dpop_proof |
-| ops-console revokes the sub-agent's key | every token bound to it refused at tool; its handoff exchange and new actor tokens refused at STS; the gateway's tokens untouched |
+| Attack | Refused at | Reason |
+|---|---|---|
+| Expired tool token replayed | tool | token expired |
+| Exchange without `may_act` (no consent) | STS | subject token has no `may_act`, no consent for any actor |
+| Different agent presents the user's token | STS | audience does not name this client |
+| Sub-agent asks for `repo:write` (confused deputy) | STS | scope exceeds what the subject holds |
+| Sub-agent asks for an unregistered tool | STS | audience not registered |
+| Plain exchange to strip the `act` chain | STS | subject carries delegation claims and would lose its `act` chain |
+| Gateway uses another agent's actor token | STS | actor token does not belong to the authenticated client |
+| Handoff token sent straight to a tool | tool | not addressed to it |
+| Prompt-injected write call | PEP | policy check in `../policy/` |
+| Agent outside the chain revokes the user's token | STS | `unauthorized_client` |
+| Revoke a token this STS never issued | STS | 200, nothing changes, no probing |
+| User token revoked, live tool token replayed | tool | token revoked |
+| User token revoked, handoff exchanged again | STS | subject token revoked |
+| Another user's token after that revocation | accepted | different grant |
+| Tool server revokes the handoff above it, any reason | STS | `unauthorized_client` |
+| Two reports from tool-github inside the window | tool | the never-reported sibling under the same handoff is refused; the gateway's own token is still accepted |
+| Third report, fresh handoff, same chain | STS and tool | grant revoked; the gateway's own token is refused; the user token is refused on exchange |
+| Gateway's actor token at an admin route | STS | HTTP 403 `insufficient_scope` |
+| ops-console retires an agent | STS and tool | its live tokens are refused at the tool; no new actor tokens |
+| ops-console revokes an unknown grant | STS | HTTP 200, zero counts, no probing |
+| Stolen tool token presented with no proof | tool | key-bound and no DPoP proof |
+| Stolen tool token, thief signs with its own key | tool | proof key does not match `cnf.jkt` |
+| Stolen token and its captured proof replayed | tool | proof `jti` already seen |
+| Proof minted for another tool's URI | tool | `htu` does not match |
+| Proof older than 60 s | tool | too old |
+| Exchange with no proof | STS | `invalid_dpop_proof` |
+| Gateway's actor token exchanged under another client's key | STS | actor token is bound to another key |
+| ops-console's bound token sent as a plain Bearer | STS | HTTP 401 `invalid_dpop_proof` |
+| ops-console revokes the sub-agent's key | STS and tool | every token bound to it is refused at the tool; its handoff exchange and new actor tokens are refused at the STS; the gateway's tokens are untouched |
 
 ## Future state
 
