@@ -1,6 +1,6 @@
 # Server
 
-GPU-hosted inference and orchestration for the smart speaker. Everything runs on one Linux box on a private LAN; nothing in the request path leaves the house.
+This is the GPU-hosted inference and orchestration for the smart speaker. Everything runs on one Linux box on a private LAN. Nothing in the request path leaves the house.
 
 ## Host
 
@@ -9,7 +9,7 @@ GPU-hosted inference and orchestration for the smart speaker. Everything runs on
 - Ubuntu 24.04, Docker with the NVIDIA container toolkit
 - Deployed to `/ai/server` on the host. Model weights, caches, and runtime state also live under that path and are not part of this repository.
 
-One GPU, no MIG or partitioning. The LLM, STT, and TTS containers share it. That shapes several decisions below, among them vLLM pinned to 85% of VRAM, a global lock in the TTS service, and health-gated startup order.
+There is one GPU, with no MIG or partitioning. The LLM, STT, and TTS containers share it. That shapes several decisions below, among them vLLM pinned to 85% of VRAM, a global lock in the TTS service, and health-gated startup order.
 
 ## Services
 

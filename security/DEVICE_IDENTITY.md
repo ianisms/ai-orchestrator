@@ -16,8 +16,7 @@ trusted address passes (threat 18). Who is speaking is a separate question,
 answered from each turn's audio.
 
 A YubiKey 5 plugged into the CM5 holds the key. The key is generated on the
-YubiKey and cannot be exported. At boot the speaker proves it
-holds that key, and the orchestrator issues a short-lived device credential.
+YubiKey and cannot be exported. The exchange at boot looks like this.
 
 ```mermaid
 sequenceDiagram
@@ -53,24 +52,25 @@ Files:
 | Voice gate reads the device credential | `core/voice_gate.py`, `origin_trusted`; `core/utterance.py`, `set_device` | built: origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` bounds on the credential's expiry per turn |
 | User token bound to the device key | `security/delegation/sts.py`, `issue_user_token(device_jkt=...)` | built (prototype): `SESSION_BINDING.md` |
 
-Signing does not require a touch; nobody is there to touch it. The YubiKey
-asks for its PIN once at boot. The client reads the PIN from a file only its
+Signing does not require a touch, because nobody is there to touch it. The
+YubiKey asks for its PIN once at boot. The client reads the PIN from a file only its
 own user can read. The management key is used at enrollment and is not kept
 on the device. In a sealed enclosure the PIN can be turned off too; possession
 of the key is then the whole secret.
 
-Fail closed. No key, unknown device, revoked device, unknown nonce, expired
-nonce, replayed nonce, nonce issued to another device, and bad signature all
-deny with a logged reason (`device_identity.audit`). A failed attempt consumes
-the nonce, so there is no second guess. The credential dies on expiry, on a
-registry revocation, and on an orchestrator restart (per-process HMAC key).
+Everything fails closed. No key, unknown device, revoked device, unknown
+nonce, expired nonce, replayed nonce, nonce issued to another device, and bad
+signature all deny with a logged reason (`device_identity.audit`). A failed
+attempt consumes the nonce, so there is no second guess. The credential dies
+on expiry, on a registry revocation, and on an orchestrator restart, because
+the HMAC key is per process.
 
-Tests: `server/test/test_device_identity.py` (both sides through the HTTP glue
-in process, with `FakeSigner`) and `speaker/test/test_device_identity.py`. CI
-runs both without hardware.
+The tests are `server/test/test_device_identity.py`, which runs both sides
+through the HTTP glue in process with `FakeSigner`, and
+`speaker/test/test_device_identity.py`. CI runs both without hardware.
 
 This proves that the device holds the enrolled key. It does not prove what
-software is running on it. There is no measured boot, no PCR quote, no
+software is running on it. There is no measured boot, no PCR quote and no
 attestation key chained to a manufacturer. A CM5 whose root filesystem has been
 replaced still attests fine if the YubiKey is plugged in. This is device
 identity. Attestation is the future state below.
@@ -91,27 +91,27 @@ flowchart LR
 ```
 
 A YubiKey can be pulled from the speaker and plugged into a laptop. With the
-PIN policy on, the attacker also needs the PIN file from the Pi; without it,
-possession is enough. Either way, treat the credential as "this key is
-present", not "this is the trustworthy kitchen speaker". Mitigations, in the
-order they apply:
+PIN policy on, the attacker also needs the PIN file from the Pi. Without it,
+possession is enough. Either way, the credential means "this key is present".
+It does not mean "this is the trustworthy kitchen speaker". Four mitigations
+apply, in this order.
 
 1. Key-bound tokens are limited to low-risk scopes. The device credential
-   carries `cnf.jkt`; a user token bound to it (`SESSION_BINDING.md`) carries
+   carries `cnf.jkt`. A user token bound to it (`SESSION_BINDING.md`) carries
    the gate's assurance record, and policy keeps a device-only signal at the
-   read tier: writes still need the voice match plus confirmation.
-2. High-risk actions still need voice plus challenge. A credential never
-   replaces the speaker match, the liveness check (not built) or the phone
-   approval (not built) for writes and high-risk calls.
+   read tier. Writes still need the voice match plus confirmation.
+2. High-risk actions still need voice plus a challenge. A credential never
+   replaces the speaker match, the liveness check or the phone approval for
+   writes and high-risk calls. The last two are not built.
 3. Enrollment is revocable in one step (`enroll_device.py revoke`). Revocation
    stops every future challenge and every credential check for that key the
    moment the registry file is written. Until then the speaker that lost the
    key stays trusted for the rest of its credential, 10 minutes by default and
-   15 at the cap. The
-   60 s re-challenge under "Future state" shrinks that to a minute.
-4. The nonce is bound to the `device_id` that asked for it and the registry is
-   never enumerated by the challenge route, so a stolen key cannot be probed
-   for which device it belongs to without already knowing.
+   15 at the cap. The 60 s re-challenge under "Future state" shrinks that to a
+   minute.
+4. The nonce is bound to the `device_id` that asked for it, and the challenge
+   route never enumerates the registry. A stolen key cannot be probed for
+   which device it belongs to.
 
 ## Future state
 
@@ -124,7 +124,7 @@ a challenge, so the fix is to ask more often.
 The orchestrator sends a fresh nonce on the open stream every 60 seconds. The
 speaker signs it or it does not. A missed answer sets `device_verified` false
 on the next turn. A second miss closes the stream when `DEVICE_IDENTITY_REQUIRE`
-is on. No new credential is minted; the credential becomes a record that this
+is on. No new credential is minted. The credential becomes a record that this
 speaker answered recently, and the interval is the control.
 
 ```mermaid

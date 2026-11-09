@@ -1,11 +1,14 @@
 # Voice enrollment
 
-How a voice becomes a profile the voice gate trusts. This covers the
-procedure, the criteria and the record. Reasoning is in `SESSION_BINDING.md` under "Enrollment
-criteria". Code: `core/voice_enrollment.py` (sessions, criteria, profile
-writes), `scripts/enroll_voice.py` (admin), `enrollment_sample` in
-`tools_server/tools/get_person_id` (hidden from the model),
-`core/utterance.py` (`_enrollment_turn`).
+A voice becomes a profile the voice gate trusts through the procedure below.
+This doc covers the procedure, the criteria and the record. The reasoning is in
+`SESSION_BINDING.md` under "Enrollment criteria".
+
+The code is in four places. `core/voice_enrollment.py` holds the sessions, the
+criteria and the profile writes. `scripts/enroll_voice.py` is the admin
+command. `enrollment_sample` in `tools_server/tools/get_person_id` produces
+the embedding and is hidden from the model. `core/utterance.py` routes the
+turn through `_enrollment_turn`.
 
 ## Current state
 
@@ -51,7 +54,7 @@ sequenceDiagram
 ```
 
 1. On the server host, open the session for the speaker the person will talk
-   to; `--device-jkt` pins it to that speaker's current key.
+   to. `--device-jkt` pins it to that speaker's current key.
 
    ```
    python scripts/enroll_voice.py open alice --name "Alice" --device kitchen \
@@ -59,8 +62,8 @@ sequenceDiagram
        --consent "asked and agreed in the kitchen, 2026-11-07" --ttl 900
    ```
 
-   Prints the session id and the first prompt. One open session per device
-   and per profile; an existing profile needs `--replace`.
+   The command prints the session id and the first prompt. There is one open
+   session per device and per profile. An existing profile needs `--replace`.
 
 2. The person wakes the speaker and says the prompt. With a session open for
    this device, the orchestrator treats the turn as a sample, with no model,
@@ -69,8 +72,8 @@ sequenceDiagram
    back a tip and the same prompt, the next prompt, or the result.
 
 3. From `min_samples` (default 6) the session is evaluated after every
-   accepted clip. It completes when the criteria hold, fails at `max_samples`
-   (default 12), expires at the time limit, or is aborted:
+   accepted clip. It completes when the criteria hold. It fails at
+   `max_samples` (default 12), expires at the time limit, or is aborted:
 
    ```
    python scripts/enroll_voice.py status <session_id>
@@ -78,8 +81,8 @@ sequenceDiagram
    ```
 
 4. On completion the profile is written to `speaker_identity.json` and the
-   gate uses it on the next turn. Revoking keeps the record and stops
-   identification:
+   gate uses it on the next turn. Revoking a profile keeps the record and
+   stops identification:
 
    ```
    python scripts/enroll_voice.py revoke-profile alice
@@ -112,7 +115,7 @@ A clip is accepted when all of these hold (`EnrollmentPolicy`):
 |---|---|---|
 | duration | 2 to 8 s | shorter embeds badly, longer drifts |
 | clipping ratio | at most 1% | distorted audio embeds as a different voice |
-| level | at least -38 dBFS | too quiet means the room, not the person |
+| level | at least -38 dBFS | a quiet clip is the room, not the person |
 | estimated SNR | at least 10 dB | noise floor shows up in the embedding |
 | silence ratio | at most 65% | the clip has to contain the sentence |
 | prompt match | at least 60% of the prompt's words in the transcript | a replayed recording of something else fails; a sentence read from the prompt passes |
@@ -125,7 +128,7 @@ A session completes when all of these hold over the accepted samples:
 | consistency (genuine) | every sample scores at or above the threshold against the mean of the other samples |
 | separation (impostor) | the threshold is the highest score of any sample against any other live profile's mean, plus `margin` (default 0.03) |
 | floor | the threshold is never below `VOICE_GATE_MIN_SCORE`; with no other profile enrolled the threshold is the floor and the record says separation was not measurable |
-| ceiling | a threshold at or above 1.0 means another enrolled voice is indistinguishable: the session cannot complete |
+| ceiling | a threshold at or above 1.0 means another enrolled voice is indistinguishable, and the session cannot complete |
 
 The threshold that results is the person's own. The gate applies the higher of
 it and the global floor (`voice_gate.effective_threshold`).
@@ -195,25 +198,26 @@ removed by the normal five minute cleanup of the client audio directory.
 ### Fail closed
 
 - A sample from a stream whose device id or thumbprint is not the session's
-  is refused; the session is untouched.
+  is refused. The session is untouched.
 - A stream with no verified device identity never enters enrollment.
   `VOICE_ENROLLMENT_ALLOW_UNBOUND_DEVICE` matches a session opened for device
-  `unbound` to any stream; bench use only, off in the house.
-- A clip that fails quality or the prompt check is spoken back, not stored.
+  `unbound` to any stream. It is for the bench and stays off in the house.
+- A clip that fails quality or the prompt check is spoken back and never
+  stored.
 - A session that cannot meet the criteria by `max_samples` fails and writes
   no profile. A revoked profile never matches and is never an impostor
   reference.
 
 ### Limits
 
-- Prompted sentences defeat a replayed recording but not a cloned voice.
-  Voice remains an identification signal; writes still require the
-  confirmation and high-risk calls still require the phone approval, whatever
-  the score.
-- The transcript check is lenient (word overlap, order ignored) so that STT
-  errors do not block enrollment. It is not a liveness check.
+- Prompted sentences defeat a replayed recording. They do nothing against a
+  cloned voice. Voice remains an identification signal. Writes still require
+  the confirmation and high-risk calls still require the phone approval,
+  whatever the score.
+- The transcript check is lenient, word overlap with order ignored, so that
+  STT errors do not block enrollment. It is not a liveness check.
 - Separation is measured against the voices enrolled at the time. Enrolling a
-  similar voice later does not re-evaluate the earlier thresholds;
+  similar voice later does not re-evaluate the earlier thresholds.
   `scripts/calibrate_voice_threshold.py` reports the overall picture.
 - The admin step is a script run on the host.
 
@@ -232,16 +236,15 @@ flowchart LR
     D[Device identity from the stream] --> G
 ```
 
-- A liveness check on each turn, so that a recording is rejected before the
+- A liveness check runs on each turn, so a recording is rejected before the
   voice match is considered.
-- Sessions opened, approved and closed from the person's own phone through the
-  phone approval flow. The record is unchanged.
-- Re-evaluation when a new voice is enrolled: each existing profile's
+- Sessions are opened, approved and closed from the person's own phone through
+  the phone approval flow. The record is unchanged.
+- Enrolling a new voice re-evaluates every existing profile. Each profile's
   separation is measured again against the new voice, and any threshold that
   no longer holds is flagged for re-enrollment.
-- The assurance record as a policy input, so that a profile enrolled with a
-  narrow separation margin is held to a higher tier than one with a wide
-  margin.
-- Voice treated as one factor among several, alongside device identity from
-  the stream (built), liveness and the step-ups. The score alone never
-  authorizes a write.
+- The assurance record is a policy input. A profile enrolled with a narrow
+  separation margin is held to a higher tier than one with a wide margin.
+- Voice is one factor among several, alongside device identity from the
+  stream (built), liveness and the step-ups. The score alone never authorizes
+  a write.

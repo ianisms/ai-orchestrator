@@ -9,10 +9,9 @@ The path, in order:
 5. The PEP asks the PDP.
 6. The tool runs and its output returns to the model.
 
-Scope: the prototypes in delegation/ and policy/ (threats 1-15), and the voice gate in the live orchestrator (threats 16-22). The live assistant does not use the delegation and policy prototypes yet.
+The scope is the prototypes in `delegation/` and `policy/` (threats 1-15) and the voice gate in the live orchestrator (threats 16-22). The live assistant does not use the delegation and policy prototypes yet.
 
-Assume breach: any agent can be steered by text it reads, and any token an agent holds can leak.
-Goal: a steered or compromised agent can do no more than the user approved, for no longer than a few minutes, and every attempt leaves a record.
+Assume breach. Any agent can be steered by text it reads, and any token an agent holds can leak. The goal is that a steered or compromised agent can do no more than the user approved, for no longer than a few minutes. Every attempt leaves a record.
 
 | # | Threat | Control | Tested | Residual risk |
 |---|---|---|---|---|
@@ -34,9 +33,9 @@ Goal: a steered or compromised agent can do no more than the user approved, for 
 
 ## Current state: voice gate in the live orchestrator (server/)
 
-Path: speaker audio > orchestrator commits the turn > model requests a tool > gate decides > tool runs.
+The path is speaker audio > orchestrator commits the turn > model requests a tool > gate decides > tool runs.
 
-Mode: monitor. Every non-read decision is logged as `allow` or `would_deny`; nothing is blocked until the liveness check and the approval flows exist.
+The gate runs in monitor mode. Every non-read decision is logged as `allow` or `would_deny`. Nothing is blocked until the liveness check and the approval flows exist.
 
 | # | Threat | Control | Tested | Residual risk |
 |---|---|---|---|---|
@@ -48,7 +47,9 @@ Mode: monitor. Every non-read decision is logged as `allow` or `would_deny`; not
 | 21 | Gate failure or misconfiguration | Gate errors fail closed in enforce; an unknown mode falls back to monitor, never off; an unset threshold verifies no voice; any missing signal fails | Partly: mode, threshold and missing-signal cases tested; error handling reviewed | Monitor mode blocks nothing by design until rollout |
 | 22 | Path injection through the client-supplied session id | Session and audio ids are validated to a plain token before they reach a file path | No | Sessions are still keyed by a client-supplied id |
 
-Explicit location-preference commands are not gated yet. They are handled before the model and do not pass the gate. 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`) run in CI.
+Explicit location-preference commands are not gated yet. They are handled before the model and do not pass the gate.
+
+CI runs 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`).
 
 ## Attacks run (demo.py in delegation/ and policy/)
 
@@ -112,12 +113,12 @@ Policy (policy/):
 
 ## Future state: next controls, in order
 
-1. Sender-constrained tokens to close #1: DPoP is built (partial: binds to a software key in the agent's process, no nonces, no rotation); mTLS-bound tokens (RFC 8705) come with B's SVIDs and finish it.
-2. Workload identity for agents instead of client secrets (B) to close #6 and #13, and to move the DPoP key out of process memory.
+1. Finish sender-constrained tokens (#1). DPoP is built but binds to a software key in the agent's process, with no nonces and no rotation. mTLS-bound tokens (RFC 8705) come with prototype B's SVIDs and finish it.
+2. Workload identity for agents instead of client secrets (prototype B), to close #6 and #13 and to move the DPoP key out of process memory.
 3. A real approval channel with the call summary shown to the user (#7).
-4. Device posture as a signed policy input for write-class tools (D); the speaker's device credential (#14) is the gate's origin signal now, and the `assurance` claim carries it to the STS and the tools; the OPA input does not read it yet.
-5. Central, append-only audit sink (#12).
-6. Pushed deny list to every PEP, and a Keycloak admin-event feed into grant revocation, so #11 holds across processes and for hop 1.
+4. Device posture as a signed policy input for write-class tools (prototype D). The speaker's device credential (#14) is the gate's origin signal now, and the `assurance` claim carries it to the STS and the tools. The OPA input does not read it yet.
+5. A central, append-only audit sink (#12).
+6. A pushed deny list to every PEP, and a Keycloak admin-event feed into grant revocation, so #11 holds across processes and for hop 1.
 
 ## Future state: voice gate rollout, in order
 
@@ -126,4 +127,4 @@ Policy (policy/):
 3. A spoken liveness challenge, then an anti-spoof model (#15).
 4. Switch to enforce.
 5. Gate the direct location-preference commands and move identity for per-person reads onto the gate (#16).
-6. Done: the device credential rides on the Converse stream and the gate takes device identity in place of the address check (#18, `SESSION_BINDING.md`), behind `DEVICE_IDENTITY_REQUIRE` and `VOICE_GATE_REQUIRE_DEVICE`. Next: turn both on once every speaker attests, then move the key from the YubiKey to the TPM 2.0 on the next carrier-board revision (`DEVICE_IDENTITY.md`).
+6. Turn on `DEVICE_IDENTITY_REQUIRE` and `VOICE_GATE_REQUIRE_DEVICE` once every speaker attests (#18, `SESSION_BINDING.md`). The device credential already rides on the Converse stream and the gate can already take it in place of the address check. Then move the key from the YubiKey to the TPM 2.0 on the next carrier-board revision (`DEVICE_IDENTITY.md`).

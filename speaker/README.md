@@ -1,6 +1,6 @@
 # Smart speaker
 
-Voice client and hardware for a fully local voice assistant. A Raspberry Pi Compute Module 5 on a custom carrier board captures audio from an XMOS XVF3800 mic array over I2S. It streams the audio to the AI server over gRPC and plays the reply through a Wondom JAB5 DSP amplifier on the same I2S bus. There is no cloud dependency anywhere in the audio path.
+This is the voice client and hardware for a fully local voice assistant. A Raspberry Pi Compute Module 5 on a custom carrier board captures audio from an XMOS XVF3800 mic array over I2S. It streams the audio to the AI server over gRPC and plays the reply through a Wondom JAB5 DSP amplifier on the same I2S bus. There is no cloud dependency anywhere in the audio path.
 
 ## Voice flow
 
@@ -16,7 +16,7 @@ Voice client and hardware for a fully local voice assistant. A Raspberry Pi Comp
 | File | Role |
 |---|---|
 | `orchestrator.py` | Wires seven supervised tasks with exponential-backoff restart; `tee_mic()` fans mic frames out to the wakeword, utterance, and barge-in queues and holds the echo suppression and playback-guard policy |
-| `capture_streamer.py` | Turn capture: drain, settle, VAD-gated `mic_iter`, barge-in monitor, playback backpressure |
+| `capture_streamer.py` | Turn capture. Drain, settle, VAD-gated `mic_iter`, barge-in monitor, playback backpressure |
 | `grpc_client.py` | Persistent `Converse` stream, reconnect with backoff, early transmit stop, late-cancel path |
 | `vad.py` | RMS VAD with adaptive threshold, noisy-room ceiling, persisted noise floor |
 | `audio_capture.py`, `audio_playback.py`, `playback_worker.py` | ALSA capture and playback, threaded writer, out-of-order chunk stash |
@@ -57,7 +57,7 @@ Then uncomment the `/run/pcscd` mount in `docker/docker-compose.yaml`, set `devi
 
 | Component | Role |
 |---|---|
-| Raspberry Pi CM5 | Compute; I2S bitclock and frame master |
+| Raspberry Pi CM5 | Compute, and I2S bitclock and frame master |
 | Custom CM5 carrier board (`hardware/pcb/theboard/`, rev 3.7) | Replaces the Geekworm X1500 and separate breakouts. Internal 28 V input, 5 V and 3.3 V rails, PCIe to M.2 NVMe, 40-pin GPIO, 2x10 ribbon header to the mic array, JST I2S link and Micro-Fit power to the amplifier |
 | Seeed reSpeaker XVF3800 (XMOS, non-ESP32 variant) | Four-mic array with beamforming, flashed with XMOS I2S firmware, I2S slave on capture |
 | Wondom JAB5 (AA-JA33286, ADAU1701 DSP) | I2S slave on playback, Class D amplifier with DSP limiter |
@@ -82,7 +82,7 @@ All grounds are common. No clock cross-wiring between the two slaves.
 
 `overlays/xvf3800-jab5-i2s.dts` enables the Pi I2S block as clock producer and declares the XVF3800 as a capture codec (`linux,spdif-dir`) and the JAB5 as a playback codec (`linux,spdif-dit`) on one `simple-audio-card` named `XVF3800-JAB5`. No generic or dummy codecs, no MCLK, no HAT EEPROM. The header comments give the `dtc` compile and `config.txt` install steps.
 
-`xvf3800/` holds the bring-up scripts and notes, including two earlier overlay approaches that were tried before settling on the single duplex overlay.
+`xvf3800/` holds the bring-up scripts and notes, including two earlier overlay approaches tried before settling on the single duplex overlay.
 
 ### Enclosure
 
