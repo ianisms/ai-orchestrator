@@ -100,7 +100,7 @@ flowchart LR
         DENY["In-memory denylist by jti and grant_id<br/>entries expire with the family, bounded by 600 s<br/>revocation.py"]
         HOOK["Verify-side check after local JWT verification<br/>shared denylist in process, or a callback<br/>verify.py: RevocationCheck"]
         PUSH["Pushed deny list across PEPs<br/>NOT BUILT: a tool that does not share<br/>the object does not see revocations (threat 11)"]
-        PDPX["PDP fail-closed is a second, independent cut:<br/>OPA down or policy change = all calls denied<br/>(threat 9, by design)"]
+        PDPX["PDP fail-closed is a second, independent cut:<br/>OPA down or policy change = all calls denied<br/>(threat 9)"]
         LOG["In-process audit log, revocations included<br/>no tamper evidence, no central sink (threat 12)"]
     end
     LIN --> REV --> DENY --> HOOK
@@ -285,7 +285,7 @@ expires.
 ## Sender constraint (DPoP)
 
 A bearer token is good for whoever holds the bytes. Threat 1 in
-`THREAT_MODEL.md` is exactly that. A tool token copied out of an agent's
+`THREAT_MODEL.md` describes this. A tool token copied out of an agent's
 process works at the tool until it expires, 120 to 300 s later. RFC 9449 (DPoP)
 closes it by binding a token to a key the client holds. Every request then
 carries a short signed proof that the client still holds that key.
