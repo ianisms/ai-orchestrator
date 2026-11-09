@@ -40,7 +40,7 @@ The voice rules are the exception. [`server/modules/orchestrator/core/voice_gate
 | Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; TPM on the carrier board not built; mTLS from the device not taken) | [`security/DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`security/SESSION_BINDING.md`](SESSION_BINDING.md) | 18, 1 |
 | Admin-run voice enrollment with per-user thresholds | built | [`security/VOICE_ENROLLMENT.md`](VOICE_ENROLLMENT.md) | 17, 15 |
 | Client-secret actor credentials | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py) | 6 |
-| SPIFFE/SPIRE workload identity | not built | [`security/README.md`](README.md#attestation-in-short) | 6, 13 |
+| SPIFFE/SPIRE workload identity | not built | [`security/README.md`](README.md#attestation) | 6, 13 |
 | RFC 8693 exchange with nested `act` chain | built | [`security/delegation/sts.py`](delegation/sts.py) | 2, 3, 4, 5 |
 | Tool-side verifier | built | [`security/delegation/verify.py`](delegation/verify.py) | 5, 10 |
 | Policy check before every tool call: the enforcement point (PEP) in the tool server asks the decision point (PDP) over OPA, fail closed | built | [`security/policy/`](policy/) | 7, 8, 9 |

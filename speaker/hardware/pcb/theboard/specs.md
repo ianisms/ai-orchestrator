@@ -89,14 +89,14 @@ Primary spec file:
 If I ask a question, continue from this context and keep everything consistent with the constraints above.
 
 
-## 1) Assumptions & Open Questions
+## Assumptions & Open Questions
 - Should be able to export to JLCPCB via JLCPCB kicad plugin
 - Confirm CM5 mechanical: CM5 uses two board-to-board connectors; verify the exact part number, pinout, and keepouts from the latest CM5 datasheet.
 - Audio target: mono 2-way (1× RS125-4 woofer + 1× RS100-4 tweeter), 30 W RMS per channel (2 channels) with DSP limiting.
 - **No external connectors**: Internal AC-DC PSU with captive AC cord. M.2, GPIO, I2S, XVF3800, and JAB5 headers are internal only.
 
 
-## 2) Top-Level Block Diagram
+## Top-Level Block Diagram
 
 ```mermaid
 flowchart TB
@@ -122,7 +122,7 @@ flowchart TB
     end
 ```
 
-## 3) Power Tree & Budget
+## Power Tree & Budget
 ### 28V DC Input (from Internal PSU)
 - Internal AC-DC PSU: Mean Well LRS-150-28 (28V/5.4A, 151W, open-frame).
 - Housed inside enclosure, connected to carrier board via screw terminal (J1).
@@ -174,7 +174,7 @@ flowchart TB
 
 - 54 W headroom at sustained full power on both channels. Average music power well below 30 W RMS per channel, so real-world headroom is much larger.
 
-## 4) Internal PSU (Mean Well LRS-150-28)
+## Internal PSU (Mean Well LRS-150-28)
 ### Specifications
 - Model: LRS-150-28
 - Input: 85-264 VAC, 47-63 Hz
@@ -189,36 +189,36 @@ flowchart TB
 - 28V DC output wired to carrier board screw terminal (J1)
 - Ensure adequate ventilation for PSU cooling
 
-## 5) CM5 Power & Control
+## CM5 Power & Control
 - 5 V input pins: feed all required CM5 5 V pins with a solid plane. Target ≥ 4.75 V at pins under full load.
 - Enable/Reset: wire RUN/RESET and any required boot configuration pins to test pads or header.
 - Power sequencing: 5 V rail only rises after 28V present → LM73606 EN chain. No CM5 pins powered before 5 V is stable.
 
-## 6) PCIe Gen2 x1 -> M.2 NVMe
+## PCIe Gen2 x1 -> M.2 NVMe
 - Differential pair routing: controlled impedance (typically 85 ohm diff), length-matched.
 - Clock: keep PCIe ref clock clean and short; follow CM5 design rules.
 - Power: NVMe 3.3 V only; add bulk + high-frequency decoupling close to M.2.
 - Reset/CLKREQ/PEWAKE: connect per CM5 requirements and M.2 spec.
 
-## 7) I2S Audio Topology
+## I2S Audio Topology
 - CM5 as I2S master; JAB5 + XVF3800 as slaves.
 - Shared clocks: MCLK, BCLK, LRCLK routed as a short, matched-length star or daisy chain with minimal stubs.
 - Data lines: separate SDOUT (CM5 -> amps) and SDIN (mics -> CM5).
 - Level shifting if any module is not 3.3 V logic.
 
-## 8) DSP Limiter (JAB5 ADAU1701)
+## DSP Limiter (JAB5 ADAU1701)
 - Implement a limiter in the DSP project (SigmaStudio) to protect the drivers.
 - Target RMS limiter per channel: 30 W into 4 ohm (~10.95 Vrms).
 - Target peak limiter per channel: 60 W into 4 ohm (~15.5 Vrms) for brief transients.
 - Mono sum → 2-way crossover: low-pass to woofer (RS125-4), high-pass to tweeter (RS100-4). Crossover point (~2-3 kHz) TBD in SigmaStudio.
 
-## 9) Speaker Loads (JAB5)
+## Speaker Loads (JAB5)
 - Planned drivers: Dayton Audio 1× RS125-4 (woofer) + 1× RS100-4 (tweeter).
 - Mono 2-way: each driver on its own JAB5 channel (2 of 4 channels used), 4 Ω nominal per driver.
 - JAB5 in 4.0 mode (4 independent channels). Channels 3 and 4 unused.
 - 30 W/ch at 4 Ω - at the edge of clean operation for TDA7498E. DSP limiter enforces ceiling.
 
-## 10) Headers & IO
+## Headers & IO
 ### 28V DC Input - Screw Terminal, 2-pin
 - Receives 28V DC from internal Mean Well LRS-150-28 PSU.
 - Simple, reliable connection. No polarity protection on carrier (rely on correct wiring).
@@ -260,13 +260,13 @@ flowchart TB
 - Pinout: MCLK, BCLK, LRCLK, SDOUT, SDIN, 3.3 V, GND.
 - Directly parallels the I2S signals. For development/debug use.
 
-## 11) Layout & Stackup
+## Layout & Stackup
 - Layer count: 4-layer minimum; 6-layer recommended for PCIe + high-current power.
 - Power planes: dedicate internal planes for 5 V and GND; use wide pours for 28V high-current path to JAB5 header.
 - High-current paths: short, wide copper, multiple vias; keep away from sensitive audio/I2S lines.
 - PCIe: keep diff pairs on inner layers with continuous reference plane.
 
-## 12) DFM / JLCPCB Manufacturing
+## DFM / JLCPCB Manufacturing
 - **Board fabrication**: JLCPCB. Matte black solder mask, standard stackup (4- or 6-layer).
 - **Parts sourcing**: not restricted to LCSC. Use the best-fit part; source from LCSC, Mouser, DigiKey, etc. as needed.
 - **Assembly**: JLCPCB SMT assembly for LCSC-stocked passives/ICs where possible; hand-solder or second-source anything not on LCSC.
@@ -275,7 +275,7 @@ flowchart TB
   - Other parts: KiCad built-in libs, EasyEDA2KiCad plugin, SnapEDA, Ultra Librarian, or manual creation.
 - Keep passives standard (0603/0805). Use KiCad JLCPCB plugin (Bouni/kicad-jlcpcb-tools) for BOM/CPL export when using LCSC parts.
 
-## 13) Internal PSU Selection
+## Internal PSU Selection
 **Mean Well LRS-150-28** selected for:
 - 28V output matches JAB5 optimal voltage range (30W/ch clean power)
 - 151W capacity with 54W headroom for 97W system load
@@ -285,7 +285,7 @@ flowchart TB
 
 Alternative if more power needed: LRS-200-24 (24V/200W) with slight reduction in JAB5 headroom.
 
-## 14) Power BOM (Simplified - No USB-C PD)
+## Power BOM (Simplified - No USB-C PD)
 Parts listed with LCSC numbers where available; non-LCSC parts sourced from Mouser/DigiKey. Footprints via KiCad libs, EasyEDA2KiCad, or SnapEDA.
 
 | Name / Purpose | Value / Notes | LCSC Part # |
@@ -315,7 +315,7 @@ Notes:
 - LM73606 abs max is **40 V** (not 36 V). 36 V is the recommended operating range. 28 V input is within operating range.
 - TBD part numbers: screw terminal, Molex Micro-Fit 3.0 4-pin, JST PH 6-pos. Check LCSC first; fall back to Mouser/DigiKey.
 
-## 15) Bring-Up & Test Plan (minimal)
+## Bring-Up & Test Plan (minimal)
 - 28V input: verify Mean Well PSU outputs 28V DC. Connect to carrier board screw terminal.
 - 5 V rail: verify 5.0 V ± 50 mV at CM5 pins under load (use scope, not just DMM).
 - 3.3 V rail: verify 3.3 V ± 5% at M.2 and XVF3800 header under load.
