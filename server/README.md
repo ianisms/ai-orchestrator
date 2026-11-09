@@ -44,13 +44,14 @@ scripts/           manual harnesses and container maintenance
 
 ## Request flow
 
-```
-Speaker ──gRPC Converse──► orchestrator :7000
-                              ├──► stt   :50051   streaming transcript, partials
-                              ├──► llm   :8000    streamed completion, tool calls
-                              ├──► tools :9102    MCP; local tools + proxied upstream
-                              └──► tts   :9001    streamed PCM
-                                   └──► TtsAudio chunks back to the speaker
+```mermaid
+flowchart LR
+    S[Speaker] -- gRPC Converse --> O[orchestrator :7000]
+    O --> STT[stt :50051<br/>streaming transcript, partials]
+    O --> LLM[llm :8000<br/>streamed completion, tool calls]
+    O --> T[tools :9102<br/>MCP, local tools and proxied upstream]
+    O --> TTS[tts :9001<br/>streamed PCM]
+    TTS -- TtsAudio chunks --> S
 ```
 
 Each turn runs like this. Audio frames stream to STT as they arrive. Partial transcripts start a speculative LLM call. On commit the LLM streams a reply. Tool calls are validated and dispatched in parallel, and a second pass synthesizes the final answer from tool output. The text is sanitized for speech and TTS audio streams back in chunks. Barge-in cancels TTS mid-stream.

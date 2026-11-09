@@ -5,11 +5,14 @@ decision point about the call before dispatching it. The request uses the
 OpenID AuthZEN evaluation shape of subject, action, resource and context. The PDP
 is a small facade over OPA. The whole delegation chain is evaluated once.
 
-```
-tools/call --> verify token (A) --> PEP builds AuthZEN request --> PDP /access/v1/evaluation --> OPA
-                                        |                                   |
-                                   fail closed on                   allow only when no
-                              timeout, 5xx, bad answer               reason to deny exists
+```mermaid
+flowchart LR
+    C[tools/call] --> V[Verify token<br/>prototype A]
+    V --> PEP[PEP builds the<br/>AuthZEN request]
+    PEP --> PDP[PDP<br/>/access/v1/evaluation]
+    PDP --> OPA[OPA]
+    PEP -. timeout, 5xx or bad answer .-> D[deny, fail closed]
+    OPA -. allow only when no<br/>reason to deny exists .-> A[allow]
 ```
 
 ## What the policy enforces (`rego/agent_tools.rego`)
