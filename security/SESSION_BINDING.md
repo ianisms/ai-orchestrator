@@ -55,11 +55,10 @@ flowchart LR
     GW -- login: device_jkt, assurance --> UT
     GW -- exchange: actor proof + device_jkt asserted --> TT
     TT -- token + DPoP proof --> TS
-    classDef off stroke-dasharray: 4 3
-    class DI,VG off
 ```
 
-The dashed boxes are built. Their enforcement switches stay off until every
+Device identity and the voice gate are built. Their enforcement switches,
+`DEVICE_IDENTITY_REQUIRE` and `VOICE_GATE_REQUIRE_DEVICE`, stay off until every
 speaker attests. The orchestrator already asserts who is speaking. Here it also
 asserts which device the stream came from. No new component is trusted.
 
