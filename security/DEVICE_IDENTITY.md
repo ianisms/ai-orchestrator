@@ -37,25 +37,25 @@ sequenceDiagram
     Note over G: verified at connect, refused without it when DEVICE_IDENTITY_REQUIRE is on
 ```
 
-Files:
+The pieces, where they live and their status:
 
 | Control | Where | Status |
 |---|---|---|
-| Signer interface, `YubiKeyPivSigner`, `FakeSigner` | `speaker/modules/speaker/device_identity.py` | built; YubiKey path reviewed against the yubikit API, not exercised in CI |
-| Boot-time attest client, credential cache | same file, `DeviceAttestClient`; called from `orchestrator.py` `_attest_device` | built, off by default (`device_identity_enable`) |
-| Enrollment: generate key on the YubiKey, export public key, write request | `speaker/scripts/enroll_device_key.py` | built |
-| Registry (JSON, `device_id`, `room`, `household`, public key PEM, thumbprint, `enrolled_at`, `revoked_at`) | `server/modules/orchestrator/core/device_identity.py`, file at `DEVICE_REGISTRY_PATH` | built |
-| Admin: add, list, revoke, remove | `server/scripts/enroll_device.py` | built |
-| Challenge, verify, credential mint and verify | `DeviceIdentityService`, routes on the status server | built |
-| Credential read from gRPC metadata at connect | `server/modules/aiserver/server.py`, `device_from_metadata` | built: verified and logged; refused with UNAUTHENTICATED when `DEVICE_IDENTITY_REQUIRE` is on (off by default) |
-| Speaker attaches the credential to the Converse stream | `DeviceAttestClient.grpc_metadata()` via `OrchestratorGrpcConfig.metadata_provider` | built: sent at every connect, re-attested when stale |
-| Voice gate reads the device credential | `core/voice_gate.py`, `origin_trusted`; `core/utterance.py`, `set_device` | built: origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` bounds on the credential's expiry per turn |
-| User token bound to the device key | `security/delegation/sts.py`, `issue_user_token(device_jkt=...)` | built (prototype): `SESSION_BINDING.md` |
+| Signer interface, `YubiKeyPivSigner`, `FakeSigner` | `speaker/modules/speaker/device_identity.py` | built; the YubiKey path is reviewed against the yubikit API and not exercised in CI |
+| Boot-time attest client and credential cache (`DeviceAttestClient`) | `speaker/modules/speaker/device_identity.py`, called from `speaker/modules/speaker/orchestrator.py` | built, off by default (`device_identity_enable`) |
+| Enrollment on the speaker: generate the key on the YubiKey, export the public key, write the request | `speaker/scripts/enroll_device_key.py` | built |
+| Registry as JSON with `device_id`, `room`, `household`, public key PEM, thumbprint, `enrolled_at` and `revoked_at` | `server/modules/orchestrator/core/device_identity.py`, file at `DEVICE_REGISTRY_PATH` | built |
+| Admin add, list, revoke and remove | `server/scripts/enroll_device.py` | built |
+| Challenge, verify, credential mint and verify (`DeviceIdentityService`, routes on the status server) | `server/modules/orchestrator/core/device_identity.py` | built |
+| Credential read from gRPC metadata at connect | `server/modules/aiserver/server.py` | built; verified and logged, refused with UNAUTHENTICATED when `DEVICE_IDENTITY_REQUIRE` is on (off by default) |
+| Speaker attaches the credential to the Converse stream | `speaker/modules/speaker/grpc_client.py`, `speaker/modules/speaker/device_identity.py` | built; sent at every connect, re-attested when stale |
+| Voice gate reads the device credential | `server/modules/orchestrator/core/voice_gate.py`, `server/modules/orchestrator/core/utterance.py` | built; origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (off by default); `device_verified` is bounded by the credential's expiry per turn |
+| User token bound to the device key | `security/delegation/sts.py` | built (prototype); see `SESSION_BINDING.md` |
 
 Signing does not require a touch, because nobody is there to touch it. The
 YubiKey asks for its PIN once at boot. The client reads the PIN from a file only its
 own user can read. The management key is used at enrollment and is not kept
-on the device. In a sealed enclosure the PIN can be turned off too; possession
+on the device. In a sealed enclosure the PIN can be turned off too. Possession
 of the key is then the whole secret.
 
 Everything fails closed. No key, unknown device, revoked device, unknown

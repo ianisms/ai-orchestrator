@@ -18,15 +18,15 @@ This is what runs, what it binds, and which switches are off.
 
 | Control | Where | Status |
 |---|---|---|
-| Speaker holds a key in a YubiKey; signs a 30 s nonce at boot; gets a 10 min credential with `cnf.jkt` | `speaker/.../device_identity.py`, `server/.../device_identity.py` | built, off by default (`device_identity_enable`) |
-| Credential rides on every Converse call as `x-device-credential`, re-attested when stale | `grpc_client.py` metadata provider, `capture_streamer.py` | built |
-| Orchestrator verifies the credential at connect; refuses the stream without one when `DEVICE_IDENTITY_REQUIRE` | `aiserver/server.py` | built, switch off |
-| Voice gate takes the device as origin when `VOICE_GATE_REQUIRE_DEVICE`; `device_verified` bounded by credential expiry per turn | `core/voice_gate.py`, `core/utterance.py` | built, switch off (address check until then) |
-| Per-user threshold from enrollment, floored by `VOICE_GATE_MIN_SCORE` | `voice_gate.effective_threshold`, `identify_speaker` | built; floor still uncalibrated |
-| Assurance record on every gate decision and audit line | `voice_gate.assurance` | built; not yet an OPA input |
-| Admin-run enrollment session: device-bound, time-boxed, prompted; quality, prompt match, consistency, separation; profile with threshold and record; revocation | `core/voice_enrollment.py`, `scripts/enroll_voice.py`, `enrollment_sample` | built |
-| STS: root user token bound to the device key; consented client asserts the thumbprint it verified on the stream; `device` and `assurance` down the chain; `revoke_device` kills the subtree | `delegation/sts.py`, `verify.py`, `admin.py` | built (prototype, `security/` only) |
-| Actor leg (gateway, sub-agents, tool tokens): bound to software keys in process (DPoP) | `delegation/dpop.py`, `sts.py` | built; stops a copied token, does nothing against a compromised process |
+| Speaker holds a key in a YubiKey, signs a 30 s nonce at boot and gets a 10 min credential with `cnf.jkt` | `speaker/modules/speaker/device_identity.py`, `server/modules/orchestrator/core/device_identity.py` | built, off by default (`device_identity_enable`) |
+| Credential rides on every Converse call as `x-device-credential` and is re-attested when stale | `speaker/modules/speaker/grpc_client.py`, `speaker/modules/speaker/capture_streamer.py` | built |
+| Orchestrator verifies the credential at connect and refuses the stream without one when `DEVICE_IDENTITY_REQUIRE` is on | `server/modules/aiserver/server.py` | built, switch off |
+| Voice gate takes the device as origin when `VOICE_GATE_REQUIRE_DEVICE` is on; `device_verified` is bounded by the credential expiry per turn | `server/modules/orchestrator/core/voice_gate.py`, `server/modules/orchestrator/core/utterance.py` | built, switch off; address check until then |
+| Per-user threshold from enrollment, floored by `VOICE_GATE_MIN_SCORE` | `server/modules/orchestrator/core/voice_gate.py`, `server/tools_server/tools/get_person_id/get_person_id.py` | built; floor still uncalibrated |
+| Assurance record on every gate decision and audit line | `server/modules/orchestrator/core/voice_gate.py` | built; not yet an OPA input |
+| Admin-run enrollment session, device-bound, time-boxed and prompted, with quality, prompt match, consistency and separation checks, a profile with threshold and record, and revocation | `server/modules/orchestrator/core/voice_enrollment.py`, `server/scripts/enroll_voice.py`, `server/tools_server/tools/get_person_id/get_person_id.py` | built |
+| STS binds the root user token to the device key; the consented client asserts the thumbprint it verified on the stream; `device` and `assurance` travel down the chain; `revoke_device` kills the subtree | `security/delegation/sts.py`, `security/delegation/verify.py`, `security/delegation/admin.py` | built (prototype, `security/` only) |
+| Actor leg (gateway, sub-agents, tool tokens) bound to software keys in process (DPoP) | `security/delegation/dpop.py`, `security/delegation/sts.py` | built; stops a copied token, does nothing against a compromised process |
 | Liveness, spoken confirmation, phone approval | | not built; the gate stays in monitor mode until they are |
 
 ```mermaid
@@ -69,7 +69,7 @@ assertions are replaced by proofs wherever a proof is possible.
 
 | Step | What moves | Why |
 |---|---|---|
-| Speaker as STS client (option (a) under "Who proves possession at the exchange") | The speaker performs the exchange itself over its own channel; the STS checks possession of the device key directly | Removes the orchestrator's assertion of the device; the one place today where a compromised orchestrator could lie |
+| Speaker as STS client, option (a) under "Who proves possession at the exchange" | The speaker performs the exchange itself over its own channel; the STS checks possession of the device key directly | Removes the orchestrator's assertion of the device, the one place where a compromised orchestrator could lie |
 | Re-challenge on the open stream every 60 s (`DEVICE_IDENTITY.md`) | The orchestrator sends a nonce on the live stream; a speaker whose key was pulled cannot sign it | Bounds a pulled key to a minute instead of the credential lifetime |
 | TPM 2.0 on the carrier board (`DEVICE_IDENTITY.md`) | The key is generated in the TPM and stays there; no pluggable part; a quote over the boot chain before the credential is issued | Device identity becomes attestation, covering which software runs as well as which key is present |
 | SPIFFE/SPIRE for the actor leg | Gateway and sub-agents get X.509-SVIDs from SPIRE with attestation plugins gating issuance; tokens bound with `cnf.x5t#S256` (RFC 8705) over mTLS, per connection; the DPoP software key retires | Closes the "key next to the token" gap on the actor leg; no per-request signing |
@@ -165,7 +165,7 @@ flowchart LR
     c -. target .-> a
 ```
 
-v2.0 uses (c). The orchestrator is already trusted for who is speaking.
+The current state uses (c). The orchestrator is already trusted for who is speaking.
 Trusting it for which device adds one more fact from the same component. The
 cost is that a compromised orchestrator could assert a device it did not see,
 as it could already misreport the voice. The thumbprint is on every record, so

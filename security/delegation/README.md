@@ -100,7 +100,7 @@ flowchart LR
         DENY["In-memory denylist by jti and grant_id<br/>entries expire with the family, bounded by 600 s<br/>revocation.py"]
         HOOK["Verify-side check after local JWT verification<br/>shared denylist in process, or a callback<br/>verify.py: RevocationCheck"]
         PUSH["Pushed deny list across PEPs<br/>NOT BUILT: a tool that does not share<br/>the object does not see revocations (threat 11)"]
-        PDPX["PDP fail-closed is a second, independent cut:<br/>OPA down or policy change = all calls denied<br/>(threat 9, by design)"]
+        PDPX["PDP fail-closed is a second, independent cut:<br/>OPA down or policy change = all calls denied<br/>(threat 9)"]
         LOG["In-process audit log, revocations included<br/>no tamper evidence, no central sink (threat 12)"]
     end
     LIN --> REV --> DENY --> HOOK
@@ -185,11 +185,11 @@ side is logged with its reason, in the same JSON form as the exchange audit log.
 | Topic | RFC 7009 | This STS |
 |---|---|---|
 | Endpoint and parameters | `POST` to the revocation endpoint; `token` required; `token_type_hint` optional, a wrong hint must not stop the server from finding the token | `POST /revoke`; `token` required (missing or empty is 400 `invalid_request`); `token_type_hint` accepted and ignored, since every token carries its own `token_use` and there is one token type |
-| Client authentication and ownership | Client authenticates as for the token endpoint; the server verifies the token was issued to the requesting client, else refuses | Same client secret check as `/token` (401 `invalid_client`). "Issued to" is read as: the client is the holder (named in `aud` or in the `client_id` claim) or any client in the `act` chain. Downstream never revokes upstream |
-| Invalid token | Section 2.2: respond 200 whether or not the token was valid, so the client cannot probe | 200 and no change for anything the STS cannot validate: malformed, forged, signed by another issuer, expired, no `jti` |
-| Error codes | RFC 6749 section 5.2 codes plus `unsupported_token_type`; no code is bound to "not your token" | `invalid_request`, `invalid_client`, and `unauthorized_client` for a genuine token outside the caller's authority (our choice, the spec leaves it open); `unsupported_token_type` is never returned because hints are ignored |
-| Related tokens | Revoking a refresh token SHOULD revoke the access tokens issued with it; revoking an access token MAY revoke its refresh token | No refresh tokens exist. Revoking a token revokes its lineage subtree, and revoking a user token revokes its `grant_id`. That is an extension for exchanged tokens, not a reading of 7009 |
-| Immediate effect | Section 2.1: the token is invalidated immediately | Immediate at the STS and at any verifier wired to the denylist; anywhere that is not wired, the token lives until its TTL, at most 600 s |
+| Client authentication and ownership | Client authenticates as for the token endpoint; the server verifies the token was issued to the requesting client, else refuses | Same client secret check as `/token` (401 `invalid_client`). "Issued to" means the client is the holder, named in `aud` or in the `client_id` claim, or any client in the `act` chain. Downstream never revokes upstream |
+| Invalid token | Section 2.2 says to respond 200 whether or not the token was valid, so the client cannot probe | 200 and no change for anything the STS cannot validate, which covers malformed, forged, signed by another issuer, expired and no `jti` |
+| Error codes | RFC 6749 section 5.2 codes plus `unsupported_token_type`; no code is bound to "not your token" | `invalid_request`, `invalid_client`, and `unauthorized_client` for a genuine token outside the caller's authority, which is this STS's choice where the spec leaves it open; `unsupported_token_type` is never returned because hints are ignored |
+| Related tokens | Revoking a refresh token SHOULD revoke the access tokens issued with it; revoking an access token MAY revoke its refresh token | No refresh tokens exist. Revoking a token revokes its lineage subtree, and revoking a user token revokes its `grant_id`. That is an extension for exchanged tokens and goes beyond 7009 |
+| Immediate effect | Section 2.1 says the token is invalidated immediately | Immediate at the STS and at any verifier wired to the denylist; anywhere that is not wired, the token lives until its TTL, at most 600 s |
 
 ### Where the denylist lives
 
@@ -285,7 +285,7 @@ expires.
 ## Sender constraint (DPoP)
 
 A bearer token is good for whoever holds the bytes. Threat 1 in
-`THREAT_MODEL.md` is exactly that. A tool token copied out of an agent's
+`THREAT_MODEL.md` describes this. A tool token copied out of an agent's
 process works at the tool until it expires, 120 to 300 s later. RFC 9449 (DPoP)
 closes it by binding a token to a key the client holds. Every request then
 carries a short signed proof that the client still holds that key.
@@ -332,8 +332,8 @@ direct use at a resource. It goes back to the STS as a subject token.
 |---|---|---|
 | Proof shape (section 4.2) | JWT, `typ` `dpop+jwt`, `alg` an asymmetric algorithm, header `jwk` public key; claims `jti`, `htm`, `htu`, `iat`, and `ath` when an access token is presented, `nonce` when the server issued one | Same. `alg` allowlist is ES256 only; a header `jwk` with any private member (`d`, `p`, `q`, ...) is refused; `htu` is compared without query and fragment with scheme and host case-folded |
 | Checks (section 4.3) | typ, alg, jwk, signature, htm, htu, iat within an acceptable window, jti unique, nonce, ath, and the key matches the bound token | Same list. The window is 60 s back and 5 s forward on the verifier's own clock (the injectable STS clock, so tests can move it). jti uniqueness is a per-verifier replay cache keyed by jti, expiring at `iat + max_age`, pruned on every check, so it holds at most 60 s of proofs |
-| Binding at the token endpoint (section 5) | The server binds the issued token to the proof key by `cnf.jkt`; `token_type` is `DPoP`; a bad proof is `invalid_dpop_proof` | Same for actor and tool tokens. Beyond the RFC: the proof key at `client_credentials` must be the client's registered key, and at exchange it must match the subject token's binding as well as the actor token's. The RFC binds to whatever key proves itself; this STS also requires that it be the key on file, because handoffs are bound to registered keys and a registry that any key can bypass would be decoration |
-| Exchanged tokens | RFC 9449 does not address RFC 8693; RFC 8693 says nothing about `cnf` | The handoff is bound at issuance to the delegate's registered key; the tool token to the requesting actor's. That is this STS's choice, not a reading of either RFC |
+| Binding at the token endpoint (section 5) | The server binds the issued token to the proof key by `cnf.jkt`; `token_type` is `DPoP`; a bad proof is `invalid_dpop_proof` | Same for actor and tool tokens. Beyond the RFC, the proof key at `client_credentials` must be the client's registered key, and at exchange it must match the subject token's binding as well as the actor token's. The RFC binds to whatever key proves itself. This STS also requires that it be the key on file, because handoffs are bound to registered keys and a registry that any key can bypass would be decoration |
+| Exchanged tokens | RFC 9449 does not address RFC 8693; RFC 8693 says nothing about `cnf` | The handoff is bound at issuance to the delegate's registered key; the tool token to the requesting actor's. That is this STS's choice and goes beyond both RFCs |
 | Resource server (section 7.1) | Checks the proof with `ath`, the `DPoP` authorization scheme, and the key against `cnf.jkt`; a bound token must not be accepted as Bearer | `verify.py` and the admin routes do this. A bound token under `Bearer` is 401 `invalid_dpop_proof`. `WWW-Authenticate: DPoP` challenge headers are not emitted |
 | Server nonces (section 8) | A server MAY require a nonce it issued (`DPoP-Nonce`, `use_dpop_nonce`) to bound the window for pre-computed proofs | Not implemented. `verify_proof` will check a nonce it is handed, but nothing issues one. The replay cache plus the 60 s window bound the same thing in a closed system where every party shares one clock; nonces earn their round trip when clients are remote with clocks the server does not trust |
 | Public clients and refresh tokens (section 5) | Refresh tokens issued to public clients are bound to the key | No refresh tokens, no public clients |
@@ -447,37 +447,37 @@ once it is an STS client.
 
 `demo.py` runs each of these.
 
-| Attack | Result |
-|---|---|
-| Expired tool token replayed | refused at tool: token expired |
-| Exchange without `may_act` (no consent) | refused at STS: no may_act |
-| Different agent presents the user's token | refused at STS: audience does not name this client |
-| Sub-agent asks for `repo:write` (confused deputy) | refused at STS: scope exceeds what the subject holds |
-| Sub-agent asks for an unregistered tool | refused at STS: audience not registered |
-| Plain exchange to strip the `act` chain | refused at STS |
-| Gateway uses another agent's actor token | refused at STS |
-| Handoff token sent straight to a tool | refused at tool: not addressed to it |
-| Prompt-injected write call | handled by the policy check in `../policy/` |
-| Agent outside the chain revokes the user's token | refused at STS: unauthorized_client |
-| Revoke a token this STS never issued | 200, nothing changes (no probing) |
-| User token revoked, live tool token replayed | refused at tool: token revoked |
-| User token revoked, handoff exchanged again | refused at STS: subject_token revoked |
-| Another user's token after that revocation | still accepted (different grant) |
-| Tool server revokes the handoff above it, any reason | refused at STS: unauthorized_client |
-| Two reports from tool-github inside the window | never-reported sibling under the same handoff refused at tool; gateway's own token still accepted |
-| Third report, fresh handoff, same chain | grant revoked; gateway's own token refused; user token refused on exchange |
-| Gateway's actor token at an admin route | HTTP 403 insufficient_scope |
-| ops-console retires an agent | its live tokens refused at tool; no new actor tokens |
-| ops-console revokes an unknown grant | HTTP 200, zero counts (no probing) |
-| Stolen tool token presented with no proof | refused at tool: key-bound and no DPoP proof |
-| Stolen tool token, thief signs with its own key | refused at tool: proof key does not match cnf.jkt |
-| Stolen token and its captured proof replayed | refused at tool: proof jti already seen |
-| Proof minted for another tool's URI | refused at tool: htu does not match |
-| Proof older than 60 s | refused at tool: too old |
-| Exchange with no proof | refused at STS: invalid_dpop_proof |
-| Gateway's actor token exchanged under another client's key | refused at STS: actor_token is bound to another key |
-| ops-console's bound token sent as a plain Bearer | HTTP 401 invalid_dpop_proof |
-| ops-console revokes the sub-agent's key | every token bound to it refused at tool; its handoff exchange and new actor tokens refused at STS; the gateway's tokens untouched |
+| Attack | Refused at | Reason |
+|---|---|---|
+| Expired tool token replayed | tool | token expired |
+| Exchange without `may_act` (no consent) | STS | subject token has no `may_act`, no consent for any actor |
+| Different agent presents the user's token | STS | audience does not name this client |
+| Sub-agent asks for `repo:write` (confused deputy) | STS | scope exceeds what the subject holds |
+| Sub-agent asks for an unregistered tool | STS | audience not registered |
+| Plain exchange to strip the `act` chain | STS | subject carries delegation claims and would lose its `act` chain |
+| Gateway uses another agent's actor token | STS | actor token does not belong to the authenticated client |
+| Handoff token sent straight to a tool | tool | not addressed to it |
+| Prompt-injected write call | PEP | policy check in `../policy/` |
+| Agent outside the chain revokes the user's token | STS | `unauthorized_client` |
+| Revoke a token this STS never issued | STS | 200, nothing changes, no probing |
+| User token revoked, live tool token replayed | tool | token revoked |
+| User token revoked, handoff exchanged again | STS | subject token revoked |
+| Another user's token after that revocation | accepted | different grant |
+| Tool server revokes the handoff above it, any reason | STS | `unauthorized_client` |
+| Two reports from tool-github inside the window | tool | the never-reported sibling under the same handoff is refused; the gateway's own token is still accepted |
+| Third report, fresh handoff, same chain | STS and tool | grant revoked; the gateway's own token is refused; the user token is refused on exchange |
+| Gateway's actor token at an admin route | STS | HTTP 403 `insufficient_scope` |
+| ops-console retires an agent | STS and tool | its live tokens are refused at the tool; no new actor tokens |
+| ops-console revokes an unknown grant | STS | HTTP 200, zero counts, no probing |
+| Stolen tool token presented with no proof | tool | key-bound and no DPoP proof |
+| Stolen tool token, thief signs with its own key | tool | proof key does not match `cnf.jkt` |
+| Stolen token and its captured proof replayed | tool | proof `jti` already seen |
+| Proof minted for another tool's URI | tool | `htu` does not match |
+| Proof older than 60 s | tool | too old |
+| Exchange with no proof | STS | `invalid_dpop_proof` |
+| Gateway's actor token exchanged under another client's key | STS | actor token is bound to another key |
+| ops-console's bound token sent as a plain Bearer | STS | HTTP 401 `invalid_dpop_proof` |
+| ops-console revokes the sub-agent's key | STS and tool | every token bound to it is refused at the tool; its handoff exchange and new actor tokens are refused at the STS; the gateway's tokens are untouched |
 
 ## Future state
 

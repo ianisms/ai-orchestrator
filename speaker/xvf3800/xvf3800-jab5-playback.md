@@ -216,6 +216,6 @@ Replace `<card>` with the number shown by `aplay -l`.
 ## Troubleshooting
 
 - **No sound**: Verify JAB5 power, speaker wiring, and that DAC line-out is wired to JAB5 line-in.
-- **Playback only works on HDMI**: Ensure `aplay` targets the I2S card, not the default.
+- **Playback only works on HDMI.** Point `aplay` at the I2S card instead of the default.
 - **Noise/garbled audio**: Double-check BCLK/LRCLK wiring and that Pi is I2S master.
-- **AEC not working**: Ensure GPIO21 also feeds XVF3800 DIN if AEC is required.
+- **AEC not working.** GPIO21 has to feed XVF3800 DIN as well if AEC is required.

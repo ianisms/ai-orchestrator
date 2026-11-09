@@ -239,7 +239,7 @@ Measure an impedance sweep from 10 Hz to 1 kHz with a USB audio interface and RE
 
 ### Ventilation
 
-84 hex-flower vent holes across 12 clusters cool the CM5 passively. The active cooler exhausts into the acoustic chamber by design. Six intake clusters at Z=38 mm and six exhaust clusters at Z=226 mm, staggered 30°, make a chimney. No enclosure fan is needed. If the CM5 throttles under sustained load, check that the intake and exhaust clusters are clear.
+84 hex-flower vent holes across 12 clusters cool the CM5 passively. The active cooler exhausts into the acoustic chamber on purpose; the vents carry the heat out. Six intake clusters at Z=38 mm and six exhaust clusters at Z=226 mm, staggered 30°, make a chimney. No enclosure fan is needed. If the CM5 throttles under sustained load, check that the intake and exhaust clusters are clear.
 
 ---
 

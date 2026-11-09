@@ -185,9 +185,9 @@ flowchart TB
 
 ### Enclosure Integration
 - PSU mounted inside enclosure, separate from carrier board
-- Captive AC cord (IEC C18 inlet or hardwired) - HomePod-style aesthetic
+- Captive AC cord (IEC C18 inlet or hardwired), no user-facing connectors
 - 28V DC output wired to carrier board screw terminal (J1)
-- Ensure adequate ventilation for PSU cooling
+- Vent the enclosure for PSU cooling
 
 ## CM5 Power & Control
 - 5 V input pins: feed all required CM5 5 V pins with a solid plane. Target ≥ 4.75 V at pins under full load.
