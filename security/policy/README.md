@@ -18,7 +18,9 @@ flowchart LR
     OPA -. allow only when no<br/>reason to deny exists .-> A[allow]
 ```
 
-## What the policy enforces (`rego/agent_tools.rego`)
+## What the policy enforces
+
+The rules are in `rego/agent_tools.rego`.
 
 - Every actor in the chain must be granted the tool, so access only narrows.
 - The token must hold the tool's scope.

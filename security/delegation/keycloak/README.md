@@ -1,6 +1,6 @@
-# Keycloak 26.8 hop 1 (timebox: 45 minutes)
+# Keycloak 26.8 for hop 1
 
-The goal is for Keycloak to issue the user > mcp-gateway delegated token, and
+This is a 45 minute timebox. The goal is for Keycloak to issue the user > mcp-gateway delegated token, and
 for the same `UpstreamVerifier` from `verify.py` to accept it through
 Keycloak's JWKS. The nested sub-agent hop stays in the Python STS. Whether
 Keycloak's delegation exchange accepts a subject token that already carries

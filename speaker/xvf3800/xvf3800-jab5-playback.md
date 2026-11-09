@@ -10,9 +10,9 @@ The JAB5 amplifier will be driven from the **HiFiBerry DAC+ Lite analog output**
 
 ---
 
-## 1) Wiring Plan (Explicit)
+## Wiring Plan (Explicit)
 
-### A) Pi CM5 <-> XVF3800 (Capture)
+### Pi CM5 <-> XVF3800 (Capture)
 This is the existing capture wiring (repeat here for completeness):
 
 | Wire Color | Pi Pin | Pi GPIO | Signal | XVF3800 Pad | Direction |
@@ -24,7 +24,7 @@ This is the existing capture wiring (repeat here for completeness):
 | 🔵 Blue | 38 | GPIO20 | I2S DIN (Pi) | X1D00 (DOUT) | XVF -> Pi |
 | 🟣 Purple | 40 | GPIO21 | I2S DOUT (Pi) | X1D01 (DIN) | Pi -> XVF (optional, for AEC) |
 
-### B) CM5 <-> HiFiBerry DAC+ Lite (I2S)
+### CM5 <-> HiFiBerry DAC+ Lite (I2S)
 Mount the DAC+ Lite on the Pi header (or wire it off-board). It uses the same I2S pins as XVF3800:
 
 | Wire Color | Pi Pin | Pi GPIO | Signal | DAC+ Lite Pin | Direction |
@@ -38,7 +38,7 @@ Notes:
 - The DAC+ Lite sits on the same I2S bus as XVF3800 capture; both share GPIO18/19/21.
 - If you also want XVF3800 AEC, split GPIO21 to **XVF3800 DIN** as well.
 
-### B1) DAC+ Lite Header Map (40-Pin Pass-Through)
+### DAC+ Lite Header Map (40-Pin Pass-Through)
 The DAC+ Lite is a HAT that passes the Pi's 40-pin header straight through. If the DAC headers are unlabeled, wire by **Pi physical pin numbers**:
 
 | Pi Physical Pin | Signal | Use |
@@ -54,7 +54,7 @@ The DAC+ Lite is a HAT that passes the Pi's 40-pin header straight through. If t
 
 If you're mounting the DAC+ Lite on a breadboard, bring these pins out to the breadboard rails and fan out from there.
 
-### B2) Breadboard Fan-Out (Temporary)
+### Breadboard Fan-Out (Temporary)
 If you only have single jumper leads, use the breadboard as a splitter:
 
 1) Run short jumpers from the Pi to the breadboard rows for **BCLK (Pin 12)**, **LRCLK (Pin 35)**, **DOUT (Pin 40)**, **GND (Pin 6)**, **5V (Pin 2/4)**, and **3.3V (Pin 1)**.
@@ -78,7 +78,7 @@ Pi jumpers land on the left side of each row.
 Fan-out jumpers (XVF/DAC) land on the right side of the same row.
 ```
 
-### C) DAC+ Lite analog out -> JAB5 analog in (screw terminals)
+### DAC+ Lite analog out -> JAB5 analog in (screw terminals)
 Use the DAC+ Lite **line-out** to feed the JAB5 **line-in** screw terminals (often labeled `LIN`, `RIN`, `GND`).
 
 | Wire Color | DAC+ Lite Line-Out | JAB5 Line-In Terminal |
@@ -87,7 +87,7 @@ Use the DAC+ Lite **line-out** to feed the JAB5 **line-in** screw terminals (oft
 | ⚪ White | L | LIN |
 | ⚫ Black | GND | GND |
 
-### D) JAB5 Speaker Outputs
+### JAB5 Speaker Outputs
 Wire speakers directly to the JAB5 outputs:
 
 | Wire Color | JAB5 Output | Speaker Terminal |
@@ -103,7 +103,7 @@ Caution:
 
 ---
 
-## 2) Power Considerations
+## Power Considerations
 
 - **XVF3800**: 5V from the Pi header is OK (already working).
 - **JAB5**: Use a **separate power supply** (do **not** power from the Pi 5V rail).
@@ -113,7 +113,7 @@ Caution:
 
 ---
 
-## 3) HiFiBerry DAC+ Lite Notes (Current Path)
+## HiFiBerry DAC+ Lite Notes (Current Path)
 
 Important constraints:
 - Do **not** enable `dtoverlay=hifiberry-dacplus` separately; the DAC codec is embedded in the custom overlay used below.
@@ -121,7 +121,7 @@ Important constraints:
 
 ---
 
-## 4) Device Tree Overlay (Capture + DAC Playback)
+## Device Tree Overlay (Capture + DAC Playback)
 
 This path needs **two audio links** (XVF3800 capture + DAC+ Lite playback). Use the dedicated installer script:
 
@@ -144,7 +144,7 @@ Notes:
 
 ---
 
-## 5) ALSA Playback Routing (DAC Output)
+## ALSA Playback Routing (DAC Output)
 
 ### Direct (recommended for testing)
 Find the card + device numbers:
@@ -181,7 +181,7 @@ Replace `<card>` with the number shown by `aplay -l`.
 
 ---
 
-## 6) Test Plan (Ordered)
+## Test Plan (Ordered)
 
 1) **Power**
    - Power the JAB5 from its dedicated PSU.
@@ -213,7 +213,7 @@ Replace `<card>` with the number shown by `aplay -l`.
 
 ---
 
-## 7) Troubleshooting
+## Troubleshooting
 
 - **No sound**: Verify JAB5 power, speaker wiring, and that DAC line-out is wired to JAB5 line-in.
 - **Playback only works on HDMI**: Ensure `aplay` targets the I2S card, not the default.

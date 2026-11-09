@@ -1,4 +1,4 @@
-# Threat model: agent delegation path
+# Threat model
 
 The path, in order:
 
@@ -31,7 +31,7 @@ Assume breach. Any agent can be steered by text it reads, and any token an agent
 | 14 | Device posture spoofing; device-code phishing on headless agents | Posture as a policy input is not built. Device identity for the speaker is built (`server/modules/orchestrator/core/device_identity.py`, `DEVICE_IDENTITY.md`): a key that cannot leave a plugged-in YubiKey 5 answers a boot-time nonce challenge, and the orchestrator issues a 10 minute credential with the key thumbprint in `cnf`; enrollment is host-side and revocable | Yes: right key accepted; wrong key, expired nonce, replayed nonce, nonce for another device, unknown device, revoked device and missing key all denied and logged; credential carries `cnf` and expires | The key proves possession, not software state: no measured boot, no PCRs, so a reflashed CM5 with the YubiKey still attests. The credential is sent on every connect, enforced when `DEVICE_IDENTITY_REQUIRE` is on, and is the gate's origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (both off until every speaker attests). A pulled key stays trusted until the credential expires, 10 minutes by default; a 60 s re-challenge on the open stream is the next control. Future state is a TPM 2.0 on the next carrier-board revision |
 | 15 | Voice spoofing: replayed recording, cloned voice, request from outside the home | Voice requests need a match of 0.98 or better, home-network origin and a passed liveness check; missing signals fail closed; writes confirm by default and high-risk tools always confirm | Yes: low match, failed liveness, off-network and missing signals all denied; high-risk merge denied with confirmations off | The policy trusts the front end's liveness result; a real-time voice clone that passes liveness still gets read access, so writes keep the confirmation. The orchestrator's voice gate (16-22) gathers these signals itself; liveness is not built yet. Enrollment (`VOICE_ENROLLMENT.md`) requires prompted sentences, which a replayed recording fails and a cloned voice passes |
 
-## Current state: voice gate in the live orchestrator (server/)
+## Voice gate in the live orchestrator
 
 The path is speaker audio > orchestrator commits the turn > model requests a tool > gate decides > tool runs.
 
@@ -51,10 +51,10 @@ Explicit location-preference commands are not gated yet. They are handled before
 
 CI runs 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`).
 
-## Attacks run (demo.py in delegation/ and policy/)
+## Attacks run
 
-Every attack below is refused with a logged reason. 103 Python tests and 22
-policy tests pass.
+`demo.py` in `delegation/` and `policy/` runs every attack below. Each is
+refused with a logged reason. 103 Python tests and 22 policy tests pass.
 
 Exchange and chain (delegation/):
 
@@ -111,7 +111,7 @@ Policy (policy/):
 - voice with no signals
 - high-risk voice write with confirmations off
 
-## Future state: next controls, in order
+## Next controls
 
 1. Finish sender-constrained tokens (#1). DPoP is built but binds to a software key in the agent's process, with no nonces and no rotation. mTLS-bound tokens (RFC 8705) come with the SPIFFE SVIDs and finish it.
 2. Workload identity for agents (SPIFFE) instead of client secrets, to close #6 and #13 and to move the DPoP key out of process memory.
@@ -120,7 +120,7 @@ Policy (policy/):
 5. A central, append-only audit sink (#12).
 6. A pushed deny list to every PEP, and a Keycloak admin-event feed into grant revocation, so #11 holds across processes and for hop 1.
 
-## Future state: voice gate rollout, in order
+## Voice gate rollout
 
 1. Calibrate the match threshold from enrolled voices (`scripts/calibrate_voice_threshold.py`), then check the logged scores from real turns in monitor mode.
 2. Spoken confirmation for writes and phone approval through the Home Assistant app for high-risk calls and enrollment (#17, #19).

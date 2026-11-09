@@ -35,12 +35,12 @@ The voice rules are the exception. [`server/modules/orchestrator/core/voice_gate
 |---|---|---|---|
 | Network-origin check for the speaker | built | [`server/modules/orchestrator/core/voice_gate.py`](../server/modules/orchestrator/core/voice_gate.py) | 18 |
 | Speaker identification on the turn's audio | built | [`server/modules/orchestrator/core/audio_tap.py`](../server/modules/orchestrator/core/audio_tap.py), [`server/tools_server/tools/get_person_id/`](../server/tools_server/tools/get_person_id/) | 16 |
-| Liveness check | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#future-state-voice-gate-rollout-in-order) | 15, 21 |
-| Spoken confirmation and phone approval | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#future-state-voice-gate-rollout-in-order) | 17, 19 |
+| Liveness check | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#voice-gate-rollout) | 15, 21 |
+| Spoken confirmation and phone approval | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#voice-gate-rollout) | 17, 19 |
 | Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; TPM on the carrier board not built; mTLS from the device not taken) | [`security/DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`security/SESSION_BINDING.md`](SESSION_BINDING.md) | 18, 1 |
 | Admin-run voice enrollment with per-user thresholds | built | [`security/VOICE_ENROLLMENT.md`](VOICE_ENROLLMENT.md) | 17, 15 |
 | Client-secret actor credentials | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py) | 6 |
-| SPIFFE/SPIRE workload identity | not built | [`security/README.md`](README.md#attestation-in-short) | 6, 13 |
+| SPIFFE/SPIRE workload identity | not built | [`security/README.md`](README.md#attestation) | 6, 13 |
 | RFC 8693 exchange with nested `act` chain | built | [`security/delegation/sts.py`](delegation/sts.py) | 2, 3, 4, 5 |
 | Tool-side verifier | built | [`security/delegation/verify.py`](delegation/verify.py) | 5, 10 |
 | Policy check before every tool call: the enforcement point (PEP) in the tool server asks the decision point (PDP) over OPA, fail closed | built | [`security/policy/`](policy/) | 7, 8, 9 |
@@ -49,9 +49,9 @@ The voice rules are the exception. [`server/modules/orchestrator/core/voice_gate
 | Tool reports with STS-owned escalation (token, delegation, grant) | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/revocation.py`](delegation/revocation.py) | 11, 7 |
 | Admin revocation routes behind an `sts:admin` actor token | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/admin.py`](delegation/admin.py) | 11 |
 | Revocation beyond lifetimes | partial: key revocation built; pushed deny list across PEPs, SVID revocation and an admin SVID not built | [`security/delegation/README.md`](delegation/README.md#revocation) | 11 |
-| Append-only audit sink | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#future-state-next-controls-in-order) | 12 |
+| Append-only audit sink | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#next-controls) | 12 |
 
-## Attestation, in short
+## Attestation
 
 The speaker ([`DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`SESSION_BINDING.md`](SESSION_BINDING.md)) holds a key that cannot leave its YubiKey. The key answers a boot-time challenge and gets a 10 minute credential with the key thumbprint in `cnf`. The credential rides on every connect. The orchestrator can refuse a stream without one. The gate can take it as the origin signal. The session's user token is bound to the device key. Enrollment is a host-side admin step and is revocable. Both sides are built with tests. The enforcement switches are off until every speaker attests.
 
