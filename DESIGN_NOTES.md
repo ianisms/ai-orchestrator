@@ -57,12 +57,12 @@ Decisions visible in the code, with where to find them. Written for someone revi
 
 - `MethodStreamableHTTPTransport` subclasses the SDK transport to use `POST` for the SSE stream (Home Assistant requires it), with `last-event-id` resumption and a bounded reconnect counter.
 - Upstream tools are namespaced `server__tool`; collisions are skipped with a warning.
-- Per-server `allowed_tools` and `denied_tools`, deny evaluated first. Empty allow means all.
+- Each server has `allowed_tools` and `denied_tools`, with deny evaluated first. An empty allow list means all.
 - `overrides.tools.<name>.{description,params}` rewrites an upstream tool's description and schema without touching the upstream server. Provenance is stamped into `meta._source`.
-- Each proxy tool carries a signature over description, schemas, annotations, and meta; refresh only re-registers on change.
-- A 60 s ping loop; a failed ping unwinds the connection, clears that server's tools, and retries after 10 s.
+- Each proxy tool carries a signature over its description, schemas, annotations, and meta. A refresh only re-registers on change.
+- A ping runs every 60 s. A failed ping unwinds the connection, clears that server's tools, and retries after 10 s.
 
-**Identity.** `tools/get_person_id/` resolves in three tiers. First a session cache hit. Then a NeMo speaker embedding against enrolled profiles, each at its own threshold from enrollment (0.78 for profiles without one). Last, a sentinel instruction telling the model to ask the speaker's name and call again with `stated_name`. A stated name is a claim and never proof. It records a pending enrollment, and the speaker stays a guest until the sample is approved out of band (`scripts/approve_enrollment.py`). New voices are enrolled in an admin-run session (`security/VOICE_ENROLLMENT.md`). The embedding call runs in a single-worker pool with a hard 10 s deadline because NeMo can hang. The model is shared with the sibling `speaker_identity` tool through `sys.modules` so it is not loaded twice into VRAM. A second tool, `identify_speaker`, is hidden from the model and returns the raw best match, score and threshold for the voice gate.
+**Identity.** `tools/get_person_id/` resolves in three tiers. The first is a session cache hit. The second is a NeMo speaker embedding against enrolled profiles, each at its own threshold from enrollment (0.78 for profiles without one). The third is a sentinel instruction telling the model to ask the speaker's name and call again with `stated_name`. A stated name is a claim and never proof. It records a pending enrollment, and the speaker stays a guest until the sample is approved out of band (`scripts/approve_enrollment.py`). New voices are enrolled in an admin-run session (`security/VOICE_ENROLLMENT.md`). The embedding call runs in a single-worker pool with a hard 10 s deadline because NeMo can hang. The model is shared with the sibling `speaker_identity` tool through `sys.modules` so it is not loaded twice into VRAM. A second tool, `identify_speaker`, is hidden from the model and returns the raw best match, score and threshold for the voice gate.
 
 **Voice gate.** `orchestrator/core/voice_gate.py` decides every tool call before dispatch, with no input from the model. Tools are read, write or high risk. Unlisted tools are writes, and Home Assistant on/off calls naming a lock, garage, door or alarm are high. The orchestrator identifies the speaker once per turn, and only when a non-read tool is requested. Origin is the verified device credential on the stream when `VOICE_GATE_REQUIRE_DEVICE` is on, and the gRPC peer address until then (`security/DEVICE_IDENTITY.md`). A verified voice needs a match at or above the speaker's threshold, a trusted origin and a passed liveness check. Writes need a verified voice and a spoken confirmation, or a phone approval. High-risk calls need both a verified voice and a phone approval. Every decision carries an assurance record of what was measured. The default mode is `monitor`. Every non-read decision is logged as `allow` or `would_deny` and nothing is blocked, because liveness and the approval flows are not built yet. `scripts/calibrate_voice_threshold.py` suggests the global floor from the enrolled samples.
 
@@ -70,7 +70,7 @@ Decisions visible in the code, with where to find them. Written for someone revi
 
 ## TTS service (`server/tts/server/`)
 
-FastAPI, one streaming endpoint returning `audio/L16` with the sample rate in a header. The pipeline runs in this order:
+The service is FastAPI with one streaming endpoint that returns `audio/L16` with the sample rate in a header. The pipeline runs in this order:
 
 1. Normalize with the NeMo text normalizer under a 150 ms budget, with raw-text fallback.
 2. Optional abbreviation expansion with protected-phrase sentinels.
