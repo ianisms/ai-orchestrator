@@ -1,19 +1,20 @@
 # Device-bound sessions and admin-run voice enrollment
 
-How a speaker's session is bound to its hardware key, and how voices are
-enrolled. `DEVICE_IDENTITY.md` covers the key and the challenge,
-`VOICE_ENROLLMENT.md` the enrollment procedure, `THREAT_MODEL.md` the threats.
+A speaker's session is tied to the key in its YubiKey, and voices are enrolled
+in a measured session run by an admin. This doc covers both. `DEVICE_IDENTITY.md`
+covers the key and the challenge. `VOICE_ENROLLMENT.md` covers the enrollment
+procedure. `THREAT_MODEL.md` covers the threats.
 
-Three things hold. The speaker is trusted for a key it holds, not for its
-address or for the voice on the stream (threat 18). The user token is bound to
-that key, because it is the only leg of the chain the hardware can vouch for.
-The agents' DPoP keys are software in process. They stop a copied token and do
-nothing against a compromised process. A voice match stands on a measured
-enrollment, not on one global threshold.
+The design rests on three rules. The speaker is trusted for the key it holds,
+never for its address or for the voice on the stream (threat 18). The user
+token is bound to that key, because it is the only leg of the chain the
+hardware can vouch for. The agents' DPoP keys are software in process; they
+stop a copied token and do nothing against a compromised process. A voice match
+stands on a measured enrollment, never on one global threshold.
 
 ## Current state
 
-What runs, what it binds, which switches are off.
+This is what runs, what it binds, and which switches are off.
 
 | Control | Where | Status |
 |---|---|---|
@@ -58,9 +59,9 @@ flowchart LR
     class DI,VG off
 ```
 
-Dashed boxes are built with the enforcement switch off until every speaker
-attests. The orchestrator already asserts who is speaking; here it also asserts
-which device the stream came from. No new component is trusted.
+The dashed boxes are built. Their enforcement switches stay off until every
+speaker attests. The orchestrator already asserts who is speaking. Here it also
+asserts which device the stream came from. No new component is trusted.
 
 ## Future state
 
