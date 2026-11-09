@@ -46,7 +46,9 @@ sequenceDiagram
 
 Every token is bound to a key (`cnf.jkt`) and every call carries a DPoP proof
 signed with that key, so a copied token is useless on its own. See "Sender
-constraint (DPoP)" below.
+constraint (DPoP)" below. In the diagram, the PEP is the policy enforcement
+point in the tool server and the PDP is the policy decision point it asks,
+both in `../policy/`.
 
 ## Run
 

@@ -1,9 +1,12 @@
 # Policy check before every tool call
 
-The MCP server verifies the delegated token (`../delegation/`), then asks a policy
-decision point about the call before dispatching it. The request uses the
-OpenID AuthZEN evaluation shape of subject, action, resource and context. The PDP
-is a small facade over OPA. The whole delegation chain is evaluated once.
+The MCP server verifies the delegated token (`../delegation/`), then asks
+whether this call is allowed before dispatching it. The code in the MCP server
+that asks is the policy enforcement point (PEP). The service that answers is
+the policy decision point (PDP), a small facade over OPA, the policy engine
+that holds the rules. The request uses the OpenID AuthZEN evaluation shape of
+subject, action, resource and context. The whole delegation chain is evaluated
+once.
 
 ```mermaid
 flowchart LR
@@ -60,7 +63,7 @@ python -m pytest -q     # 16 tests, skipped if opa is missing
 | Policy engine down | denied, fail closed |
 | PDP timeout | denied, fail closed |
 
-## Future state: not built here
+## Future state
 
 - The approval store is in memory and the approval channel is simulated. In the real gateway, approval has to come from a UI the model cannot drive.
 - Session resources are set by the caller of the PEP. In the real gateway they come from the user's task, never from the model.
