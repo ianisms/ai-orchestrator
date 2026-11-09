@@ -37,18 +37,18 @@ The voice rules are the exception. [`server/modules/orchestrator/core/voice_gate
 | Speaker identification on the turn's audio | built | [`server/modules/orchestrator/core/audio_tap.py`](../server/modules/orchestrator/core/audio_tap.py), [`server/tools_server/tools/get_person_id/`](../server/tools_server/tools/get_person_id/) | 16 |
 | Liveness check | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#voice-gate-rollout) | 15, 21 |
 | Spoken confirmation and phone approval | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#voice-gate-rollout) | 17, 19 |
-| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built (YubiKey; TPM on the carrier board not built; mTLS from the device not taken) | [`security/DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`security/SESSION_BINDING.md`](SESSION_BINDING.md) | 18, 1 |
+| Hardware device key, enrollment registry, credential on the stream, gate origin from the device, user token bound to the device key | built with a YubiKey; the TPM on the carrier board is not built; mTLS from the device was not taken | [`security/DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`security/SESSION_BINDING.md`](SESSION_BINDING.md) | 18, 1 |
 | Admin-run voice enrollment with per-user thresholds | built | [`security/VOICE_ENROLLMENT.md`](VOICE_ENROLLMENT.md) | 17, 15 |
 | Client-secret actor credentials | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py) | 6 |
 | SPIFFE/SPIRE workload identity | not built | [`security/README.md`](README.md#attestation) | 6, 13 |
 | RFC 8693 exchange with nested `act` chain | built | [`security/delegation/sts.py`](delegation/sts.py) | 2, 3, 4, 5 |
 | Tool-side verifier | built | [`security/delegation/verify.py`](delegation/verify.py) | 5, 10 |
-| Policy check before every tool call: the enforcement point (PEP) in the tool server asks the decision point (PDP) over OPA, fail closed | built | [`security/policy/`](policy/) | 7, 8, 9 |
-| Sender-constrained tokens (DPoP, RFC 9449) | built (prototype, partial): software key in process, no nonces, no rotation; mTLS-bound waits for SVIDs | [`security/delegation/dpop.py`](delegation/dpop.py), [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/verify.py`](delegation/verify.py) | 1, 6 |
+| Policy check before every tool call, fail closed; the enforcement point (PEP) in the tool server asks the decision point (PDP) over OPA | built | [`security/policy/`](policy/) | 7, 8, 9 |
+| Sender-constrained tokens (DPoP, RFC 9449) | built (prototype, partial); software key in process, no nonces, no rotation; mTLS-bound waits for SVIDs | [`security/delegation/dpop.py`](delegation/dpop.py), [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/verify.py`](delegation/verify.py) | 1, 6 |
 | Lineage claims, RFC 7009 `/revoke` with subtree extension, in-memory denylist, verify-side check | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/revocation.py`](delegation/revocation.py), [`security/delegation/verify.py`](delegation/verify.py) | 11 |
 | Tool reports with STS-owned escalation (token, delegation, grant) | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/revocation.py`](delegation/revocation.py) | 11, 7 |
 | Admin revocation routes behind an `sts:admin` actor token | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/admin.py`](delegation/admin.py) | 11 |
-| Revocation beyond lifetimes | partial: key revocation built; pushed deny list across PEPs, SVID revocation and an admin SVID not built | [`security/delegation/README.md`](delegation/README.md#revocation) | 11 |
+| Revocation beyond lifetimes | partial; key revocation built, pushed deny list across PEPs, SVID revocation and an admin SVID not built | [`security/delegation/README.md`](delegation/README.md#revocation) | 11 |
 | Append-only audit sink | not built | [`security/THREAT_MODEL.md`](THREAT_MODEL.md#next-controls) | 12 |
 
 ## Attestation
