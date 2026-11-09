@@ -39,7 +39,7 @@ Decisions visible in the code, with where to find them. Written for someone revi
 
 **Backpressure.** There are three bounded queues with distinct policies. `audio_in` and `text_in` drop the oldest. `out_q` evicts oldest and records which `oneof` kind was dropped. Drops are logged on the first and every fiftieth occurrence. Shutdown gathers tasks under a 15 s timeout.
 
-**Metrics.** `orchestrator/core/metrics.py` exposes Prometheus on `:9110` plus a JSON stats file for lifetime counters. Every emitter is wrapped in its own try/except so instrumentation cannot break a turn. A separate status server on `:9111` serves `/healthz`, `/readyz`, which is 503 until every dependency is green, and `/selfcheck`, which reports the resolved model, context length, proto hash, prompt hash, and session and degradation state.
+**Metrics.** `orchestrator/core/metrics.py` exposes Prometheus on `:9110` plus a JSON stats file for lifetime counters. Every emitter is wrapped in its own try/except so instrumentation cannot break a turn. A separate status server on `:9111` serves `/healthz`, `/readyz` and `/selfcheck`. `/readyz` is 503 until every dependency is green. `/selfcheck` reports the resolved model, context length, proto hash, prompt hash, and session and degradation state.
 
 **Proto drift guard.** The server hashes its `.proto` at startup and exchanges it as `x-orch-proto-sha256` metadata. A mismatch is logged with `x-orch-proto-mismatch` in the reply metadata.
 
@@ -49,7 +49,7 @@ Decisions visible in the code, with where to find them. Written for someone revi
 
 ## Tools server (`server/tools_server/`)
 
-**Discovery.** `loader.py` scans `tools/` for modules or packages exposing `register(server) -> list[str]`. Tool descriptions and per-parameter metadata live in a `config.yaml` beside each tool (`utils/tool_meta.py`), so prompt text is data, not code.
+**Discovery.** `loader.py` scans `tools/` for modules or packages exposing `register(server) -> list[str]`. Tool descriptions and per-parameter metadata live in a `config.yaml` beside each tool (`utils/tool_meta.py`), so prompt text is data.
 
 **Hot reload.** `watchfiles` maps a changed path back to its owning module, unregisters that module's previously returned names, reloads, and re-registers. Any change to the tool set pushes a raw `ToolListChangedNotification` down every live transport (`app.py`), which is exactly what the orchestrator's client listens for.
 

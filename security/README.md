@@ -57,4 +57,4 @@ The speaker ([`DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`SESSION_BINDING.md`](
 
 This does not measure the software. There are no PCRs and no measured boot. A stolen key on another host passes. That is why key-bound tokens stay at low-risk scopes and high-risk actions keep voice plus a step-up. The future state is a TPM 2.0 on the PCB of the next carrier-board revision, over SPI, for measured boot and the full attestation chain.
 
-Agents use client secrets at the STS, each paired with a key that every token is bound to (DPoP, RFC 9449). A copied token is useless without the key. The key lives in the agent's process, which stops theft of the token and does nothing against compromise of the process. Workload identity (SPIFFE, prototype B) is not built.
+Agents use client secrets at the STS, each paired with a key that every token is bound to (DPoP, RFC 9449). A copied token is useless without the key. The key lives in the agent's process. That stops theft of the token and does nothing against compromise of the process. Workload identity (SPIFFE, prototype B) is not built.

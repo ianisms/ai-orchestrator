@@ -2,7 +2,7 @@
 
 The MCP server verifies the delegated token (prototype A), then asks a policy
 decision point about the call before dispatching it. The request uses the
-OpenID AuthZEN evaluation shape: subject, action, resource, context. The PDP
+OpenID AuthZEN evaluation shape of subject, action, resource and context. The PDP
 is a small facade over OPA. The whole delegation chain is evaluated once.
 
 ```

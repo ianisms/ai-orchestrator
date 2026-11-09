@@ -11,7 +11,7 @@ The path, in order:
 
 The scope is the prototypes in `delegation/` and `policy/` (threats 1-15) and the voice gate in the live orchestrator (threats 16-22). The live assistant does not use the delegation and policy prototypes yet.
 
-Assume breach. Any agent can be steered by text it reads, and any token an agent holds can leak. The goal is that a steered or compromised agent can do no more than the user approved, for no longer than a few minutes, and every attempt leaves a record.
+Assume breach. Any agent can be steered by text it reads, and any token an agent holds can leak. The goal is that a steered or compromised agent can do no more than the user approved, for no longer than a few minutes. Every attempt leaves a record.
 
 | # | Threat | Control | Tested | Residual risk |
 |---|---|---|---|---|

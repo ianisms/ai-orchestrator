@@ -5,7 +5,7 @@
 
 This is a fully local voice assistant. A custom smart speaker built on a Raspberry Pi CM5 talks to a GPU server over one bidirectional gRPC stream. Speech recognition, the language model, tool calling, and speech synthesis all run on hardware in the house. Nothing in the audio path touches a cloud API.
 
-This repository is a sanitized snapshot of a personal project, published as a reference for how I design and build systems. It is not packaged for reuse; there is no one-command install. It does show a working end-to-end system with the tradeoffs left visible: streaming everywhere, barge-in, per-speaker identity, an MCP tool plane with authorization boundaries, and observability from the first commit.
+This repository is a sanitized snapshot of a personal project, published as a reference for how I design and build systems. It is not packaged for reuse; there is no one-command install. It does show a working end-to-end system with the tradeoffs left visible. It has streaming everywhere, barge-in, per-speaker identity, an MCP tool plane with authorization boundaries, and observability from the first commit.
 
 I am Ian Bennett ([github.com/ianisms](https://github.com/ianisms)). The source is available for review under the PolyForm Strict License 1.0.0. Any other use needs my written permission. See [LICENSE.md](LICENSE.md) and [NOTICE](NOTICE).
 
