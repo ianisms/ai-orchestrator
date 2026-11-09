@@ -49,7 +49,7 @@ The gate runs in monitor mode. Every non-read decision is logged as `allow` or `
 
 Explicit location-preference commands are not gated yet. They are handled before the model and do not pass the gate.
 
-CI runs 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`) run in CI.
+CI runs 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`).
 
 ## Attacks run (demo.py in delegation/ and policy/)
 
