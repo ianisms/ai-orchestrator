@@ -1,10 +1,11 @@
 # Keycloak 26.8 hop 1 (timebox: 45 minutes)
 
-Goal: Keycloak issues the user > mcp-gateway delegated token, and the same
-`UpstreamVerifier` from `verify.py` accepts it through Keycloak's JWKS.
-The nested sub-agent hop stays in the Python STS. Whether Keycloak's delegation
-exchange accepts a subject token that already carries `act` is untested; record
-the result either way, it is a useful line in the threat model.
+The goal is for Keycloak to issue the user > mcp-gateway delegated token, and
+for the same `UpstreamVerifier` from `verify.py` to accept it through
+Keycloak's JWKS. The nested sub-agent hop stays in the Python STS. Whether
+Keycloak's delegation exchange accepts a subject token that already carries
+`act` is untested. Record the result either way; it is a useful line in the
+threat model.
 
 Delegation is a preview feature in 26.8 (off by default, not for production).
 Setup below follows the Keycloak 26.8 token exchange guide as summarized by
@@ -48,5 +49,10 @@ Skycloak (2 Oct 2026); confirm names in the admin console as you go.
 - Delegation exchange where the subject already carries `act` (the nested hop): result unknown.
 - Revoking alice's token does not revoke exchanged tokens; keep access token lifetimes short.
 
-Troubleshooting: no `may_act` = missing `delegate` permission, misspelled client, or no service account.
-`invalid_request` on exchange = actor does not match `may_act`. `access_denied` = requesting client outside a token's audience.
+## Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| no `may_act` in the token | missing `delegate` permission, misspelled client, or no service account |
+| `invalid_request` on exchange | actor does not match `may_act` |
+| `access_denied` | requesting client outside a token's audience |

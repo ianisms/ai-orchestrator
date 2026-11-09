@@ -2,8 +2,8 @@
 
 The MCP server verifies the delegated token (prototype A), then asks a policy
 decision point about the call before dispatching it. The request uses the
-OpenID AuthZEN evaluation shape (subject, action, resource, context), and the
-PDP is a small facade over OPA. The whole delegation chain is evaluated once.
+OpenID AuthZEN evaluation shape: subject, action, resource, context. The PDP
+is a small facade over OPA. The whole delegation chain is evaluated once.
 
 ```
 tools/call --> verify token (A) --> PEP builds AuthZEN request --> PDP /access/v1/evaluation --> OPA
@@ -22,11 +22,11 @@ tools/call --> verify token (A) --> PEP builds AuthZEN request --> PDP /access/v
 - Unknown tools and unknown request channels are denied.
 - Confirmation is on by default. A user can turn it off for ordinary writes; high-risk tools (merge) always need it.
 - Voice requests also need a speaker match of 0.98 or better, origin on the home network, and a passed liveness check. These signals come from the speaker front end, never from the model.
-- Fails closed: any missing signal counts as a failed check.
+- Any missing signal counts as a failed check.
 
 ## Run
 
-Needs the OPA binary (Windows: `opa_windows_amd64.exe` from the OPA GitHub releases, renamed `opa.exe` on PATH, or set `OPA_BIN`).
+This needs the OPA binary. On Windows, download `opa_windows_amd64.exe` from the OPA GitHub releases, rename it `opa.exe` and put it on PATH, or set `OPA_BIN`.
 
 ```
 pip install -r ../delegation/requirements.txt
@@ -60,7 +60,7 @@ python -m pytest -q     # 16 tests, skipped if opa is missing
 ## Future state: not built here
 
 - The approval store is in memory and the approval channel is simulated. In the real gateway, approval has to come from a UI the model cannot drive.
-- Session resources are set by the caller of the PEP; in the real gateway they come from the user's task, not from the model.
-- Policy and data are loaded at OPA start; no bundle signing or versioned rollout.
-- Liveness is an input here, not an implementation: the policy trusts the front end's result. How good the liveness check is decides how much the voice path is worth.
-- Tool output is not inspected. A read the policy allows can still return injected text; the defense is that the next call goes through the same check.
+- Session resources are set by the caller of the PEP. In the real gateway they come from the user's task, never from the model.
+- Policy and data are loaded at OPA start. There is no bundle signing or versioned rollout.
+- Liveness is an input here. The policy trusts the front end's result, and how good the liveness check is decides how much the voice path is worth.
+- Tool output is not inspected. A read the policy allows can still return injected text. The defense is that the next call goes through the same check.
