@@ -6,7 +6,7 @@ The path, in order:
 2. The gateway exchanges for a tool token or a handoff.
 3. A sub-agent exchanges the handoff.
 4. The tool server verifies the token.
-5. The PEP asks the PDP.
+5. The policy enforcement point (PEP) in the tool server asks the policy decision point (PDP) whether the call is allowed.
 6. The tool runs and its output returns to the model.
 
 The scope is the prototypes in `delegation/` and `policy/` (threats 1-15) and the voice gate in the live orchestrator (threats 16-22). The live assistant does not use the delegation and policy prototypes yet.

@@ -43,7 +43,7 @@ The voice rules are the exception. [`server/modules/orchestrator/core/voice_gate
 | SPIFFE/SPIRE workload identity | not built | [`security/README.md`](README.md#attestation-in-short) | 6, 13 |
 | RFC 8693 exchange with nested `act` chain | built | [`security/delegation/sts.py`](delegation/sts.py) | 2, 3, 4, 5 |
 | Tool-side verifier | built | [`security/delegation/verify.py`](delegation/verify.py) | 5, 10 |
-| AuthZEN-shaped PEP and OPA PDP, fail closed | built | [`security/policy/`](policy/) | 7, 8, 9 |
+| Policy check before every tool call: the enforcement point (PEP) in the tool server asks the decision point (PDP) over OPA, fail closed | built | [`security/policy/`](policy/) | 7, 8, 9 |
 | Sender-constrained tokens (DPoP, RFC 9449) | built (prototype, partial): software key in process, no nonces, no rotation; mTLS-bound waits for SVIDs | [`security/delegation/dpop.py`](delegation/dpop.py), [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/verify.py`](delegation/verify.py) | 1, 6 |
 | Lineage claims, RFC 7009 `/revoke` with subtree extension, in-memory denylist, verify-side check | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/revocation.py`](delegation/revocation.py), [`security/delegation/verify.py`](delegation/verify.py) | 11 |
 | Tool reports with STS-owned escalation (token, delegation, grant) | built (prototype) | [`security/delegation/sts.py`](delegation/sts.py), [`security/delegation/revocation.py`](delegation/revocation.py) | 11, 7 |
