@@ -12,7 +12,7 @@ turn through `_enrollment_turn`.
 
 ## Current state
 
-### Two paths, one record
+### Two paths into one record
 
 | Path | Who starts it | What it produces | Status |
 |---|---|---|---|

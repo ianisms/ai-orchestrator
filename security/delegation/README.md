@@ -180,7 +180,7 @@ Enforcement happens in two places.
 Every revocation decision (revoked, noop, deny) and every refusal on the verify
 side is logged with its reason, in the same JSON form as the exchange audit log.
 
-### What RFC 7009 says, what this STS does
+### RFC 7009 compared with this STS
 
 | Topic | RFC 7009 | This STS |
 |---|---|---|
@@ -326,7 +326,7 @@ Token responses say `token_type: DPoP` for actor and tool tokens. The handoff
 stays `N_A`, as RFC 8693 section 2.2.1 prescribes for a token that is not for
 direct use at a resource. It goes back to the STS as a subject token.
 
-### What RFC 9449 says, what this STS does
+### RFC 9449 compared with this STS
 
 | Topic | RFC 9449 | This STS |
 |---|---|---|
@@ -443,7 +443,9 @@ thumbprint is on every record, so such a misreport can be traced to a
 specific stream. Having the speaker perform the exchange itself is the target
 once it is an STS client.
 
-## Attack results (from `demo.py`)
+## Attack results
+
+`demo.py` runs each of these.
 
 | Attack | Result |
 |---|---|

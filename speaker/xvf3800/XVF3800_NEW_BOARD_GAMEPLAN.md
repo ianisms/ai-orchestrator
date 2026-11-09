@@ -129,7 +129,7 @@ Make the Raspberry Pi CM5 (Geekworm X1500) capture audio from the Seeed ReSpeake
 
 ## Step-by-step setup for the new board
 
-### Step 1: Flash Firmware (on PC first)
+### Flash the firmware on a PC first
 
 **Flash before connecting to the Pi.** USB DFU does not work after the I2S firmware is loaded.
 
@@ -147,13 +147,13 @@ dfu-util -R -e -a 1 -D respeaker_xvf3800_i2s_master_dfu_firmware_v1.0.x_48k.bin
 
 4. Verify: Red LED should flash during DFU, then board restarts
 
-### Step 2: Wire to Pi
+### Wire it to the Pi
 
 1. **Disconnect Pi power**
 2. Wire as shown above (5 wires minimum: 5V, GND, BCLK, LRCLK, DOUT)
 3. Double-check connections before powering on
 
-### Step 3: Power On & Verify
+### Power on and verify
 
 1. Power on Pi (USB-C or barrel jack to X1500)
 2. XVF3800 should power from Pi's 5V header
@@ -161,7 +161,7 @@ dfu-util -R -e -a 1 -D respeaker_xvf3800_i2s_master_dfu_firmware_v1.0.x_48k.bin
    - **LEDs stay on/breathing** = Board is running
    - **LEDs flash once then off** = Power issue (see troubleshooting)
 
-### Step 4: Validate Audio Capture
+### Validate audio capture
 
 ```bash
 # Run validation script
@@ -236,7 +236,7 @@ sudo reboot
 
 ---
 
-## Recovery: enter safe mode
+## Recovering with safe mode
 
 If XVF3800 firmware is corrupted or unresponsive:
 

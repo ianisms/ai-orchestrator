@@ -110,7 +110,7 @@ high-risk call on a voice match alone.
 
 ## Reasoning
 
-### Bind per connection, not per request
+### Binding per connection
 
 Having the agent sign DPoP proofs with the YubiKey does not work. The agent
 runs on the server and the key is on the CM5. A YubiKey or TPM also signs about
@@ -260,7 +260,7 @@ registry; the orchestrator refuses the next credential check and the STS
 refuses the next exchange. `revoke_key(<device jkt>)` at the STS kills every
 live token bound to the device and their descendants.
 
-### Enrollment session, states
+### Enrollment session states
 
 ```mermaid
 stateDiagram-v2
@@ -279,7 +279,7 @@ stateDiagram-v2
     aborted --> [*]
 ```
 
-### Enrollment sample, one turn
+### One enrollment sample
 
 ```mermaid
 flowchart TD
