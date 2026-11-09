@@ -105,13 +105,55 @@ order they apply:
    approval (not built) for writes and high-risk calls.
 3. Enrollment is revocable in one step (`enroll_device.py revoke`). Revocation
    stops every future challenge and every credential check for that key the
-   moment the registry file is written; the credential's own lifetime is at
-   most 15 minutes anyway.
+   moment the registry file is written. Until then the speaker that lost the
+   key stays trusted for the rest of its credential, 10 minutes by default and
+   15 at the cap. The
+   60 s re-challenge under "Future state" shrinks that to a minute.
 4. The nonce is bound to the `device_id` that asked for it and the registry is
    never enumerated by the challenge route, so a stolen key cannot be probed
    for which device it belongs to without already knowing.
 
 ## Future state
+
+### Re-challenge on the open stream
+
+The credential lasts ten minutes. Pull the YubiKey in minute one and the
+stream stays trusted until minute ten. A speaker without its key cannot answer
+a challenge, so the fix is to ask more often.
+
+The orchestrator sends a fresh nonce on the open stream every 60 seconds. The
+speaker signs it or it does not. A missed answer sets `device_verified` false
+on the next turn. A second miss closes the stream when `DEVICE_IDENTITY_REQUIRE`
+is on. No new credential is minted; the credential becomes a record that this
+speaker answered recently, and the interval is the control.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Y as YubiKey
+    participant S as Speaker (CM5)
+    participant O as Orchestrator
+
+    S->>O: Converse stream with x-device-credential
+    loop every 60 s
+        O->>S: DeviceChallenge {nonce}
+        alt key present
+            S->>Y: sign nonce
+            Y-->>S: signature
+            S->>O: DeviceProof {nonce, signature}
+            Note over O: verified, device_verified stays true
+        else key removed
+            Note over O: no proof before the deadline<br/>first miss: device_verified false on the next turn<br/>second miss: stream closed when DEVICE_IDENTITY_REQUIRE is on
+        end
+    end
+```
+
+Trust never depends on the speaker reporting its own state. The speaker can
+also watch for card removal through pcscd and reconnect sooner, but that is
+for logging and recovery, not for trust. The cost is one signature a minute,
+well inside what the YubiKey can do.
+
+### TPM on the carrier board
 
 The next carrier-board revision (`speaker/hardware/pcb/theboard/`, rev 3.7
 today) puts a TPM 2.0 on the PCB over SPI. The key is generated in the TPM and
@@ -138,7 +180,8 @@ sequenceDiagram
 
 The orchestrator side keeps its shape. There is still a signer behind the
 `Signer` interface, an enrollment registry keyed by thumbprint, a short nonce
-and a short-lived key-bound credential. The TPM adds a quote to the attest request
-and a PCR policy to the verifier. The session pieces in `SESSION_BINDING.md`
+and a short-lived key-bound credential. The TPM adds a quote to the attest
+request and a PCR policy to the verifier. The re-challenge above works the same
+way with a TPM key. The session pieces in `SESSION_BINDING.md`
 do not change; moving the key from the YubiKey into the TPM changes the signer
 and nothing else.
