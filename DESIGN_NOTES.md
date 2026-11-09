@@ -6,50 +6,50 @@ Decisions visible in the code, with where to find them. Written for someone revi
 
 **Wire protocol.** One RPC, `Converse(stream ClientMessage) returns (stream ServerMessage)`, defined in `orchestrator/orchestrator.proto`. Client messages are `Start`, `AudioFrame`, `EndOfUtterance`, `Cancel`, `TextInput`. Server messages are `State` (LISTENING, THINKING, SPEAKING, IDLE), `Transcript`, `TtsAudio`, `Reply`, `Error`. The text path exists so the pipeline can be exercised without a microphone (`test/chat_client.py`).
 
-**Concurrency.** Pure `asyncio` on `grpc.aio`. Each `Converse` call runs an ingest task, a pipeline task, and an output drain. Anything blocking (SQLite writes, WAV encoding, stats file writes) goes to an executor. Threads appear only for the status HTTP server and the SQLite connection lock. `aiserver/server.py`.
+**Concurrency.** Everything is `asyncio` on `grpc.aio`. Each `Converse` call runs an ingest task, a pipeline task, and an output drain. Anything blocking (SQLite writes, WAV encoding, stats file writes) goes to an executor. Threads appear only for the status HTTP server and the SQLite connection lock. `aiserver/server.py`.
 
-**Turn state machine.** `orchestrator/core/utterance.py` races the STT iterator, a text-input queue, and a timeout with `asyncio.wait(FIRST_COMPLETED)`. Five commit paths, each logged with its reason. The idle timeout is dynamic. It is short once partial text exists and long before it.
+**Turn state machine.** `orchestrator/core/utterance.py` races the STT iterator, a text-input queue, and a timeout with `asyncio.wait(FIRST_COMPLETED)`. There are five commit paths, each logged with its reason. The idle timeout is dynamic. It is short once partial text exists and long before it.
 
 **Speculative LLM prefetch.** On each non-final partial transcript the runner starts a full LLM round and cancels any prior one. At commit the result is reused only if the prefetch text equals the committed text exactly. This spends GPU time to buy time-to-first-audio. `_start_prefetch`, `_think_and_speak`.
 
-**Turn watchdog.** The whole think-and-speak phase runs under `asyncio.wait_for`; on expiry it emits `Error`, forces `IDLE`, and increments a counter. No turn can wedge a session.
+**Turn watchdog.** The whole think-and-speak phase runs under `asyncio.wait_for`. On expiry it emits `Error`, forces `IDLE`, and increments a counter. No turn can wedge a session.
 
 **Barge-in.** While the phase is `SPEAKING`, any inbound audio frame of at least one 20 ms frame sets `interrupt_event`. That same event is the cancel token handed to the TTS stream, so the `async for` over TTS chunks breaks on the next chunk. `Cancel` messages and gRPC context cancellation feed the same event with distinct metric labels. Latency from detection to last audio chunk is histogrammed.
 
-**History.** In-memory message list with a chars-per-token heuristic. Trimming walks backwards and stops at the first message that does not fit, so history stays a contiguous tail. Leading non-user messages are stripped so the model never sees an orphaned tool result. Persistence is SQLite in WAL mode with an upsert per change, wired through an `on_change` callback. `orchestrator/core/history.py`, `history_store.py`.
+**History.** The history is an in-memory message list with a chars-per-token heuristic. Trimming walks backwards and stops at the first message that does not fit, so history stays a contiguous tail. Leading non-user messages are stripped so the model never sees an orphaned tool result. Persistence is SQLite in WAL mode with an upsert per change, wired through an `on_change` callback. `orchestrator/core/history.py`, `history_store.py`.
 
-**Degrade before evict.** Sessions expire on TTL. Above 85% of `ORCH_SESSION_MAX` every session's history budget drops to `ORCH_HISTORY_DEGRADED_TOKENS`; only above 1.25x the max does LRU eviction start. `_evict_sessions`, `_effective_history_budget_tokens` in `aiserver/server.py`.
+**Degrade before evict.** Sessions expire on TTL. Above 85% of `ORCH_SESSION_MAX` every session's history budget drops to `ORCH_HISTORY_DEGRADED_TOKENS`. LRU eviction starts only above 1.25x the max. `_evict_sessions`, `_effective_history_budget_tokens` in `aiserver/server.py`.
 
 **Budget negotiation.** At startup the server queries `/v1/models`, prefers the configured model, falls back with a warning, and exits non-zero if nothing works. The history budget is derived from the model's `max_model_len` minus a generation reserve; config can only lower it. `_resolve_startup_history_budget`.
 
 **Audio tap.** `orchestrator/core/audio_tap.py`. `AudioTapQueue` duck-types `asyncio.Queue` and records every frame the STT client consumes. On commit it writes a WAV and returns `(session_id, audio_id)`, which is injected into the prompt as `[AUDIO_REF ...]` immediately before the final user turn. Tools receive the reference and never the audio. Files are swept on a 300 s TTL.
 
-**Tool-call loop.** `_collect_llm_with_tools` in `utterance.py`:
+**Tool-call loop.** `_collect_llm_with_tools` in `utterance.py` does the following.
 
-1. Parser tolerance for three output shapes: Qwen `<tool_call>` XML blocks, bare JSON, and `[name]{args}`. Names resolve case-insensitively against the registry; unknown names are dropped.
-2. Local JSON Schema validation (`required`, types including unions, `enum`, `additionalProperties: false`, array items) before any dispatch. Failures go back to the model as text.
-3. At most three tool rounds per turn.
-4. Calls within a round run under `asyncio.gather` with a semaphore, then are re-sorted to original order so the message log is deterministic.
+1. It parses three output shapes: Qwen `<tool_call>` XML blocks, bare JSON, and `[name]{args}`. Names resolve case-insensitively against the registry. Unknown names are dropped.
+2. It validates arguments against the JSON Schema before any dispatch: `required`, types including unions, `enum`, `additionalProperties: false`, array items. Failures go back to the model as text.
+3. It allows at most three tool rounds per turn.
+4. Calls within a round run under `asyncio.gather` with a semaphore, then are re-sorted to their original order so the message log is deterministic.
 5. After tools run, a system message tells the model to treat tool output as the sole source of truth and ignore persona, and a second completion runs at temperature 0.
 6. If a places tool ran and the synthesized prose lost the address, the raw tool output is returned instead.
 
-**Rules before the model.** Regex intent classifiers decide whether a query needs a location; a pending-location state machine expands a short follow-up like a city name into the original query. Explicit set/get/clear-default phrasings never reach the LLM. `_maybe_resolve_location_query`.
+**Rules before the model.** Regex intent classifiers decide whether a query needs a location. A pending-location state machine expands a short follow-up like a city name into the original query. Explicit set/get/clear-default phrasings never reach the LLM. `_maybe_resolve_location_query`.
 
-**TTS sanitization.** Markdown stripped (links keep label text), URLs and special tokens removed, degree, percent, currency, and math symbols expanded to words, then a Unicode-category whitelist. Abbreviation groups are additive; the `address` group is enabled only on turns where a places tool ran. `_sanitize_tts_text`, `_expand_context`.
+**TTS sanitization.** Markdown is stripped and links keep their label text. URLs and special tokens are removed. Degree, percent, currency, and math symbols are expanded to words. A Unicode-category whitelist runs last. Abbreviation groups are additive, and the `address` group is enabled only on turns where a places tool ran. `_sanitize_tts_text`, `_expand_context`.
 
-**Backpressure.** Three bounded queues with distinct policies. `audio_in` and `text_in` drop oldest. `out_q` evicts oldest and records which `oneof` kind was dropped. Drops are logged on the first and every fiftieth occurrence. Shutdown gathers tasks under a 15 s timeout.
+**Backpressure.** There are three bounded queues with distinct policies. `audio_in` and `text_in` drop the oldest. `out_q` evicts oldest and records which `oneof` kind was dropped. Drops are logged on the first and every fiftieth occurrence. Shutdown gathers tasks under a 15 s timeout.
 
-**Metrics.** `orchestrator/core/metrics.py` exposes Prometheus on `:9110` plus a JSON stats file for lifetime counters. Every emitter is individually try/except-wrapped so instrumentation cannot break a turn. A separate status server on `:9111` serves `/healthz`, `/readyz` (503 until every dependency is green), and `/selfcheck` (resolved model, context length, proto hash, prompt hash, session and degradation state).
+**Metrics.** `orchestrator/core/metrics.py` exposes Prometheus on `:9110` plus a JSON stats file for lifetime counters. Every emitter is wrapped in its own try/except so instrumentation cannot break a turn. A separate status server on `:9111` serves `/healthz`, `/readyz`, which is 503 until every dependency is green, and `/selfcheck`, which reports the resolved model, context length, proto hash, prompt hash, and session and degradation state.
 
-**Proto drift guard.** The server hashes its `.proto` at startup and exchanges it as `x-orch-proto-sha256` metadata; a mismatch is logged with `x-orch-proto-mismatch` in the reply metadata.
+**Proto drift guard.** The server hashes its `.proto` at startup and exchanges it as `x-orch-proto-sha256` metadata. A mismatch is logged with `x-orch-proto-mismatch` in the reply metadata.
 
 **MCP client.** `orchestrator/tools/mcp_client.py` is a supervised reconnect loop. The session is assigned only after `initialize()` returns, so concurrent callers see `None` and get a clean error instead of a crash. It subscribes to `ToolListChangedNotification` and refreshes off the notification path. `call_tool` hand-builds the JSON-RPC request to avoid the SDK's extra `list_tools` round trip, and falls back to a throwaway session on timeout.
 
-**Hidden tools.** `modules/tools/registry.py` keeps a `_HIDDEN` set: tools omitted from the schema the LLM sees but still callable from orchestrator code. Four internal tools use this.
+**Hidden tools.** `modules/tools/registry.py` keeps a `_HIDDEN` set of tools omitted from the schema the LLM sees but still callable from orchestrator code. Four internal tools use this.
 
 ## Tools server (`server/tools_server/`)
 
-**Discovery.** `loader.py` scans `tools/` for modules or packages exposing `register(server) -> list[str]`. Tool descriptions and per-parameter metadata live in a `config.yaml` beside each tool (`utils/tool_meta.py`), so prompt text is data.
+**Discovery.** `loader.py` scans `tools/` for modules or packages exposing `register(server) -> list[str]`. Tool descriptions and per-parameter metadata live in a `config.yaml` beside each tool (`utils/tool_meta.py`), so prompt text is data, not code.
 
 **Hot reload.** `watchfiles` maps a changed path back to its owning module, unregisters that module's previously returned names, reloads, and re-registers. Any change to the tool set pushes a raw `ToolListChangedNotification` down every live transport (`app.py`), which is exactly what the orchestrator's client listens for.
 
@@ -83,11 +83,11 @@ A single module-level lock serializes the GPU.
 
 ## Compose stack (`server/docker/docker-compose.yaml`)
 
-Eleven services. `llm`, `stt`, `tts`, and `dcgm-exporter` share the GPU without partitioning. The orchestrator depends on all four inference and tool services with `condition: service_healthy`; STT and TTS wait on the LLM because it is the slowest to load. The orchestrator additionally runs its own readiness poll that names failing checks, since a compose healthcheck can pass before a service is usable. Prometheus scrapes the host-network services through `host.docker.internal`; Promtail uses Docker service discovery into Loki; Grafana provisions datasources and two dashboards.
+There are eleven services. `llm`, `stt`, `tts`, and `dcgm-exporter` share the GPU without partitioning. The orchestrator depends on all four inference and tool services with `condition: service_healthy`; STT and TTS wait on the LLM because it is the slowest to load. The orchestrator additionally runs its own readiness poll that names failing checks, since a compose healthcheck can pass before a service is usable. Prometheus scrapes the host-network services through `host.docker.internal`; Promtail uses Docker service discovery into Loki; Grafana provisions datasources and two dashboards.
 
 ## Speaker client (`speaker/modules/speaker/`)
 
-**Supervision.** `orchestrator.py` wires seven tasks, each under `_supervise()`: exponential-backoff restart, clean stop on the shared event. Shared state is constructor-injected; there are no module globals.
+**Supervision.** `orchestrator.py` wires seven tasks, each under `_supervise()`, which restarts with exponential backoff and stops cleanly on the shared event. Shared state is constructor-injected. There are no module globals.
 
 **Fan-out.** `tee_mic()` is the single point where mic frames split to the wakeword, utterance, and barge-in queues. It also holds the echo policy. During playback only the barge-in queue is fed. For a guard window after playback, frames are discarded. Optional echo suppression attenuates the mic when a playback chunk was seen within 250 ms and mic RMS is below 1.5x playback RMS.
 
@@ -101,7 +101,7 @@ Eleven services. `llm`, `stt`, `tts`, and `dcgm-exporter` share the GPU without 
 
 **gRPC client.** `grpc_client.py` holds one persistent `Converse` stream and a receive loop that pushes a `None` sentinel and marks disconnected in its `finally`. `connect()` awaits the old receive loop before draining queues, because otherwise a stale sentinel aborts the next turn (the reasoning is in a comment). Keepalive is tuned for LAN. Transmit stops early on `THINKING` or on the first TTS chunk, with a guard against duplicate end-of-utterance.
 
-**Config.** A flat dataclass of about 70 fields. `from_yaml` warns on unknown keys and overlays a named benchmark profile (`latency`, `balanced`, `robust`, `noisy`) from `config/benchmarks.yaml`, so the latency-versus-robustness tradeoff is a one-line change.
+**Config.** The config is a flat dataclass of about 70 fields. `from_yaml` warns on unknown keys and overlays a named benchmark profile (`latency`, `balanced`, `robust`, `noisy`) from `config/benchmarks.yaml`, so the latency-versus-robustness tradeoff is a one-line change.
 
 ## Hardware (`speaker/hardware/`, `speaker/overlays/`, `speaker/xvf3800/`)
 
