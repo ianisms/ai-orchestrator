@@ -53,7 +53,7 @@ The voice rules are the exception. [`server/modules/orchestrator/core/voice_gate
 
 ## Attestation, in short
 
-The speaker ([`DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`SESSION_BINDING.md`](SESSION_BINDING.md)) holds a key that cannot leave its YubiKey. The key answers a boot-time challenge and gets a 10 minute credential with the key thumbprint in `cnf`. The credential rides on every connect. The orchestrator can refuse a stream without one, the gate can take it as the origin signal, and the session's user token is bound to the device key. Enrollment is a host-side admin step and is revocable. Both sides are built with tests. The enforcement switches are off until every speaker attests.
+The speaker ([`DEVICE_IDENTITY.md`](DEVICE_IDENTITY.md), [`SESSION_BINDING.md`](SESSION_BINDING.md)) holds a key that cannot leave its YubiKey. The key answers a boot-time challenge and gets a 10 minute credential with the key thumbprint in `cnf`. The credential rides on every connect. The orchestrator can refuse a stream without one. The gate can take it as the origin signal. The session's user token is bound to the device key. Enrollment is a host-side admin step and is revocable. Both sides are built with tests. The enforcement switches are off until every speaker attests.
 
 This does not measure the software. There are no PCRs and no measured boot. A stolen key on another host passes. That is why key-bound tokens stay at low-risk scopes and high-risk actions keep voice plus a step-up. The future state is a TPM 2.0 on the PCB of the next carrier-board revision, over SPI, for measured boot and the full attestation chain.
 
