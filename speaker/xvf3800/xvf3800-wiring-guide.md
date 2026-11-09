@@ -12,8 +12,8 @@ The XVF3800 is running **I2S Slave** firmware, so the Pi is the **I2S Master**.
 
 | Wire Color | Pi Physical Pin | Pi GPIO | Signal | XVF3800 Pad | Direction |
 |------------|----------------:|--------:|--------|-------------|-----------|
-| 🔴 **Red** | Pin 2 or 4 | — | **5V** | **5V** | Power → XVF |
-| ⚫ **Black** | Pin 6 (any GND) | — | **GND** | **GND** | Common ground |
+| 🔴 **Red** | Pin 2 or 4 | - | **5V** | **5V** | Power → XVF |
+| ⚫ **Black** | Pin 6 (any GND) | - | **GND** | **GND** | Common ground |
 | 🟡 **Yellow** | **Pin 12** | **GPIO18** | **BCLK** | **X0D37** | Pi → XVF |
 | 🟢 **Green** | **Pin 35** | **GPIO19** | **LRCLK/FS** | **X0D38** | Pi → XVF |
 | 🔵 **Blue** | **Pin 38** | **GPIO20** | **DOUT** | **X1D00** | XVF → Pi (audio) |
@@ -49,8 +49,8 @@ The XVF3800 is running **I2S Slave** firmware, so the Pi is the **I2S Master**.
 
 | Wire | Pi Pin | Pi GPIO | Signal | Notes |
 |------|-------:|--------:|--------|-------|
-| 🔴 Red | 2 or 4 | — | 5V | Power to XVF3800 |
-| ⚫ Black | 6 | — | GND | Ground |
+| 🔴 Red | 2 or 4 | - | 5V | Power to XVF3800 |
+| ⚫ Black | 6 | - | GND | Ground |
 | 🟡 Yellow | 12 | GPIO18 | BCLK | Bit clock (Pi → XVF) |
 | 🟢 Green | 35 | GPIO19 | LRCLK | Frame sync (Pi → XVF) |
 | 🔵 Blue | 38 | GPIO20 | DOUT | Audio data to Pi |
@@ -68,8 +68,8 @@ The XVF3800 is running **I2S Slave** firmware, so the Pi is the **I2S Master**.
 | X0D38 | 🟢 Green | LRCLK | Frame sync (from Pi) |
 | X1D00 | 🔵 Blue | DOUT | Audio data to Pi |
 | X1D01 | 🟣 Purple | DIN | Optional audio to XVF |
-| X1D13 | — | — | Unused |
-| X1D11 | — | — | Unused |
+| X1D13 | - | - | Unused |
+| X1D11 | - | - | Unused |
 
 ---
 

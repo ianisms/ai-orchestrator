@@ -9,7 +9,7 @@ GPU-hosted inference and orchestration for the smart speaker. Everything runs on
 - Ubuntu 24.04, Docker with the NVIDIA container toolkit
 - Deployed to `/ai/server` on the host. Model weights, caches, and runtime state also live under that path and are not part of this repository.
 
-One GPU, no MIG or partitioning. The LLM, STT, and TTS containers share it, which shapes several decisions below (vLLM pinned to 85% of VRAM, a global lock in the TTS service, health-gated startup order).
+One GPU, no MIG or partitioning. The LLM, STT, and TTS containers share it. That shapes several decisions below, among them vLLM pinned to 85% of VRAM, a global lock in the TTS service, and health-gated startup order.
 
 ## Services
 
@@ -53,7 +53,7 @@ Speaker ──gRPC Converse──► orchestrator :7000
                                    └──► TtsAudio chunks back to the speaker
 ```
 
-Per turn: audio frames stream to STT as they arrive; partial transcripts start a speculative LLM call; on commit the LLM streams a reply, tool calls are validated and dispatched in parallel, a second pass synthesizes the final answer from tool output, the text is sanitized for speech, and TTS audio streams back in chunks. Barge-in cancels TTS mid-stream.
+Each turn runs like this. Audio frames stream to STT as they arrive. Partial transcripts start a speculative LLM call. On commit the LLM streams a reply. Tool calls are validated and dispatched in parallel, and a second pass synthesizes the final answer from tool output. The text is sanitized for speech and TTS audio streams back in chunks. Barge-in cancels TTS mid-stream.
 
 ## Tools
 
@@ -81,7 +81,17 @@ Upstream MCP servers are declared in `tools_server/mcp-servers.yaml` with per-se
 
 `config/prompt.md` is the system prompt. It carries the tool-routing rules the model follows, including the `[AUDIO_REF]` protocol for speaker identification and the Home Assistant naming conventions.
 
-The voice gate is configured with `VOICE_GATE_*` keys in `config/config.yaml` (defaults in `modules/orchestrator/config/settings.py`): the mode (`off`, `monitor` or `enforce`; default `monitor`), the origin signal (`VOICE_GATE_REQUIRE_DEVICE: true` takes the verified device credential on the stream; otherwise the speaker devices' CIDRs), the global match floor from `scripts/calibrate_voice_threshold.py` (each enrolled person's own threshold sits on top of it), and the risk tier for each tool. `DEVICE_IDENTITY_REQUIRE: true` refuses a stream that presents no valid device credential. New voices are enrolled in an admin-run session with `scripts/enroll_voice.py` (`security/VOICE_ENROLLMENT.md`); pending samples from a stated name are approved or rejected with `scripts/approve_enrollment.py`.
+The voice gate is configured with `VOICE_GATE_*` keys in `config/config.yaml`, with defaults in `modules/orchestrator/config/settings.py`.
+
+| Key | What it sets |
+|---|---|
+| `VOICE_GATE_MODE` | `off`, `monitor` or `enforce`; default `monitor` |
+| `VOICE_GATE_REQUIRE_DEVICE` | `true` takes the verified device credential on the stream as the origin; `false` checks the peer address against `VOICE_GATE_TRUSTED_SPEAKER_NETS` |
+| `VOICE_GATE_MIN_SCORE` | the global match floor, from `scripts/calibrate_voice_threshold.py`; each enrolled person's own threshold sits on top of it |
+| `VOICE_GATE_TOOL_RISK`, `VOICE_GATE_DEFAULT_RISK` | the risk tier for each tool; unlisted tools get the default, `write` |
+| `DEVICE_IDENTITY_REQUIRE` | `true` refuses a stream that presents no valid device credential |
+
+New voices are enrolled in an admin-run session with `scripts/enroll_voice.py` (`security/VOICE_ENROLLMENT.md`). Pending samples from a stated name are approved or rejected with `scripts/approve_enrollment.py`.
 
 ## Running
 
@@ -93,7 +103,7 @@ The voice gate is configured with `VOICE_GATE_*` keys in `config/config.yaml` (d
 
 ## Tests
 
-`test/` mostly uses `unittest`. Coverage is on the pure parts: TTS abbreviation expansion, place-details formatting, settings coercion, and selected orchestrator behaviors. The voice gate tests (`test_voice_gate.py`, `test_voice_scripts.py`) use pytest and run in CI on every pull request; the other suites read deployment paths and run on the host. The streaming handler, tool loop, and MCP proxy are exercised by the manual harnesses in `scripts/` and by the readiness endpoints.
+`test/` mostly uses `unittest`. Coverage is on the pure parts: TTS abbreviation expansion, place-details formatting, settings coercion, and selected orchestrator behaviors. The voice gate, enrollment and device identity tests use pytest and run in CI on every pull request. The other suites read deployment paths and run on the host. The streaming handler, tool loop, and MCP proxy are exercised by the manual harnesses in `scripts/` and by the readiness endpoints.
 
 ## Constraints this was built under
 

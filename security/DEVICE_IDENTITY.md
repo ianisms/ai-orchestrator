@@ -1,27 +1,28 @@
 # Device identity for the speaker
 
-How the orchestrator decides that the thing on the other end of the gRPC stream
-is the kitchen speaker and not some other host on the same network. What the
-session does with that identity is in `SESSION_BINDING.md`.
+The orchestrator has to know which speaker is on the other end of a gRPC
+stream. Any host on the network can open one. This doc covers how a
+speaker proves which device it is. `SESSION_BINDING.md` covers what the session
+does with that identity.
 
 ## Current state
 
-The speaker proves which device it is with a key it holds and cannot export,
-once at boot, and carries the resulting credential on the stream. With
-`VOICE_GATE_REQUIRE_DEVICE` on, that credential is the gate's origin signal.
-With it off, the gate falls back to the gRPC peer address against
-`VOICE_GATE_TRUSTED_SPEAKER_NETS`, which any host on a trusted address passes
-(threat 18). Who is speaking is a separate question, answered from each turn's
-audio.
+At boot the speaker signs a challenge with a key that never leaves the YubiKey.
+The orchestrator answers with a short-lived credential, and the speaker sends
+that credential on every stream it opens. With `VOICE_GATE_REQUIRE_DEVICE` on,
+the credential is the gate's origin signal. With it off, the gate checks the
+gRPC peer address against `VOICE_GATE_TRUSTED_SPEAKER_NETS`, and any host on a
+trusted address passes (threat 18). Who is speaking is a separate question,
+answered from each turn's audio.
 
-A YubiKey 5 plugged into the CM5 holds a P-256 key in PIV slot 9a. The key is
-generated on the YubiKey and cannot be exported. At boot the speaker proves it
+A YubiKey 5 plugged into the CM5 holds the key. The key is generated on the
+YubiKey and cannot be exported. At boot the speaker proves it
 holds that key, and the orchestrator issues a short-lived device credential.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Y as YubiKey (PIV 9a)
+    participant Y as YubiKey
     participant S as Speaker (CM5)
     participant O as Orchestrator (status server :9111)
     participant G as gRPC Converse
@@ -72,7 +73,7 @@ This proves that the device holds the enrolled key. It does not prove what
 software is running on it. There is no measured boot, no PCR quote, no
 attestation key chained to a manufacturer. A CM5 whose root filesystem has been
 replaced still attests fine if the YubiKey is plugged in. This is device
-identity, not attestation.
+identity. Attestation is the future state below.
 
 ### Theft of a pluggable key
 
@@ -104,17 +105,59 @@ order they apply:
    approval (not built) for writes and high-risk calls.
 3. Enrollment is revocable in one step (`enroll_device.py revoke`). Revocation
    stops every future challenge and every credential check for that key the
-   moment the registry file is written; the credential's own lifetime is at
-   most 15 minutes anyway.
+   moment the registry file is written. Until then the speaker that lost the
+   key stays trusted for the rest of its credential, 10 minutes by default and
+   15 at the cap. The
+   60 s re-challenge under "Future state" shrinks that to a minute.
 4. The nonce is bound to the `device_id` that asked for it and the registry is
    never enumerated by the challenge route, so a stolen key cannot be probed
    for which device it belongs to without already knowing.
 
 ## Future state
 
+### Re-challenge on the open stream
+
+The credential lasts ten minutes. Pull the YubiKey in minute one and the
+stream stays trusted until minute ten. A speaker without its key cannot answer
+a challenge, so the fix is to ask more often.
+
+The orchestrator sends a fresh nonce on the open stream every 60 seconds. The
+speaker signs it or it does not. A missed answer sets `device_verified` false
+on the next turn. A second miss closes the stream when `DEVICE_IDENTITY_REQUIRE`
+is on. No new credential is minted; the credential becomes a record that this
+speaker answered recently, and the interval is the control.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Y as YubiKey
+    participant S as Speaker (CM5)
+    participant O as Orchestrator
+
+    S->>O: Converse stream with x-device-credential
+    loop every 60 s
+        O->>S: DeviceChallenge {nonce}
+        alt key present
+            S->>Y: sign nonce
+            Y-->>S: signature
+            S->>O: DeviceProof {nonce, signature}
+            Note over O: verified, device_verified stays true
+        else key removed
+            Note over O: no proof before the deadline<br/>first miss: device_verified false on the next turn<br/>second miss: stream closed when DEVICE_IDENTITY_REQUIRE is on
+        end
+    end
+```
+
+Trust never depends on the speaker reporting its own state. The speaker can
+also watch for card removal through pcscd and reconnect sooner, but that is
+for logging and recovery, not for trust. The cost is one signature a minute,
+well inside what the YubiKey can do.
+
+### TPM on the carrier board
+
 The next carrier-board revision (`speaker/hardware/pcb/theboard/`, rev 3.7
 today) puts a TPM 2.0 on the PCB over SPI. The key is generated in the TPM and
-never leaves it, nothing is pluggable, and the TPM's PCRs let the orchestrator
+never leaves it, and nothing is pluggable. The TPM's PCRs let the orchestrator
 require a quote over the boot chain before issuing the credential. The device
 then proves what software it runs as well as which key it holds.
 
@@ -135,9 +178,10 @@ sequenceDiagram
     O-->>S: credential only if the key and the measured state both pass
 ```
 
-The orchestrator side keeps its shape: a signer behind the `Signer`
-interface, an enrollment registry keyed by thumbprint, a short nonce, a
-short-lived key-bound credential. The TPM adds a quote to the attest request
-and a PCR policy to the verifier. The session pieces in `SESSION_BINDING.md`
+The orchestrator side keeps its shape. There is still a signer behind the
+`Signer` interface, an enrollment registry keyed by thumbprint, a short nonce
+and a short-lived key-bound credential. The TPM adds a quote to the attest
+request and a PCR policy to the verifier. The re-challenge above works the same
+way with a TPM key. The session pieces in `SESSION_BINDING.md`
 do not change; moving the key from the YubiKey into the TPM changes the signer
 and nothing else.

@@ -1,10 +1,10 @@
 # Smart speaker
 
-Voice client and hardware for a fully local voice assistant. A Raspberry Pi Compute Module 5 on a custom carrier board captures audio from an XMOS XVF3800 mic array over I2S, streams it to the AI server over gRPC, and plays the reply through a Wondom JAB5 DSP amplifier on the same I2S bus. There is no cloud dependency anywhere in the audio path.
+Voice client and hardware for a fully local voice assistant. A Raspberry Pi Compute Module 5 on a custom carrier board captures audio from an XMOS XVF3800 mic array over I2S. It streams the audio to the AI server over gRPC and plays the reply through a Wondom JAB5 DSP amplifier on the same I2S bus. There is no cloud dependency anywhere in the audio path.
 
 ## Voice flow
 
-1. The client listens continuously for a wakeword with openWakeWord. The deployed unit uses a custom phrase trained with the [openWakeWord training notebook](https://github.com/dscripka/openWakeWord#training-new-models); that model is not included, and `wake_model_path` defaults to the bundled `hey_jarvis` model, which `docker/oww_bootstrap.py` downloads at image build.
+1. The client listens continuously for a wakeword with openWakeWord. The deployed unit uses a custom phrase trained with the [openWakeWord training notebook](https://github.com/dscripka/openWakeWord#training-new-models). That model is not included. `wake_model_path` defaults to the bundled `hey_jarvis` model, which `docker/oww_bootstrap.py` downloads at image build.
 2. On wake it plays a chime and begins streaming the utterance. A pre-roll buffer keeps the audio from just before the wake event so the first syllable is not clipped.
 3. Energy-based adaptive VAD gates the stream. Capture ends on sustained silence, or early when the server reports `THINKING` or sends the first TTS chunk.
 4. The server streams `Transcript`, `Reply`, and `TtsAudio` back. Audio is queued to a playback worker and written to ALSA from a dedicated thread.
@@ -24,13 +24,13 @@ Voice client and hardware for a fully local voice assistant. A Raspberry Pi Comp
 | `events_bus.py`, `state_machine.py` | Topic pub/sub with per-topic overflow policy; guarded state transitions |
 | `config.py`, `reload.py` | Flat config dataclass with unknown-key warnings and named benchmark profiles; hot restart on file change |
 
-Configuration is `config/config.yaml` with `config/benchmarks.yaml` supplying `latency`, `balanced`, `robust`, and `noisy` profiles. The Docker image (`docker/`) pins gRPC and protobuf, generates the stubs at build time, and pre-downloads the openWakeWord base models so a Pi with no network still boots.
+Configuration is `config/config.yaml`, with `config/benchmarks.yaml` supplying the `latency`, `balanced`, `robust`, and `noisy` profiles. The Docker image (`docker/`) pins gRPC and protobuf and generates the stubs at build time. It pre-downloads the openWakeWord base models so a Pi with no network still boots.
 
 `test/test_speaker_integration.py` covers VAD calibration persistence, speech-versus-silence detection, state machine guards, and event bus isolation with synthesized PCM. `test/test_device_identity.py` covers the device identity pieces below with an in-memory signer. `test/chat_client.py` is a text-mode client for the server. `scripts/test/oww/testit.py` is a standalone wakeword bench.
 
 ## Device identity (YubiKey)
 
-Off by default. With `device_identity_enable: true` the client proves at boot that it holds a key the orchestrator enrolled, and gets a short-lived device credential back. The key lives in PIV slot 9a of a YubiKey 5 plugged into the CM5's USB port, generated on the YubiKey (touch policy never, PIN policy once) so it cannot be copied off the device. `modules/speaker/device_identity.py` holds the `Signer` interface, the `YubiKeyPivSigner`, a `FakeSigner` for tests, and the challenge client. The design, its limits and the TPM on the next board revision are in `security/DEVICE_IDENTITY.md`.
+Off by default. With `device_identity_enable: true` the client proves at boot that it holds a key the orchestrator enrolled, and gets a short-lived device credential back. The key lives in a YubiKey 5 plugged into the CM5's USB port. It is generated on the YubiKey, so it cannot be copied off the device. Signing does not need a touch, and the PIN is asked for once at boot. `modules/speaker/device_identity.py` holds the `Signer` interface, the `YubiKeyPivSigner`, a `FakeSigner` for tests, and the challenge client. The design, its limits and the TPM on the next board revision are in `security/DEVICE_IDENTITY.md`.
 
 One-time enrollment, on the Pi with the YubiKey in:
 
@@ -41,9 +41,9 @@ python scripts/enroll_device_key.py generate --device-id speaker-1 --room kitche
     --management-key-file /root/.yk_mgmt --pin-file /ai/speaker/state/device_pin
 ```
 
-That generates the key, exports the public key, and writes `/ai/speaker/state/device_enrollment.json`. Copy that file to the server host and register it: `python server/scripts/enroll_device.py add --request device_enrollment.json`. Registration is deliberately a host-side step, like approving a voice enrollment; a device cannot enroll itself over the network. `enroll_device.py revoke speaker-1` cuts a lost key off in one step. Then uncomment the `/run/pcscd` mount in `docker/docker-compose.yaml`, set `device_identity_enable: true`, and restart the container; the log line `device credential issued` confirms the challenge passed, and `connect metadata keys=x-device-credential` confirms the credential is going out on the Converse stream. The orchestrator logs the device id and key thumbprint at connect; with `DEVICE_IDENTITY_REQUIRE` it refuses a stream without one, and with `VOICE_GATE_REQUIRE_DEVICE` the voice gate takes the device as its origin signal (`security/SESSION_BINDING.md`).
+That generates the key, exports the public key, and writes `/ai/speaker/state/device_enrollment.json`. Copy that file to the server host and register it with `python server/scripts/enroll_device.py add --request device_enrollment.json`. Registration is a host-side step, like approving a voice enrollment. A device cannot enroll itself over the network. `enroll_device.py revoke speaker-1` cuts a lost key off in one step.
 
-What is not done yet: the credential is held by the client and verified by the orchestrator at connect, but `grpc_client.py` does not attach it to the Converse stream and nothing on the server is gated on it. The integration point is `DeviceAttestClient.grpc_metadata()`.
+Then uncomment the `/run/pcscd` mount in `docker/docker-compose.yaml`, set `device_identity_enable: true`, and restart the container. The log line `device credential issued` confirms the challenge passed. `connect metadata keys=x-device-credential` confirms the credential is going out on the Converse stream. The orchestrator logs the device id and key thumbprint at connect. With `DEVICE_IDENTITY_REQUIRE` it refuses a stream without one. With `VOICE_GATE_REQUIRE_DEVICE` the voice gate takes the device as its origin signal (`security/SESSION_BINDING.md`). Both switches are off until every speaker attests.
 
 ## Hardware
 
@@ -86,11 +86,11 @@ All grounds are common. No clock cross-wiring between the two slaves.
 
 ### Enclosure
 
-`enclosure/guide/guide.md` is the print and assembly guide for revision 16: a 150 mm by 282 mm PETG-CF cylinder, about 1.7 L sealed, passive radiator tuned near 65 Hz, hex vent clusters top and bottom, and an optional veneer wrap. `enclosure/steps/` has the STEP solids for the body, grille, lens, and full assembly. `guide/gen_images.py` renders the cut diagrams.
+`enclosure/guide/guide.md` is the print and assembly guide for revision 16. The enclosure is a 150 mm by 282 mm PETG-CF cylinder, about 1.7 L sealed. The passive radiator is tuned near 65 Hz. It has hex vent clusters top and bottom and an optional veneer wrap. `enclosure/steps/` has the STEP solids for the body, grille, lens, and full assembly. `guide/gen_images.py` renders the cut diagrams.
 
 ## Deployment
 
-`scripts/build_pi_release.sh` assembles a release tree; `scripts/deploy_pi_release_wsl.sh` provisions an SD card from WSL, and `scripts/install_pi_release.ps1` mounts the card's partition on Windows so WSL can write it. Set `PI_USER` and `SSH_PUB` for your environment. On the Pi the client runs as a Docker container (`docker/docker-compose.yaml`) with `/dev/snd` passed through. `server_target` in `config/config.yaml` points at the AI server.
+`scripts/build_pi_release.sh` assembles a release tree. `scripts/deploy_pi_release_wsl.sh` provisions an SD card from WSL, and `scripts/install_pi_release.ps1` mounts the card's partition on Windows so WSL can write it. Set `PI_USER` and `SSH_PUB` for your environment. On the Pi the client runs as a Docker container (`docker/docker-compose.yaml`) with `/dev/snd` passed through. `server_target` in `config/config.yaml` points at the AI server.
 
 ## Non-goals
 

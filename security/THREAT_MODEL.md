@@ -1,7 +1,13 @@
 # Threat model: agent delegation path (prototypes A and C)
 
-Path: user consents at the STS > gateway exchanges for a tool token or a handoff >
-sub-agent exchanges the handoff > tool server verifies the token > PEP asks the PDP > tool runs > output returns to the model.
+The path, in order:
+
+1. The user consents at the STS.
+2. The gateway exchanges for a tool token or a handoff.
+3. A sub-agent exchanges the handoff.
+4. The tool server verifies the token.
+5. The PEP asks the PDP.
+6. The tool runs and its output returns to the model.
 
 Scope: the prototypes in delegation/ and policy/ (threats 1-15), and the voice gate in the live orchestrator (threats 16-22). The live assistant does not use the delegation and policy prototypes yet.
 
@@ -23,7 +29,7 @@ Goal: a steered or compromised agent can do no more than the user approved, for 
 | 11 | Revocation gap | Short lifetimes; lineage claims (`jti`, `parent_jti`, `grant_id`) on every token; RFC 7009 `/revoke` that also revokes a token's descendants and, for a user token, its grant; admin `revoke_grant` and `revoke_client`; STS refuses exchange of a revoked subject or lineage; tool verifier checks an in-memory denylist after local JWT verification, fail closed if the check errors; tool servers report the token they were presented with a reason and the STS escalates by its own policy (1 token, 2 the actor's delegation, 3 the grant, 10 minute window); admin routes behind an `sts:admin` actor token that no exchange can issue | Yes: user token revoked, live tool token refused at tool and re-exchange refused at STS; sibling handoff unaffected; unknown and expired tokens succeed silently; client outside the chain refused; denylist entry gone after exp; revoked client loses actor tokens and live tool tokens; revocation works with the PDP down; tool cannot revoke the handoff above it; two reports kill the sibling under the same handoff and not another actor's; third kills the grant; strikes outside the window do not add up; `sts:admin` refused on login and exchange; admin routes 401 for non-actor tokens and 403 for non-admin actors; admin revoke over HTTP kills live tool tokens | Denylist is in process: a tool that does not share it sees nothing (pushed deny list across PEPs not built); tokens are key-bound (#1) and `revoke_key` kills a key's tokens, but a verifier that does not share the denylist still sees nothing of it; a hostile or buggy tool server can take out an actor's delegation with two reports and a grant with three, by design, and nothing verifies the report was warranted; the ops-console is a client secret, not an SVID; Keycloak hop 1 does not participate (its `/revoke` knows only its own tokens; no introspection or admin-event feed on exchange) |
 | 12 | Audit gaps | Every exchange and every tool decision logged with path, decision and reasons | Yes: counts checked in tests | Logs are in process; no tamper evidence or central sink |
 | 13 | Stolen workload credential, Docker socket exposure | Not built (prototype B) | No | SPIRE's Docker attestor needs the Docker socket and pid: host, which is root-equivalent |
-| 14 | Device posture spoofing; device-code phishing on headless agents | Posture as a policy input: not built (prototype D). Device identity for the speaker is built (`server/modules/orchestrator/core/device_identity.py`, `DEVICE_IDENTITY.md`): a non-extractable P-256 key in PIV slot 9a of a plugged-in YubiKey 5 answers a boot-time nonce challenge, and the orchestrator issues a 10 minute credential with the key thumbprint in `cnf`; enrollment is host-side and revocable | Yes: right key accepted; wrong key, expired nonce, replayed nonce, nonce for another device, unknown device, revoked device and missing key all denied and logged; credential carries `cnf` and expires | The key proves possession, not software state: no measured boot, no PCRs, so a reflashed CM5 with the YubiKey still attests. The credential is sent on every connect, enforced when `DEVICE_IDENTITY_REQUIRE` is on, and is the gate's origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (both off until every speaker attests). Future state is a TPM 2.0 on the next carrier-board revision |
+| 14 | Device posture spoofing; device-code phishing on headless agents | Posture as a policy input: not built (prototype D). Device identity for the speaker is built (`server/modules/orchestrator/core/device_identity.py`, `DEVICE_IDENTITY.md`): a key that cannot leave a plugged-in YubiKey 5 answers a boot-time nonce challenge, and the orchestrator issues a 10 minute credential with the key thumbprint in `cnf`; enrollment is host-side and revocable | Yes: right key accepted; wrong key, expired nonce, replayed nonce, nonce for another device, unknown device, revoked device and missing key all denied and logged; credential carries `cnf` and expires | The key proves possession, not software state: no measured boot, no PCRs, so a reflashed CM5 with the YubiKey still attests. The credential is sent on every connect, enforced when `DEVICE_IDENTITY_REQUIRE` is on, and is the gate's origin signal when `VOICE_GATE_REQUIRE_DEVICE` is on (both off until every speaker attests). A pulled key stays trusted until the credential expires, 10 minutes by default; a 60 s re-challenge on the open stream is the next control. Future state is a TPM 2.0 on the next carrier-board revision |
 | 15 | Voice spoofing: replayed recording, cloned voice, request from outside the home | Voice requests need a match of 0.98 or better, home-network origin and a passed liveness check; missing signals fail closed; writes confirm by default and high-risk tools always confirm | Yes: low match, failed liveness, off-network and missing signals all denied; high-risk merge denied with confirmations off | The policy trusts the front end's liveness result; a real-time voice clone that passes liveness still gets read access, so writes keep the confirmation. The orchestrator's voice gate (16-22) gathers these signals itself; liveness is not built yet. Enrollment (`VOICE_ENROLLMENT.md`) requires prompted sentences, which a replayed recording fails and a cloned voice passes |
 
 ## Current state: voice gate in the live orchestrator (server/)
@@ -42,11 +48,67 @@ Mode: monitor. Every non-read decision is logged as `allow` or `would_deny`; not
 | 21 | Gate failure or misconfiguration | Gate errors fail closed in enforce; an unknown mode falls back to monitor, never off; an unset threshold verifies no voice; any missing signal fails | Partly: mode, threshold and missing-signal cases tested; error handling reviewed | Monitor mode blocks nothing by design until rollout |
 | 22 | Path injection through the client-supplied session id | Session and audio ids are validated to a plain token before they reach a file path | No | Sessions are still keyed by a client-supplied id |
 
-Not gated yet: explicit location-preference commands are handled before the model and do not pass the gate. 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`) run in CI.
+Explicit location-preference commands are not gated yet. They are handled before the model and do not pass the gate. 55 voice gate and script tests (`server/test/test_voice_gate.py`, `server/test/test_voice_scripts.py`), 25 enrollment tests (`server/test/test_voice_enrollment.py`), 31 device identity tests (`server/test/test_device_identity.py`, `speaker/test/test_device_identity.py`) and 5 stream metadata tests (`speaker/test/test_grpc_metadata.py`) run in CI.
 
 ## Attacks run (demo.py in delegation/ and policy/)
 
-Expired-token replay; exchange without `may_act`; another agent presenting the user's token; sub-agent asking for write scope; sub-agent asking for an unregistered tool; plain exchange to strip `act`; borrowed actor token; handoff token sent to a tool; injected merge via sub-agent; injected merge via gateway; out-of-session read; approval replay and reuse on a different PR; token without `act`; forged signature; live tool token after the user token is revoked; re-exchange of a revoked lineage; revocation by an agent outside the chain; revoked agent's actor token; tool server revoking the handoff above it; escalation to the actor's delegation and to the grant from repeated tool reports; `sts:admin` requested through exchange; admin route with a non-admin actor token; stolen tool token without a proof, with another client's key, with a replayed proof, with a proof for another URI, with a stale proof; exchange without a proof and under another client's key; bound admin token sent as Bearer; revoked key; device-bound user token exchanged without the device assertion, with another device, without the actor's own proof, by a client the user did not consent to, with a device claim but another key's binding; assurance widened at exchange (ignored); revoked device (live tool token, re-exchange and new login all refused); OPA down; PDP timeout; voice match below threshold; replayed voice (liveness fail); off-network voice; voice with no signals; high-risk voice write with confirmations off. All refused, each with a logged reason. 103 Python tests and 22 policy tests pass.
+Every attack below is refused with a logged reason. 103 Python tests and 22
+policy tests pass.
+
+Exchange and chain (delegation/):
+
+- expired-token replay
+- exchange without `may_act`
+- another agent presenting the user's token
+- sub-agent asking for write scope
+- sub-agent asking for an unregistered tool
+- plain exchange to strip `act`
+- borrowed actor token
+- handoff token sent to a tool
+- token without `act`
+- forged signature
+- `sts:admin` requested through exchange
+- admin route with a non-admin actor token
+
+Sender constraint (delegation/):
+
+- stolen tool token without a proof, with another client's key, with a
+  replayed proof, with a proof for another URI, with a stale proof
+- exchange without a proof and under another client's key
+- bound admin token sent as Bearer
+- revoked key
+
+Device binding (delegation/):
+
+- device-bound user token exchanged without the device assertion, with another
+  device, without the actor's own proof, by a client the user did not consent
+  to, with a device claim but another key's binding
+- assurance widened at exchange (ignored)
+- revoked device: live tool token, re-exchange and new login all refused
+
+Revocation (delegation/):
+
+- live tool token after the user token is revoked
+- re-exchange of a revoked lineage
+- revocation by an agent outside the chain
+- revoked agent's actor token
+- tool server revoking the handoff above it
+- escalation to the actor's delegation and to the grant from repeated tool
+  reports
+
+Policy (policy/):
+
+- injected merge via sub-agent
+- injected merge via gateway
+- out-of-session read
+- approval replay and reuse on a different PR
+- OPA down
+- PDP timeout
+- voice match below threshold
+- replayed voice (liveness fail)
+- off-network voice
+- voice with no signals
+- high-risk voice write with confirmations off
 
 ## Future state: next controls, in order
 
