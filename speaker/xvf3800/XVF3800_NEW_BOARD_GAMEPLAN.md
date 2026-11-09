@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Goal
+## Goal
 
 Make the Raspberry Pi CM5 (Geekworm X1500) capture audio from the Seeed ReSpeaker XVF3800 via I2S.
 
@@ -66,19 +66,16 @@ Make the Raspberry Pi CM5 (Geekworm X1500) capture audio from the Seeed ReSpeake
 
 ---
 
-## 🔌 Required Wiring (Minimum for Audio Capture)
+## Required wiring (minimum for audio capture)
 
-```
-XVF3800                           Raspberry Pi CM5
-┌──────────┐                      ┌──────────────────────┐
-│  5V      │◄───── 🔴 Red ───────►│ Pin 2 or 4 (5V)      │
-│  GND     │◄───── ⚫ Black ──────►│ Pin 6 (GND)          │
-│  X0D37   │────── 🟡 Yellow ────►│ Pin 12 (GPIO18 BCLK) │
-│  X0D38   │────── 🟢 Green ─────►│ Pin 35 (GPIO19 LRCLK)│
-│  X1D00   │────── 🔵 Blue ──────►│ Pin 38 (GPIO20 DOUT) │
-│  X1D01   │◄───── 🟣 Purple ─────│ Pin 40 (GPIO21 DIN)  │ *optional*
-└──────────┘                      └──────────────────────┘
-```
+| Wire | XVF3800 | Raspberry Pi CM5 | Signal |
+|---|---|---|---|
+| 🔴 Red | 5V | Pin 2 or 4 (5V) | power |
+| ⚫ Black | GND | Pin 6 (GND) | ground |
+| 🟡 Yellow | X0D37 | Pin 12 (GPIO18) | BCLK, Pi to XVF |
+| 🟢 Green | X0D38 | Pin 35 (GPIO19) | LRCLK, Pi to XVF |
+| 🔵 Blue | X1D00 | Pin 38 (GPIO20) | DOUT, XVF to Pi |
+| 🟣 Purple | X1D01 | Pin 40 (GPIO21) | DIN, Pi to XVF, optional |
 
 ### Pi 40-Pin Header Reference
 
@@ -179,7 +176,7 @@ hexdump -C /tmp/test.wav | head -n 30
 
 ---
 
-## 🩺 Troubleshooting
+## Troubleshooting
 
 ### XVF3800 LEDs flash once then turn off
 
@@ -239,7 +236,7 @@ sudo reboot
 
 ---
 
-## 🔄 Recovery: Enter Safe Mode
+## Recovery: enter safe mode
 
 If XVF3800 firmware is corrupted or unresponsive:
 
@@ -266,7 +263,7 @@ If XVF3800 firmware is corrupted or unresponsive:
 
 ---
 
-## 📝 Quick Reference Commands
+## Quick reference commands
 
 ```bash
 # Check ALSA cards
